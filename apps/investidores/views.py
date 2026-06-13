@@ -22,7 +22,9 @@ from .models import CobrancaGestao, Investidor, VeiculoInvestidor
 
 def _semana_anterior():
     hoje = timezone.now().date()
-    inicio = hoje - timedelta(days=hoje.weekday() + 7)
+    # weekday(): Mon=0 ... Sun=6 → início da semana atual sempre na segunda
+    inicio_semana_atual = hoje - timedelta(days=hoje.weekday())
+    inicio = inicio_semana_atual - timedelta(weeks=1)
     fim = inicio + timedelta(days=6)
     return inicio, fim
 
@@ -120,7 +122,8 @@ class InvestidorDetalheView(GrupoRequiredMixin, DetailView):
         ctx['vinculos_ativos'] = vinculos_ativos
 
         # Calcula quais vínculos não têm cobrança gerada para a semana anterior
-        semana_anterior_inicio = hoje_date - timedelta(days=hoje_date.weekday() + 7)
+        inicio_semana_atual = hoje_date - timedelta(days=hoje_date.weekday())
+        semana_anterior_inicio = inicio_semana_atual - timedelta(weeks=1)
         ids_com_cobranca_semana = set(
             CobrancaGestao.objects.filter(
                 veiculo_investidor__investidor=investidor,

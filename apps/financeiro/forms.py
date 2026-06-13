@@ -1,9 +1,11 @@
 from decimal import Decimal
 
 from django import forms
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from .models import ConfiguracaoLocadora, ContaReceber, DespesaOperacional, MultaTransito
 from apps.contracts.models import PagamentoContrato
+from apps.core.validators import validar_cpf
 
 FC = 'form-control'
 FS = 'form-select'
@@ -100,6 +102,15 @@ class MultaTransitoForm(forms.ModelForm):
             'situacao': forms.Select(attrs={'class': FS}),
             'observacoes': forms.Textarea(attrs={'class': FC, 'rows': 2}),
         }
+
+    def clean_condutor_cpf(self):
+        cpf = self.cleaned_data.get('condutor_cpf', '').strip()
+        if cpf:
+            try:
+                validar_cpf(cpf)
+            except ValidationError as e:
+                raise forms.ValidationError(e.message)
+        return cpf
 
 
 class RecebimentoForm(forms.Form):

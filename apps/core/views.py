@@ -497,7 +497,7 @@ class RelatorioClientesView(GrupoRequiredMixin, View):
                 'cliente__tipo', 'cliente__cpf', 'cliente__cnpj',
             )
             .annotate(
-                locacoes=Count('id'),
+                locacoes=Count('id', distinct=True),
                 receita=Coalesce(Sum('pagamentos__valor'), Decimal('0.00')),
             )
             .order_by('-receita')[:20]

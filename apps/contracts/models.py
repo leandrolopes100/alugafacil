@@ -475,6 +475,7 @@ class ParcelaContrato(models.Model):
     TIPO = [
         ('caucao', 'Caucao'),
         ('semanal', 'Semanal'),
+        ('mensal', 'Mensal'),
     ]
     SITUACAO = [
         ('pendente', 'Pendente'),
@@ -553,19 +554,16 @@ class ParcelaContrato(models.Model):
             return self.valor
 
 
-def gerar_parcelas(contrato, data_inicio, data_fim, origem='original'):
+def gerar_parcelas(contrato, data_inicio, data_fim, origem='original', tipo_cobranca='semanal'):
     """Gera parcelas de locação para o período indicado.
 
-    Modelo de cobrança: semana atual paga no dia da saída (upfront), semanas
-    seguintes pagas a cada 7 dias. Contratos < 7 dias geram 1 parcela proporcional
-    — vencimento na saída (upfront), consistente com contratos >= 7 dias.
+    tipo_cobranca='semanal': 1 parcela/semana upfront (padrão).
+    tipo_cobranca='mensal': 1 parcela/mês upfront, valor = diaria * dias_do_mes.
 
-    Exemplos:
-      3 dias  → 1 parcela em data_inicio (upfront proporcional)
-      7 dias  → 1 parcela em data_inicio
-      14 dias → 2 parcelas: data_inicio e data_inicio+7
-      30 dias → 5 parcelas: data_inicio, +7, +14, +21, +28
+    Modelo semanal: semana atual paga upfront, demais a cada 7 dias.
+    Contratos < 7 dias → 1 parcela proporcional upfront.
     """
+    from dateutil.relativedelta import relativedelta
     delta_dias = (data_fim - data_inicio).days
     if delta_dias <= 0:
         return 0
@@ -574,8 +572,25 @@ def gerar_parcelas(contrato, data_inicio, data_fim, origem='original'):
     numero = ultimo_num + 1
     novas = []
 
-    if delta_dias < 7:
-        # Contrato curto: 1 parcela proporcional paga upfront (mesmo modelo dos >= 7 dias)
+    if tipo_cobranca == 'mensal':
+        data_atual = data_inicio
+        while data_atual < data_fim:
+            proxima = data_atual + relativedelta(months=1)
+            fim_periodo = min(proxima, data_fim)
+            dias = (fim_periodo - data_atual).days
+            valor = (contrato.diaria * dias).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            novas.append(ParcelaContrato(
+                contrato=contrato,
+                numero=numero,
+                tipo='mensal',
+                data_vencimento=data_atual,
+                valor=valor,
+                origem=origem,
+            ))
+            data_atual = proxima
+            numero += 1
+    elif delta_dias < 7:
+        # Contrato curto: 1 parcela proporcional paga upfront
         valor = (contrato.diaria * delta_dias).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         novas.append(ParcelaContrato(
             contrato=contrato,

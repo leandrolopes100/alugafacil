@@ -1,8 +1,15 @@
 from datetime import timedelta
 from django.utils import timezone
 
+_CACHE_ATTR = '_aluga_facil_badges'
+
 
 def agenda_cobrancas(request):
+    # Cache por request para evitar 3 COUNTs duplicados em cada sub-request/context-processor
+    cached = getattr(request, _CACHE_ATTR, None)
+    if cached is not None:
+        return cached
+
     cobrancas_badge = 0
     pagamentos_badge = 0
     investidores_badge = 0
@@ -32,10 +39,16 @@ def agenda_cobrancas(request):
             agenda_pagamentos_url = reverse('financeiro:agenda-pagamentos')
         except Exception:
             pass
-    return {
+
+    result = {
         'cobrancas_badge': cobrancas_badge,
         'pagamentos_badge': pagamentos_badge,
         'investidores_badge': investidores_badge,
         'agenda_url': agenda_url,
         'agenda_pagamentos_url': agenda_pagamentos_url,
     }
+    try:
+        setattr(request, _CACHE_ATTR, result)
+    except Exception:
+        pass
+    return result

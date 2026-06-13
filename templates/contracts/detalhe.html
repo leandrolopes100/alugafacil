@@ -45,7 +45,7 @@
     </a>
     <form method="post" action="{% url 'contratos:cancelar' contrato.pk %}" class="d-inline">
       {% csrf_token %}
-      <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Cancelar contrato?')">Cancelar</button>
+      <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmarAcao(this, 'Cancelar contrato?', 'Esta ação não pode ser desfeita.', 'danger')">Cancelar</button>
     </form>
     {% elif contrato.situacao == 'ativo' %}
     <a href="{% url 'contratos:checkin' contrato.pk %}" class="btn btn-success btn-sm">
@@ -59,10 +59,10 @@
       <i class="bi bi-check2-circle me-1"></i>Encerrar Contrato
     </button>
     {% if is_admin_locadora %}
-    <form method="post" action="{% url 'contratos:reverter-checkin' contrato.pk %}" class="d-inline"
-          onsubmit="return confirm('Reverter o check-in? O contrato voltará para Ativo e as fotos de devolução serão excluídas.')">
+    <form method="post" action="{% url 'contratos:reverter-checkin' contrato.pk %}" class="d-inline">
       {% csrf_token %}
-      <button type="submit" class="btn btn-outline-warning btn-sm">
+      <button type="button" class="btn btn-outline-warning btn-sm"
+              onclick="confirmarAcao(this, 'Reverter Check-in?', 'O contrato voltará para Ativo e as fotos de devolução serão excluídas.', 'warning')">
         <i class="bi bi-arrow-counterclockwise me-1"></i>Reverter Check-in
       </button>
     </form>
@@ -254,7 +254,7 @@
                 {% endif %}
               </td>
               <td class="text-end">
-                {% if p.situacao in 'pendente,em_atraso' %}
+                {% if p.situacao == 'pendente' or p.situacao == 'em_atraso' %}
                 <button class="btn btn-sm btn-outline-success"
                   onclick="abrirPagamentoParcela({{ p.pk }}, '{{ p.valor|floatformat:2 }}', '{% if p.tipo == "caucao" %}Caução{% else %}Parcela {{ p.numero }}{% endif %}', '{{ p.valor_corrigido|floatformat:2 }}')">
                   <i class="bi bi-cash"></i>
@@ -459,7 +459,7 @@
         {% for avaria in avarias %}
         <li class="list-group-item d-flex justify-content-between small px-3 py-2">
           <span class="text-truncate">{{ avaria.descricao|truncatechars:35 }}</span>
-          {% if avaria.valor_cobrado %}<span class="text-danger fw-semibold flex-shrink-0 ms-2">R$ {{ avaria.valor_cobrado }}</span>{% endif %}
+          {% if avaria.valor_cobrado %}<span class="text-danger fw-semibold flex-shrink-0 ms-2">R$ {{ avaria.valor_cobrado|floatformat:2 }}</span>{% endif %}
         </li>
         {% empty %}
         <li class="list-group-item text-center text-muted small py-2">Nenhuma avaria.</li>

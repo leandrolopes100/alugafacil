@@ -40,7 +40,7 @@ class VeiculoForm(forms.ModelForm):
         from apps.core.validators import validar_placa
         from django.core.exceptions import ValidationError as DjangoValidationError
         placa = self.cleaned_data['placa'].upper().replace(' ', '').replace('-', '')
-        # Normaliza para o formato com hifen se padrao antigo
+        # Formato antigo (ABC1234) recebe hifen; Mercosul (ABC1D23) fica sem hifen
         import re
         if re.match(r'^[A-Z]{3}\d{4}$', placa):
             placa = f'{placa[:3]}-{placa[3:]}'
@@ -49,6 +49,28 @@ class VeiculoForm(forms.ModelForm):
         except DjangoValidationError as e:
             raise forms.ValidationError(e.message)
         return placa
+
+    def clean_chassi(self):
+        from apps.core.validators import validar_chassi
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        chassi = self.cleaned_data.get('chassi', '').strip().upper()
+        if chassi:
+            try:
+                validar_chassi(chassi)
+            except DjangoValidationError as e:
+                raise forms.ValidationError(e.message)
+        return chassi
+
+    def clean_renavam(self):
+        from apps.core.validators import validar_renavam
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        renavam = self.cleaned_data.get('renavam', '').strip()
+        if renavam:
+            try:
+                validar_renavam(renavam)
+            except DjangoValidationError as e:
+                raise forms.ValidationError(e.message)
+        return renavam
 
 
 class GrupoVeiculoForm(forms.ModelForm):

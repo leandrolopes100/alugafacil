@@ -25,6 +25,12 @@ class OrdemManutencaoForm(forms.ModelForm):
             'observacoes': forms.Textarea(attrs={'class': FC, 'rows': 2}),
         }
 
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get('situacao') == 'concluida' and not cleaned.get('km_na_manutencao'):
+            self.add_error('km_na_manutencao', 'KM na manutenção é obrigatório ao concluir a OS.')
+        return cleaned
+
 
 class AlertaManutencaoForm(forms.ModelForm):
     class Meta:

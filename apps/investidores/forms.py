@@ -1,6 +1,8 @@
 from django import forms
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
+from apps.core.validators import validar_cpf, validar_cnpj
 from apps.fleet.models import Veiculo
 from .models import CobrancaGestao, Investidor, VeiculoInvestidor
 
@@ -29,6 +31,26 @@ class InvestidorForm(forms.ModelForm):
             'observacoes': forms.Textarea(attrs={'class': FC, 'rows': 2}),
             'situacao': forms.Select(attrs={'class': FS}),
         }
+
+    def clean_cpf(self):
+        cpf = self.cleaned_data.get('cpf', '').strip()
+        tipo = self.cleaned_data.get('tipo') or self.data.get('tipo')
+        if tipo == 'pf' and cpf:
+            try:
+                validar_cpf(cpf)
+            except ValidationError as e:
+                raise forms.ValidationError(e.message)
+        return cpf
+
+    def clean_cnpj(self):
+        cnpj = self.cleaned_data.get('cnpj', '').strip()
+        tipo = self.cleaned_data.get('tipo') or self.data.get('tipo')
+        if tipo == 'pj' and cnpj:
+            try:
+                validar_cnpj(cnpj)
+            except ValidationError as e:
+                raise forms.ValidationError(e.message)
+        return cnpj
 
 
 class VincularVeiculoForm(forms.ModelForm):

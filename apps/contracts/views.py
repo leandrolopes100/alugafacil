@@ -180,6 +180,7 @@ class ReservaConverterView(GrupoRequiredMixin, View):
     """Converte uma reserva confirmada em contrato aberto."""
     grupos_permitidos = ['admin_locadora', 'atendente']
     def post(self, request, pk):
+        from django.db import transaction
         reserva = get_object_or_404(Reserva, pk=pk, situacao='confirmada')
 
         if reserva.cliente.bloqueado:
@@ -194,19 +195,20 @@ class ReservaConverterView(GrupoRequiredMixin, View):
             messages.error(request, f'O veículo {reserva.veiculo} está {reserva.veiculo.get_situacao_display()} e não pode ser alocado.')
             return redirect('contratos:reserva-detalhe', pk=pk)
 
-        contrato = Contrato.objects.create(
-            reserva=reserva,
-            cliente=reserva.cliente,
-            veiculo=reserva.veiculo,
-            diaria=reserva.diaria_cotada or reserva.grupo_veiculo.diaria,
-            km_franquia_diaria=reserva.grupo_veiculo.km_franquia_diaria,
-            valor_km_excedente=reserva.grupo_veiculo.valor_km_excedente,
-            caucao_valor=reserva.caucao_cotado or reserva.grupo_veiculo.caucao,
-            data_devolucao_prevista=reserva.data_devolucao,
-            criado_por=request.user,
-        )
-        reserva.situacao = 'ativa'
-        reserva.save()
+        with transaction.atomic():
+            contrato = Contrato.objects.create(
+                reserva=reserva,
+                cliente=reserva.cliente,
+                veiculo=reserva.veiculo,
+                diaria=reserva.diaria_cotada or reserva.grupo_veiculo.diaria,
+                km_franquia_diaria=reserva.grupo_veiculo.km_franquia_diaria,
+                valor_km_excedente=reserva.grupo_veiculo.valor_km_excedente,
+                caucao_valor=reserva.caucao_cotado or reserva.grupo_veiculo.caucao,
+                data_devolucao_prevista=reserva.data_devolucao,
+                criado_por=request.user,
+            )
+            reserva.situacao = 'ativa'
+            reserva.save(update_fields=['situacao'])
         messages.success(request, f'Contrato {contrato.numero} criado com sucesso.')
         return redirect('contratos:detalhe', pk=contrato.pk)
 
@@ -322,7 +324,7 @@ class ContratoCheckoutView(GrupoRequiredMixin, View):
 
     def _get_contrato(self, pk):
         return get_object_or_404(
-            Contrato.objects.select_related('cliente', 'veiculo')
+            Contrato.objects.select_related('cliente', 'veiculo__grupo')
             .prefetch_related('cliente__cnhs', 'veiculo__documentos', 'pagamentos'),
             pk=pk, situacao='aberto',
         )
@@ -450,11 +452,14 @@ class ContratoCheckoutView(GrupoRequiredMixin, View):
                         situacao='pago' if ja_pago else 'pendente',
                         data_pagamento=contrato.caucao_pago_em or (timezone.now() if ja_pago else None),
                     )
+                grupo = contrato.veiculo.grupo
+                tipo_cobranca = 'mensal' if (grupo and grupo.mensal) else 'semanal'
                 qtd = gerar_parcelas(
                     contrato=contrato,
                     data_inicio=contrato.data_saida.date(),
                     data_fim=contrato.data_devolucao_prevista.date(),
                     origem='original',
+                    tipo_cobranca=tipo_cobranca,
                 )
             messages.success(request, f'Check-out realizado. Contrato {contrato.numero} ativo com {qtd} parcela(s) gerada(s).')
             return redirect('contratos:detalhe', pk=pk)
@@ -642,6 +647,8 @@ class ContratoProrrogarView(GrupoRequiredMixin, View):
             return redirect('contratos:detalhe', pk=pk)
 
         data_antiga = contrato.data_devolucao_prevista
+        grupo = contrato.veiculo.grupo if contrato.veiculo_id else None
+        tipo_cobranca = 'mensal' if (grupo and grupo.mensal) else 'semanal'
         with db_transaction.atomic():
             contrato.data_devolucao_prevista = nova_data
             contrato.save()
@@ -650,6 +657,7 @@ class ContratoProrrogarView(GrupoRequiredMixin, View):
                 data_inicio=data_antiga.date(),
                 data_fim=nova_data.date(),
                 origem='prorrogacao',
+                tipo_cobranca=tipo_cobranca,
             )
         messages.success(
             request,

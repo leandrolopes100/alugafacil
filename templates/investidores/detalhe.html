@@ -162,10 +162,10 @@
                   <a href="{% url 'investidores:gerar-cobranca' v.pk %}" class="btn btn-outline-secondary btn-sm" title="Gerar cobrança">
                     <i class="bi bi-plus-circle"></i>
                   </a>
-                  <form method="post" action="{% url 'investidores:desvincular' v.pk %}"
-                        onsubmit="return confirm('Encerrar vínculo do veículo {{ v.veiculo.placa }}?')">
+                  <form method="post" action="{% url 'investidores:desvincular' v.pk %}">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-outline-danger btn-sm" title="Encerrar vínculo">
+                    <button type="button" class="btn btn-outline-danger btn-sm" title="Encerrar vínculo"
+                            onclick="confirmarAcao(this, 'Encerrar vínculo do veículo {{ v.veiculo.placa }}?', '', 'danger')">
                       <i class="bi bi-x-circle"></i>
                     </button>
                   </form>

@@ -2,7 +2,7 @@ import re
 from django import forms
 from django.core.exceptions import ValidationError
 
-from apps.core.validators import validar_cpf, validar_cnpj
+from apps.core.validators import validar_cpf, validar_cnpj, validar_cep
 from .models import Cliente, CNHCliente
 
 FC = 'form-control'
@@ -77,6 +77,21 @@ class ClienteForm(forms.ModelForm):
                 raise forms.ValidationError('Já existe um cliente cadastrado com este CNPJ.')
         return cnpj
 
+    def clean_cep(self):
+        cep = self.cleaned_data.get('cep', '').strip()
+        if cep:
+            try:
+                validar_cep(cep)
+            except ValidationError as e:
+                raise forms.ValidationError(e.message)
+        return cep
+
+    def clean_celular(self):
+        celular = _so_digitos(self.cleaned_data.get('celular', ''))
+        if celular and len(celular) < 10:
+            raise forms.ValidationError('Celular inválido. Informe DDD + número (mínimo 10 dígitos).')
+        return self.cleaned_data.get('celular', '')
+
     def clean(self):
         cleaned = super().clean()
         tipo = cleaned.get('tipo')
@@ -111,3 +126,13 @@ class CNHClienteForm(forms.ModelForm):
             'foto_verso': forms.FileInput(attrs={'class': FC}),
             'principal': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+    def clean_numero(self):
+        from apps.core.validators import validar_cnh_numero
+        numero = self.cleaned_data.get('numero', '').strip()
+        if numero:
+            try:
+                validar_cnh_numero(numero)
+            except ValidationError as e:
+                raise forms.ValidationError(e.message)
+        return numero

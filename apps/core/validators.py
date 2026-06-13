@@ -41,3 +41,33 @@ def validar_placa(valor):
         raise ValidationError(
             'Placa invalida. Use o padrao antigo (ABC-1234) ou Mercosul (ABC1D23).'
         )
+
+
+def validar_cep(valor):
+    """Valida CEP: exatamente 8 digitos numericos."""
+    cep = _so_digitos(valor)
+    if len(cep) != 8:
+        raise ValidationError('CEP invalido. Informe 8 digitos.')
+
+
+def validar_chassi(valor):
+    """Valida chassi VIN: 17 caracteres alfanumericos, sem I, O ou Q."""
+    chassi = re.sub(r'[-\s]', '', str(valor or '')).upper()
+    if len(chassi) != 17:
+        raise ValidationError('Chassi invalido. Deve ter exatamente 17 caracteres.')
+    if not re.match(r'^[A-HJ-NPR-Z0-9]{17}$', chassi):
+        raise ValidationError('Chassi invalido. Use apenas letras (exceto I, O, Q) e numeros.')
+
+
+def validar_renavam(valor):
+    """Valida RENAVAM: 9 ou 11 digitos numericos."""
+    renavam = _so_digitos(valor)
+    if len(renavam) not in (9, 11):
+        raise ValidationError('RENAVAM invalido. Deve ter 9 ou 11 digitos.')
+
+
+def validar_cnh_numero(valor):
+    """Valida numero de CNH: exatamente 11 digitos numericos."""
+    numero = _so_digitos(valor)
+    if len(numero) != 11:
+        raise ValidationError('Numero de CNH invalido. Deve ter exatamente 11 digitos.')

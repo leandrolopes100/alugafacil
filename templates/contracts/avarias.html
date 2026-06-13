@@ -25,7 +25,7 @@
               <td class="small fw-semibold">{{ avaria.descricao }}</td>
               <td class="small text-muted">{{ avaria.localizacao|default:"—" }}</td>
               <td class="text-end {% if avaria.valor_cobrado %}text-danger fw-semibold{% else %}text-muted{% endif %} small">
-                {% if avaria.valor_cobrado %}R$ {{ avaria.valor_cobrado }}{% else %}—{% endif %}
+                {% if avaria.valor_cobrado %}R$ {{ avaria.valor_cobrado|floatformat:2 }}{% else %}—{% endif %}
               </td>
               <td>
                 <span class="badge badge-status

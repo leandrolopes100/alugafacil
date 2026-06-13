@@ -108,11 +108,11 @@
           <i class="bi bi-eye"></i> Ver
         </a>
         <a href="{% url 'frota:editar' veiculo.pk %}"
-           style="flex:1; display:flex; align-items:center; justify-content:center; gap:5px; padding:10px 6px; font-size:12px; font-weight:600; color:#475569; text-decoration:none; {% if veiculo.situacao in 'disponivel,inativo' %}border-right:1px solid #f1f5f9;{% endif %} transition:background .15s"
+           style="flex:1; display:flex; align-items:center; justify-content:center; gap:5px; padding:10px 6px; font-size:12px; font-weight:600; color:#475569; text-decoration:none; {% if veiculo.situacao == 'disponivel' or veiculo.situacao == 'inativo' %}border-right:1px solid #f1f5f9;{% endif %} transition:background .15s"
            onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
           <i class="bi bi-pencil"></i> Editar
         </a>
-        {% if veiculo.situacao in 'disponivel,inativo' %}
+        {% if veiculo.situacao == 'disponivel' or veiculo.situacao == 'inativo' %}
         <button type="button"
           data-excluir-url="{% url 'frota:excluir' veiculo.pk %}"
           data-excluir-nome="{{ veiculo.marca }} {{ veiculo.modelo }} — {{ veiculo.placa }}"

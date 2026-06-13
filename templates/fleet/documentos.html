@@ -47,7 +47,7 @@
               <td class="text-end table-action">
                 <form method="post" action="{% url 'frota:documento-excluir' veiculo.pk doc.pk %}">
                   {% csrf_token %}
-                  <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Excluir documento?')">
+                  <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmarAcao(this, 'Excluir documento?', 'Esta ação não pode ser desfeita.', 'danger')">
                     <i class="bi bi-trash3"></i>
                   </button>
                 </form>

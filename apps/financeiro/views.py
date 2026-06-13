@@ -273,32 +273,53 @@ class ReceberPagamentoView(GrupoRequiredMixin, View):
     grupos_permitidos = ['admin_locadora', 'financeiro']
 
     def post(self, request, pk):
+        from django.db import transaction
         conta = get_object_or_404(ContaReceber, pk=pk)
         form = RecebimentoForm(request.POST)
         if form.is_valid():
             dados = form.cleaned_data
-            PagamentoContrato.objects.create(
-                contrato=conta.contrato,
-                forma_pagamento=dados['forma_pagamento'],
-                tipo=dados['tipo'],
-                valor=dados['valor'],
-                data_pagamento=dados['data_pagamento'],
-                observacoes=dados.get('observacoes', ''),
-                registrado_por=request.user,
-            )
-            # Signal atualiza a conta automaticamente
-            messages.success(request, f'Recebimento de R$ {dados["valor"]} registrado com sucesso.')
-            # Aviso quando há parcelas pendentes na agenda que ainda não foram baixadas
-            if dados['tipo'] != 'caucao':
-                pendentes = conta.contrato.parcelas.filter(
+            parcelas_baixadas = 0
+            with transaction.atomic():
+                pagamento = PagamentoContrato.objects.create(
+                    contrato=conta.contrato,
+                    forma_pagamento=dados['forma_pagamento'],
+                    tipo=dados['tipo'],
+                    valor=dados['valor'],
+                    data_pagamento=dados['data_pagamento'],
+                    observacoes=dados.get('observacoes', ''),
+                    registrado_por=request.user,
+                )
+                if dados['tipo'] == 'locacao':
+                    saldo_restante = dados['valor']
+                    for parcela in conta.contrato.parcelas.filter(
+                        situacao__in=['pendente', 'em_atraso']
+                    ).order_by('data_vencimento'):
+                        if saldo_restante >= parcela.valor:
+                            parcela.situacao = 'pago'
+                            parcela.data_pagamento = dados['data_pagamento']
+                            parcela.forma_pagamento = dados['forma_pagamento']
+                            parcela.observacoes = (
+                                f'Baixado automaticamente via pagamento de '
+                                f'R$ {dados["valor"]:.2f} em '
+                                f'{dados["data_pagamento"].strftime("%d/%m/%Y %H:%M")}'
+                            )
+                            parcela.save(update_fields=[
+                                'situacao', 'data_pagamento', 'forma_pagamento', 'observacoes'
+                            ])
+                            saldo_restante -= parcela.valor
+                            parcelas_baixadas += 1
+                        else:
+                            break
+            msg = f'Recebimento de R$ {dados["valor"]:.2f} registrado com sucesso.'
+            if parcelas_baixadas:
+                msg += f' {parcelas_baixadas} parcela(s) baixada(s) automaticamente.'
+            elif dados['tipo'] == 'locacao':
+                restantes = conta.contrato.parcelas.filter(
                     situacao__in=['pendente', 'em_atraso']
                 ).count()
-                if pendentes:
-                    messages.info(
-                        request,
-                        f'Há {pendentes} parcela(s) ainda pendente(s) na agenda de cobranças do contrato. '
-                        f'Se este pagamento as liquida, acesse o contrato e marque-as como pagas.'
-                    )
+                if restantes:
+                    msg += ' Valor insuficiente para cobrir a próxima parcela — baixe manualmente se necessário.'
+            messages.success(request, msg)
         else:
             messages.error(request, 'Verifique os campos e tente novamente.')
         return redirect('financeiro:conta-receber-detalhe', pk=pk)
@@ -369,10 +390,14 @@ class DespesaCreateView(GrupoRequiredMixin, View):
                 # (cenário: competência no passado ou despesa retroativa)
                 if despesa.debito_automatico:
                     DespesaOperacional.sincronizar_auto_pagamento()
+                from decimal import ROUND_DOWN
+                valor_parcela = (despesa.valor / despesa.numero_parcelas).quantize(
+                    Decimal('0.01'), rounding=ROUND_DOWN
+                )
                 messages.success(
                     request,
                     f'Despesa de R$ {despesa.valor} registrada em {despesa.numero_parcelas}x de '
-                    f'R$ {(despesa.valor / despesa.numero_parcelas):.2f}.'
+                    f'R$ {valor_parcela}.'
                 )
             else:
                 messages.success(request, f'Despesa de R$ {despesa.valor} registrada.')
@@ -622,9 +647,13 @@ class ContasPagarListView(GrupoRequiredMixin, View):
         if filtro_categoria:
             qs = qs.filter(despesa__categoria=filtro_categoria)
 
+        totais = qs.aggregate(
+            total_listado=Sum('valor'),
+            total_vencido=Sum('valor', filter=Q(situacao='em_atraso')),
+        )
+        total_listado = totais['total_listado'] or Decimal('0.00')
+        total_vencido = totais['total_vencido'] or Decimal('0.00')
         parcelas = list(qs)
-        total_listado = sum(p.valor for p in parcelas)
-        total_vencido = sum(p.valor for p in parcelas if p.situacao == 'em_atraso')
         total_pendente_mes = ParcelaDespesa.objects.filter(
             situacao__in=['pendente', 'em_atraso'],
             data_vencimento__year=hoje.year,

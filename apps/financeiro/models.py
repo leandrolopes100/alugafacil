@@ -189,12 +189,16 @@ class MultaTransito(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.contrato_id and self.veiculo_id and self.data_infracao:
+            from django.db.models import Q
             from apps.contracts.models import Contrato
+            # Para contratos encerrados usa data_devolucao_real; para os demais usa data_devolucao_prevista
             contrato = Contrato.objects.filter(
                 veiculo=self.veiculo,
                 data_saida__date__lte=self.data_infracao,
-                data_devolucao_prevista__date__gte=self.data_infracao,
                 situacao__in=['ativo', 'encerrado', 'aguardando_devolucao'],
+            ).filter(
+                Q(situacao='encerrado', data_devolucao_real__date__gte=self.data_infracao)
+                | Q(situacao__in=['ativo', 'aguardando_devolucao'], data_devolucao_prevista__date__gte=self.data_infracao)
             ).first()
             if contrato:
                 self.contrato = contrato

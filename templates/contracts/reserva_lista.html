@@ -52,7 +52,7 @@
               <a href="{% url 'contratos:reserva-detalhe' reserva.pk %}" class="btn btn-sm btn-outline-primary" title="Ver detalhes">
                 <i class="bi bi-eye"></i>
               </a>
-              {% if reserva.situacao in 'pendente,confirmada' %}
+              {% if reserva.situacao == 'pendente' or reserva.situacao == 'confirmada' %}
               <a href="{% url 'contratos:reserva-editar' reserva.pk %}" class="btn btn-sm btn-outline-secondary" title="Editar">
                 <i class="bi bi-pencil"></i>
               </a>
@@ -60,8 +60,8 @@
               {% if reserva.situacao == 'pendente' or reserva.situacao == 'cancelada' or reserva.situacao == 'no_show' %}
               <form method="post" action="{% url 'contratos:reserva-excluir' reserva.pk %}" class="d-inline">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir"
-                  onclick="return confirm('Excluir a Reserva #{{ reserva.pk }}? Esta ação não pode ser desfeita.')">
+                <button type="button" class="btn btn-sm btn-outline-danger" title="Excluir"
+                  onclick="confirmarAcao(this, 'Excluir Reserva #{{ reserva.pk }}?', 'Não é possível desfazer.', 'danger')">
                   <i class="bi bi-trash"></i>
                 </button>
               </form>

@@ -41,31 +41,32 @@
     </a>
     {% endif %}
     {% endif %}
-    {% if reserva.situacao in 'pendente,confirmada' %}
+    {% if reserva.situacao == 'pendente' or reserva.situacao == 'confirmada' %}
     <a href="{% url 'contratos:reserva-editar' reserva.pk %}" class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-pencil me-1"></i>Editar
     </a>
     {% endif %}
-    {% if reserva.situacao in 'pendente,confirmada' %}
+    {% if reserva.situacao == 'pendente' or reserva.situacao == 'confirmada' %}
     <form method="post" action="{% url 'contratos:reserva-no-show' reserva.pk %}">
       {% csrf_token %}
-      <button type="submit" class="btn btn-outline-warning btn-sm"
-        onclick="return confirm('Marcar como No Show? O cliente não compareceu. O veículo será liberado.')">
+      <button type="button" class="btn btn-outline-warning btn-sm"
+        onclick="confirmarAcao(this, 'Marcar como No Show?', 'O cliente não compareceu. O veículo será liberado.', 'warning')">
         <i class="bi bi-person-x me-1"></i>No Show
       </button>
     </form>
     {% endif %}
-    {% if reserva.situacao not in 'cancelada,ativa,concluida,no_show' %}
+    {% if reserva.situacao != 'cancelada' and reserva.situacao != 'ativa' and reserva.situacao != 'concluida' and reserva.situacao != 'no_show' %}
     <form method="post" action="{% url 'contratos:reserva-cancelar' reserva.pk %}">
       {% csrf_token %}
-      <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Cancelar esta reserva?')">Cancelar</button>
+      <button type="button" class="btn btn-outline-danger btn-sm"
+              onclick="confirmarAcao(this, 'Cancelar esta reserva?', '', 'danger')">Cancelar</button>
     </form>
     {% endif %}
     {% if reserva.situacao == 'pendente' or reserva.situacao == 'cancelada' or reserva.situacao == 'no_show' %}
     <form method="post" action="{% url 'contratos:reserva-excluir' reserva.pk %}">
       {% csrf_token %}
-      <button type="submit" class="btn btn-danger btn-sm"
-        onclick="return confirm('Excluir permanentemente esta reserva? Não é possível desfazer.')">
+      <button type="button" class="btn btn-danger btn-sm"
+        onclick="confirmarAcao(this, 'Excluir esta reserva?', 'Não é possível desfazer.', 'danger')">
         <i class="bi bi-trash me-1"></i>Excluir
       </button>
     </form>

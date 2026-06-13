@@ -46,7 +46,7 @@
               <td class="text-end">
                 <form method="post" action="{% url 'clientes:cnh-excluir' cliente.pk cnh.pk %}">
                   {% csrf_token %}
-                  <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Excluir esta CNH?')">
+                  <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmarAcao(this, 'Excluir esta CNH?', 'Esta ação não pode ser desfeita.', 'danger')">
                     <i class="bi bi-trash3"></i>
                   </button>
                 </form>

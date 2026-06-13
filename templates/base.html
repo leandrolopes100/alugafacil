@@ -671,7 +671,7 @@
     <!-- FROTA -->
     <span class="sidebar-section">Frota</span>
     <a href="{% url 'frota:lista' %}"
-       class="sidebar-link {% if request.resolver_match.app_name == 'frota' and request.resolver_match.url_name in 'lista,novo,detalhe,editar,fotos,documentos' %}active{% endif %}">
+       class="sidebar-link {% if request.resolver_match.app_name == 'frota' and (request.resolver_match.url_name == 'lista' or request.resolver_match.url_name == 'novo' or request.resolver_match.url_name == 'detalhe' or request.resolver_match.url_name == 'editar' or request.resolver_match.url_name == 'fotos' or request.resolver_match.url_name == 'documentos') %}active{% endif %}">
       <i class="bi bi-car-front-fill"></i> Veículos
     </a>
     <a href="{% url 'frota:disponibilidade' %}"
@@ -679,11 +679,11 @@
       <i class="bi bi-diagram-3-fill"></i> Disponibilidade
     </a>
     <a href="{% url 'frota:grupos' %}"
-       class="sidebar-link {% if request.resolver_match.url_name in 'grupos,grupo-novo,grupo-editar' %}active{% endif %}">
+       class="sidebar-link {% if request.resolver_match.url_name == 'grupos' or request.resolver_match.url_name == 'grupo-novo' or request.resolver_match.url_name == 'grupo-editar' %}active{% endif %}">
       <i class="bi bi-collection-fill"></i> Grupos &amp; Tarifas
     </a>
     <a href="{% url 'frota:categorias' %}"
-       class="sidebar-link {% if request.resolver_match.url_name in 'categorias,categoria-nova,categoria-editar' %}active{% endif %}">
+       class="sidebar-link {% if request.resolver_match.url_name == 'categorias' or request.resolver_match.url_name == 'categoria-nova' or request.resolver_match.url_name == 'categoria-editar' %}active{% endif %}">
       <i class="bi bi-tags-fill"></i> Categorias
     </a>
 
@@ -706,7 +706,7 @@
       {% endif %}
     </a>
     <a href="{% url 'financeiro:contas-receber' %}"
-       class="sidebar-link {% if request.resolver_match.url_name in 'contas-receber,conta-receber-detalhe' %}active{% endif %}">
+       class="sidebar-link {% if request.resolver_match.url_name == 'contas-receber' or request.resolver_match.url_name == 'conta-receber-detalhe' %}active{% endif %}">
       <i class="bi bi-receipt"></i> Contas a Receber
     </a>
     <a href="{% url 'financeiro:contas-pagar' %}"
@@ -729,11 +729,11 @@
     <!-- MANUTENÇÃO -->
     <span class="sidebar-section">Manutenção</span>
     <a href="{% url 'manutencao:lista' %}"
-       class="sidebar-link {% if request.resolver_match.app_name == 'manutencao' and request.resolver_match.url_name not in 'alertas,alerta-novo' %}active{% endif %}">
+       class="sidebar-link {% if request.resolver_match.app_name == 'manutencao' and request.resolver_match.url_name != 'alertas' and request.resolver_match.url_name != 'alerta-novo' %}active{% endif %}">
       <i class="bi bi-tools"></i> Ordens de Serviço
     </a>
     <a href="{% url 'manutencao:alertas' %}"
-       class="sidebar-link {% if request.resolver_match.url_name in 'alertas,alerta-novo' %}active{% endif %}">
+       class="sidebar-link {% if request.resolver_match.url_name == 'alertas' or request.resolver_match.url_name == 'alerta-novo' %}active{% endif %}">
       <i class="bi bi-shield-check"></i> Alertas Preventivos
     </a>
 
@@ -744,7 +744,7 @@
       <i class="bi bi-person-badge-fill"></i> Investidores
     </a>
     <a href="{% url 'investidores:cobrancas' %}"
-       class="sidebar-link {% if request.resolver_match.url_name in 'cobrancas,gerar-lote,pagar-cobranca,cancelar-cobranca' %}active{% endif %}"
+       class="sidebar-link {% if request.resolver_match.url_name == 'cobrancas' or request.resolver_match.url_name == 'gerar-lote' or request.resolver_match.url_name == 'pagar-cobranca' or request.resolver_match.url_name == 'cancelar-cobranca' %}active{% endif %}"
        style="position:relative">
       <i class="bi bi-cash-stack"></i> Cobranças de Gestão
       {% if investidores_badge > 0 %}

@@ -116,10 +116,10 @@
               <a href="{% url 'investidores:pagar-cobranca' c.pk %}" class="btn btn-outline-primary btn-sm" title="Registrar pagamento">
                 <i class="bi bi-check-lg"></i>
               </a>
-              <form method="post" action="{% url 'investidores:cancelar-cobranca' c.pk %}"
-                    onsubmit="return confirm('Cancelar esta cobrança?')">
+              <form method="post" action="{% url 'investidores:cancelar-cobranca' c.pk %}">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-outline-danger btn-sm" title="Cancelar">
+                <button type="button" class="btn btn-outline-danger btn-sm" title="Cancelar"
+                        onclick="confirmarAcao(this, 'Cancelar esta cobrança?', '', 'danger')">
                   <i class="bi bi-x-lg"></i>
                 </button>
               </form>

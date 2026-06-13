@@ -118,10 +118,11 @@ class ManutencaoUpdateView(GrupoRequiredMixin, UpdateView):
             if os_obj.km_na_manutencao:
                 os_obj.veiculo.km_atual = os_obj.km_na_manutencao
             os_obj.veiculo.save()
-            for alerta in os_obj.veiculo.alertas_manutencao.filter(tipo_alerta='km', ativo=True):
-                if alerta.vencido and alerta.km_intervalo:
-                    alerta.km_proximo_servico = (os_obj.km_na_manutencao or 0) + alerta.km_intervalo
-                    alerta.save()
+            if os_obj.km_na_manutencao:
+                for alerta in os_obj.veiculo.alertas_manutencao.filter(tipo_alerta='km', ativo=True):
+                    if alerta.vencido and alerta.km_intervalo:
+                        alerta.km_proximo_servico = os_obj.km_na_manutencao + alerta.km_intervalo
+                        alerta.save()
         os_obj.save()
         if os_obj.situacao == 'concluida' and os_obj.km_na_manutencao:
             _registrar_km_manutencao(os_obj.veiculo, os_obj)
@@ -184,10 +185,11 @@ class ManutencaoAlterarStatusView(GrupoRequiredMixin, View):
                 if ordem.km_na_manutencao:
                     veiculo.km_atual = ordem.km_na_manutencao
                 veiculo.save()
-            for alerta in veiculo.alertas_manutencao.filter(tipo_alerta='km', ativo=True):
-                if alerta.vencido and alerta.km_intervalo:
-                    alerta.km_proximo_servico = (ordem.km_na_manutencao or 0) + alerta.km_intervalo
-                    alerta.save()
+            if ordem.km_na_manutencao:
+                for alerta in veiculo.alertas_manutencao.filter(tipo_alerta='km', ativo=True):
+                    if alerta.vencido and alerta.km_intervalo:
+                        alerta.km_proximo_servico = ordem.km_na_manutencao + alerta.km_intervalo
+                        alerta.save()
             if ordem.km_na_manutencao:
                 _registrar_km_manutencao(veiculo, ordem)
             if ordem.custo_total:
@@ -219,7 +221,7 @@ class AlertaListView(GrupoRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
-        alertas = list(self.get_queryset())
+        alertas = list(self.object_list)
         contexto['alertas_vencidos'] = [a for a in alertas if a.vencido]
         contexto['alertas_proximos'] = [a for a in alertas if a.proximo]
         contexto['alertas_ok'] = [a for a in alertas if not a.vencido and not a.proximo]
