@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'contratos:lista' %}" class="text-decoration-none text-secondary">Contratos</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header">
+  <h1 class="page-title">{{ titulo }}</h1>
+</div>
+
+<div class="row">
+  <div class="col-lg-8">
+    <form method="post" x-data="autoFillTarifas()" @submit="submetendo = true">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+      <div class="form-error-banner mb-4">
+        <i class="bi bi-exclamation-triangle-fill flex-shrink-0" style="font-size:16px; margin-top:1px"></i>
+        <div>
+          <div class="fw-semibold mb-1">Corrija os erros abaixo:</div>
+          <ul>{% for erro in form.non_field_errors %}<li>{{ erro }}</li>{% endfor %}</ul>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-people me-2 text-primary"></i>Partes</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6 {% if form.cliente.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Cliente *</label>
+              {{ form.cliente }}
+              {% if form.cliente.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.cliente.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6 {% if form.veiculo.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Veículo *</label>
+              <select name="veiculo" id="id_veiculo" class="form-select"
+                      @change="buscarTarifas($event.target.value)" required>
+                <option value="">— Selecione um veículo —</option>
+                {% if veiculos_disponiveis %}
+                <optgroup label="Disponíveis para locação">
+                  {% for v in veiculos_disponiveis %}
+                  <option value="{{ v.pk }}" {% if form.veiculo.value == v.pk|stringformat:"s" %}selected{% endif %}>
+                    {{ v.placa }} — {{ v.marca }} {{ v.modelo }} {{ v.ano_modelo }}{% if v.situacao == 'reservado' %} [Reservado]{% endif %}
+                  </option>
+                  {% endfor %}
+                </optgroup>
+                {% endif %}
+                {% if veiculos_indisponiveis %}
+                <optgroup label="Indisponíveis">
+                  {% for v in veiculos_indisponiveis %}
+                  <option value="{{ v.pk }}" disabled>
+                    {{ v.placa }} — {{ v.marca }} {{ v.modelo }} {{ v.ano_modelo }} ({{ v.get_situacao_display }})
+                  </option>
+                  {% endfor %}
+                </optgroup>
+                {% endif %}
+              </select>
+              {% if form.veiculo.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.veiculo.errors.0 }}</div>
+              {% endif %}
+              <div x-show="grupoNome" x-cloak class="form-text text-primary">
+                <i class="bi bi-collection me-1"></i>Grupo: <span x-text="grupoNome"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-calendar-range me-2 text-primary"></i>Período</div>
+        <div class="card-body">
+          <div class="{% if form.data_devolucao_prevista.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Devolução Prevista *</label>
+            {{ form.data_devolucao_prevista }}
+            {% if form.data_devolucao_prevista.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.data_devolucao_prevista.errors.0 }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <span><i class="bi bi-cash-coin me-2 text-primary"></i>Tarifas</span>
+          <span x-show="carregando" x-cloak class="spinner-border spinner-border-sm text-primary"></span>
+          <span x-show="tarifasCarregadas && !carregando" x-cloak class="badge bg-success-subtle text-success border border-success-subtle small">
+            <i class="bi bi-check2 me-1"></i>Preenchido automaticamente
+          </span>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4 {% if form.diaria.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Diária (R$) *</label>
+              <input type="number" name="diaria" id="id_diaria" class="form-control" step="0.01"
+                     x-model="diaria" value="{{ form.diaria.value|default:'' }}" required>
+              {% if form.diaria.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.diaria.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">Franquia km/dia</label>
+              <input type="number" name="km_franquia_diaria" id="id_km_franquia_diaria" class="form-control"
+                     x-model="kmFranquia" value="{{ form.km_franquia_diaria.value|default:'' }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">Km excedente (R$)</label>
+              <input type="number" name="valor_km_excedente" id="id_valor_km_excedente" class="form-control" step="0.01"
+                     x-model="kmExcedente" value="{{ form.valor_km_excedente.value|default:'' }}">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-shield-lock me-2 text-primary"></i>Caução</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6 {% if form.caucao_valor.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Valor Caução (R$)</label>
+              <input type="number" name="caucao_valor" id="id_caucao_valor" class="form-control" step="0.01"
+                     x-model="caucao" value="{{ form.caucao_valor.value|default:'' }}">
+              {% if form.caucao_valor.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.caucao_valor.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Situação Caução</label>
+              {{ form.caucao_situacao }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 justify-content-end">
+        <a href="{% url 'contratos:lista' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary" :disabled="submetendo">
+          <span x-show="submetendo" class="spinner-border spinner-border-sm me-1"></span>
+          <i x-show="!submetendo" class="bi bi-file-earmark-check me-1"></i>
+          Criar Contrato
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function autoFillTarifas() {
+  return {
+    diaria: '{{ form.diaria.value|default:"" }}',
+    kmFranquia: '{{ form.km_franquia_diaria.value|default:"" }}',
+    kmExcedente: '{{ form.valor_km_excedente.value|default:"" }}',
+    caucao: '{{ form.caucao_valor.value|default:"" }}',
+    grupoNome: '',
+    carregando: false,
+    tarifasCarregadas: false,
+    submetendo: false,
+
+    async buscarTarifas(veiculoId) {
+      if (!veiculoId) {
+        this.grupoNome = '';
+        this.tarifasCarregadas = false;
+        return;
+      }
+      this.carregando = true;
+      try {
+        const resp = await fetch(`/frota/tarifas/?veiculo_id=${veiculoId}`);
+        const dados = await resp.json();
+        if (dados.diaria) {
+          this.diaria = dados.diaria;
+          this.kmFranquia = dados.km_franquia_diaria;
+          this.kmExcedente = dados.valor_km_excedente;
+          this.caucao = dados.caucao;
+          this.grupoNome = dados.grupo_nome;
+          this.tarifasCarregadas = true;
+        }
+      } catch (e) {
+        console.error('Erro ao buscar tarifas:', e);
+      } finally {
+        this.carregando = false;
+      }
+    }
+  }
+}
+</script>
+{% endblock %}

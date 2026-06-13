@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Manual do Usuário — Aluga Fácil ERP</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm 18mm 20mm 18mm;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 10pt;
+      color: #1e293b;
+      line-height: 1.6;
+    }
+
+    /* ── Capa ── */
+    .capa {
+      text-align: center;
+      padding-top: 60pt;
+      padding-bottom: 40pt;
+      border-bottom: 3px solid #6366f1;
+      margin-bottom: 30pt;
+      page-break-after: always;
+    }
+    .capa-logo-mark {
+      width: 60pt;
+      height: 60pt;
+      background: #6366f1;
+      border-radius: 16pt;
+      margin: 0 auto 16pt;
+      display: block;
+    }
+    .capa-nome {
+      font-size: 32pt;
+      font-weight: bold;
+      color: #0f172a;
+      letter-spacing: -1pt;
+      margin-bottom: 4pt;
+    }
+    .capa-sub {
+      font-size: 12pt;
+      color: #64748b;
+      margin-bottom: 40pt;
+    }
+    .capa-titulo {
+      font-size: 22pt;
+      font-weight: bold;
+      color: #6366f1;
+      margin-bottom: 8pt;
+    }
+    .capa-desc {
+      font-size: 11pt;
+      color: #64748b;
+      margin-bottom: 50pt;
+    }
+    .capa-meta {
+      font-size: 9pt;
+      color: #94a3b8;
+      line-height: 1.8;
+    }
+    .capa-meta strong {
+      color: #475569;
+    }
+    .capa-divider {
+      border: none;
+      border-top: 1px solid #e2e8f0;
+      margin: 20pt auto;
+      width: 60%;
+    }
+
+    /* ── Sumário ── */
+    .sumario-titulo {
+      font-size: 14pt;
+      font-weight: bold;
+      color: #6366f1;
+      margin-bottom: 14pt;
+      border-bottom: 2px solid #6366f1;
+      padding-bottom: 6pt;
+    }
+    .sumario-item {
+      display: block;
+      overflow: hidden;
+      margin-bottom: 5pt;
+      font-size: 10pt;
+    }
+    .sumario-item-num {
+      font-weight: bold;
+      color: #6366f1;
+      float: left;
+      width: 24pt;
+    }
+    .sumario-item-titulo {
+      color: #1e293b;
+      font-weight: 600;
+      float: left;
+      width: 360pt;
+    }
+    .sumario-item-dots {
+      color: #cbd5e1;
+      float: left;
+    }
+    .sumario-item-pag {
+      float: right;
+      color: #64748b;
+    }
+    .sumario-sub {
+      display: block;
+      overflow: hidden;
+      margin-bottom: 3pt;
+      padding-left: 24pt;
+      font-size: 9pt;
+    }
+    .sumario-sub-titulo {
+      color: #475569;
+      float: left;
+      width: 350pt;
+    }
+
+    /* ── Títulos de seção ── */
+    .h1 {
+      font-size: 18pt;
+      font-weight: bold;
+      color: #0f172a;
+      border-bottom: 2px solid #6366f1;
+      padding-bottom: 6pt;
+      margin-top: 22pt;
+      margin-bottom: 12pt;
+      page-break-after: avoid;
+    }
+    .h1-num {
+      color: #6366f1;
+      margin-right: 6pt;
+    }
+    .h2 {
+      font-size: 13pt;
+      font-weight: bold;
+      color: #0f172a;
+      margin-top: 16pt;
+      margin-bottom: 8pt;
+      padding-left: 8pt;
+      border-left: 3pt solid #6366f1;
+      page-break-after: avoid;
+    }
+    .h3 {
+      font-size: 11pt;
+      font-weight: bold;
+      color: #475569;
+      margin-top: 12pt;
+      margin-bottom: 6pt;
+      page-break-after: avoid;
+    }
+
+    /* ── Texto ── */
+    p {
+      margin-bottom: 8pt;
+      font-size: 10pt;
+    }
+    strong { font-weight: bold; }
+    em { font-style: italic; }
+
+    /* ── Info Box ── */
+    .info-box {
+      background: #f0f9ff;
+      border: 1pt solid #bae6fd;
+      border-left: 4pt solid #0284c7;
+      border-radius: 4pt;
+      padding: 8pt 12pt;
+      margin: 10pt 0;
+      font-size: 9.5pt;
+    }
+    .tip-box {
+      background: #f0fdf4;
+      border: 1pt solid #bbf7d0;
+      border-left: 4pt solid #16a34a;
+      border-radius: 4pt;
+      padding: 8pt 12pt;
+      margin: 10pt 0;
+      font-size: 9.5pt;
+    }
+    .warn-box {
+      background: #fffbeb;
+      border: 1pt solid #fde68a;
+      border-left: 4pt solid #d97706;
+      border-radius: 4pt;
+      padding: 8pt 12pt;
+      margin: 10pt 0;
+      font-size: 9.5pt;
+    }
+
+    /* ── Tabelas ── */
+    table.data {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10pt 0 14pt;
+      font-size: 9.5pt;
+    }
+    table.data thead th {
+      background: #f8fafc;
+      border: 1pt solid #e2e8f0;
+      padding: 6pt 10pt;
+      font-weight: bold;
+      font-size: 8.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5pt;
+      color: #64748b;
+      text-align: left;
+    }
+    table.data tbody td {
+      border: 1pt solid #e2e8f0;
+      padding: 6pt 10pt;
+      color: #1e293b;
+      vertical-align: top;
+    }
+    table.data tbody tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    /* ── Lista ordenada e não-ordenada ── */
+    ul, ol {
+      padding-left: 18pt;
+      margin-bottom: 8pt;
+    }
+    li {
+      margin-bottom: 4pt;
+      font-size: 10pt;
+    }
+
+    /* ── Fluxo/timeline ── */
+    .fluxo {
+      background: #f8fafc;
+      border: 1pt solid #e2e8f0;
+      border-radius: 6pt;
+      padding: 10pt 14pt;
+      margin: 8pt 0;
+      font-size: 9.5pt;
+      font-family: Courier, monospace;
+      color: #475569;
+    }
+
+    /* ── Código inline ── */
+    code {
+      font-family: Courier, monospace;
+      font-size: 9pt;
+      background: #f1f5f9;
+      padding: 1pt 4pt;
+      border-radius: 3pt;
+      color: #6366f1;
+    }
+
+    /* ── Quebra de página ── */
+    .page-break { page-break-before: always; }
+    .no-break { page-break-inside: avoid; }
+
+    /* ── Rodapé de créditos ── */
+    .creditos {
+      margin-top: 30pt;
+      border-top: 2pt solid #6366f1;
+      padding-top: 16pt;
+      text-align: center;
+    }
+    .creditos-titulo {
+      font-size: 13pt;
+      font-weight: bold;
+      color: #6366f1;
+      margin-bottom: 8pt;
+    }
+    .creditos-nome {
+      font-size: 16pt;
+      font-weight: bold;
+      color: #0f172a;
+      margin-bottom: 4pt;
+    }
+    .creditos-produto {
+      font-size: 11pt;
+      color: #64748b;
+      margin-bottom: 16pt;
+    }
+    .creditos-meta {
+      font-size: 9pt;
+      color: #94a3b8;
+      line-height: 1.9;
+    }
+    .clearfix { clear: both; }
+    .badge {
+      background: #eef2ff;
+      color: #6366f1;
+      border: 1pt solid #c7d2fe;
+      border-radius: 10pt;
+      font-size: 8.5pt;
+      font-weight: bold;
+      padding: 2pt 8pt;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════ CAPA ══════════════════ -->
+<div class="capa">
+  <div style="text-align:center; margin-bottom:20pt">
+    <div style="width:70pt; height:70pt; background:#6366f1; border-radius:18pt; margin:0 auto 14pt; display:flex; align-items:center; justify-content:center">
+      <span style="font-size:34pt; color:#fff">&#128663;</span>
+    </div>
+    <div class="capa-nome">Aluga Fácil</div>
+    <div class="capa-sub">ERP para Locadoras de Veículos</div>
+  </div>
+
+  <hr class="capa-divider">
+
+  <div class="capa-titulo">Manual do Usuário</div>
+  <div class="capa-desc">Guia completo de operação do sistema</div>
+
+  <hr class="capa-divider">
+
+  <div class="capa-meta">
+    <strong>Versão:</strong> 1.0<br>
+    <strong>Data:</strong> {{ data_geracao }}<br>
+    <strong>Desenvolvedor:</strong> Leandro Lopes<br>
+    <strong>Produto:</strong> Aluga Fácil ERP<br>
+    <br>
+    <span style="font-size:8pt; color:#cbd5e1">Este documento é de uso interno. Todos os direitos reservados.</span>
+  </div>
+</div>
+
+<!-- ══════════════════ SUMÁRIO ══════════════════ -->
+<div class="no-break">
+<p class="sumario-titulo">Sumário</p>
+
+<span class="sumario-item">
+  <span class="sumario-item-num">1.</span>
+  <span class="sumario-item-titulo">Visão Geral do Sistema</span>
+</span>
+<span class="sumario-item">
+  <span class="sumario-item-num">2.</span>
+  <span class="sumario-item-titulo">Acesso ao Sistema</span>
+</span>
+<span class="sumario-item">
+  <span class="sumario-item-num">3.</span>
+  <span class="sumario-item-titulo">Dashboard</span>
+</span>
+<span class="sumario-item">
+  <span class="sumario-item-num">4.</span>
+  <span class="sumario-item-titulo">Módulo Frota</span>
+</span>
+<span class="sumario-sub">
+  <span class="sumario-sub-titulo">4.1 Categorias · 4.2 Grupos · 4.3 Veículos · 4.4 Fotos · 4.5 Documentos · 4.6 Disponibilidade</span>
+</span>
+<span class="sumario-item">
+  <span class="sumario-item-num">5.</span>
+  <span class="sumario-item-titulo">Módulo Clientes</span>
+</span>
+<span class="sumario-sub">
+  <span class="sumario-sub-titulo">5.1 Cadastro PF/PJ · 5.2 CNH do Cliente</span>
+</span>
+<span class="sumario-item">
+  <span class="sumario-item-num">6.</span>
+  <span class="sumario-item-titulo">Módulo Contratos</span>
+</span>
+<span class="sumario-sub">
+  <span class="sumario-sub-titulo">6.1 Fluxo · 6.2 Reservas · 6.3 Criação · 6.4 Check-Out · 6.5 Prorrogação</span>
+</span>
+<span class="sumario-sub">
+  <span class="sumario-sub-titulo">6.6 Adicionais · 6.7 Avarias · 6.8 Check-In · 6.9 Encerramento · 6.10 Pagamentos</span>
+</span>
+<span class="sumario-sub">
+  <span class="sumario-sub-titulo">6.11 Parcelas · 6.12 PDF do Contrato · 6.13 Assinatura Digital</span>
+</span>
+<span class="sumario-item">
+  <span class="sumario-item-num">7.</span>
+  <span class="sumario-item-titulo">Módulo Financeiro</span>
+</span>
+<span class="sumario-sub">
+  <span class="sumario-sub-titulo">7.1 Agenda de Cobranças · 7.2 Contas a Receber · 7.3 Despesas · 7.4 Multas · 7.5 Fluxo de Caixa</span>
+</span>
+<span class="sumario-item">
+  <span class="sumario-item-num">8.</span>
+  <span class="sumario-item-titulo">Módulo Manutenção</span>
+</span>
+<span class="sumario-sub">
+  <span class="sumario-sub-titulo">8.1 Ordens de Serviço · 8.2 Alertas de Manutenção</span>
+</span>
+<span class="sumario-item">
+  <span class="sumario-item-num">9.</span>
+  <span class="sumario-item-titulo">Relatórios</span>
+</span>
+<span class="sumario-sub">
+  <span class="sumario-sub-titulo">9.1 Contratos · 9.2 Frota/Ocupação · 9.3 DRE · 9.4 Clientes · 9.5 Inadimplência</span>
+</span>
+<span class="sumario-item">
+  <span class="sumario-item-num">10.</span>
+  <span class="sumario-item-titulo">Perfis de Acesso</span>
+</span>
+<span class="sumario-item">
+  <span class="sumario-item-num">11.</span>
+  <span class="sumario-item-titulo">Fluxo Operacional Completo</span>
+</span>
+<span class="sumario-item">
+  <span class="sumario-item-num">12.</span>
+  <span class="sumario-item-titulo">Dicas e Solução de Problemas</span>
+</span>
+</div>
+
+<!-- ══════════════════ SEÇÃO 1 ══════════════════ -->
+<div class="page-break"></div>
+
+<p class="h1"><span class="h1-num">1.</span> Visão Geral do Sistema</p>
+
+<p>O <strong>Aluga Fácil</strong> é um sistema ERP (Enterprise Resource Planning) completo desenvolvido para locadoras de veículos. Cobre todo o ciclo operacional — do cadastro da frota ao fechamento financeiro — em uma interface moderna e intuitiva.</p>
+
+<p class="h3">Módulos do Sistema</p>
+<table class="data">
+  <thead><tr><th>Módulo</th><th>O que faz</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Frota</strong></td><td>Cadastro de veículos, grupos de tarifa, categorias, fotos e documentos</td></tr>
+    <tr><td><strong>Clientes</strong></td><td>Pessoa Física e Jurídica, CNH, endereço completo</td></tr>
+    <tr><td><strong>Contratos</strong></td><td>Reservas, contratos, check-out, check-in, parcelas, pagamentos, PDF</td></tr>
+    <tr><td><strong>Financeiro</strong></td><td>Contas a receber, despesas operacionais, multas de trânsito, fluxo de caixa</td></tr>
+    <tr><td><strong>Manutenção</strong></td><td>Ordens de serviço e alertas automáticos por KM ou data</td></tr>
+    <tr><td><strong>Relatórios</strong></td><td>DRE, frota/ocupação, contratos, clientes, inadimplência</td></tr>
+  </tbody>
+</table>
+
+<div class="info-box">
+  <strong>Tecnologia:</strong> O sistema é uma aplicação web SaaS multi-tenant desenvolvida com Django 5.2 e PostgreSQL. Cada locadora opera em um ambiente de dados isolado e seguro.
+</div>
+
+<!-- ══════════════════ SEÇÃO 2 ══════════════════ -->
+<p class="h1"><span class="h1-num">2.</span> Acesso ao Sistema</p>
+
+<p class="h2">2.1 Login</p>
+<p>Acesse o sistema pelo endereço fornecido pelo administrador (exemplo: <code>http://suaempresa.alugafacil.com.br/login/</code>). Informe seu <strong>usuário</strong> e <strong>senha</strong> cadastrados. Após o login, você é redirecionado automaticamente para o Dashboard.</p>
+
+<p class="h2">2.2 Logout</p>
+<p>Clique no ícone de saída (<strong>seta para a direita</strong>) no rodapé da barra lateral para encerrar a sessão com segurança.</p>
+
+<div class="warn-box">
+  <strong>Atenção:</strong> Nunca compartilhe sua senha. O sistema registra qual usuário realizou cada operação (criação de contratos, pagamentos etc.).
+</div>
+
+<!-- ══════════════════ SEÇÃO 3 ══════════════════ -->
+<p class="h1"><span class="h1-num">3.</span> Dashboard</p>
+
+<p>O dashboard é a tela inicial e exibe um resumo em tempo real de toda a operação da locadora.</p>
+
+<p class="h2">3.1 Indicadores (KPIs)</p>
+<table class="data">
+  <thead><tr><th>Card</th><th>O que mostra</th><th>Ação ao clicar</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Disponíveis</strong></td><td>Veículos prontos para locação</td><td>Lista de veículos disponíveis</td></tr>
+    <tr><td><strong>Em Uso</strong></td><td>Veículos atualmente locados</td><td>Lista de veículos em uso</td></tr>
+    <tr><td><strong>Receita do Mês</strong></td><td>Total de pagamentos recebidos no mês</td><td>Fluxo de caixa</td></tr>
+    <tr><td><strong>Clientes</strong></td><td>Total de clientes cadastrados</td><td>Lista de clientes</td></tr>
+  </tbody>
+</table>
+
+<p class="h2">3.2 Alertas Críticos</p>
+<p>Se houver <strong>alertas de manutenção vencidos</strong> ou <strong>multas aguardando identificação de condutor</strong>, uma faixa amarela aparece no topo com links diretos para resolução.</p>
+
+<p class="h2">3.3 Painéis de Situação</p>
+<ul>
+  <li><strong>Devoluções de Hoje:</strong> Contratos com devolução prevista para a data atual, com horário e dados do cliente/veículo.</li>
+  <li><strong>Em Atraso:</strong> Contratos com data de devolução já ultrapassada, destacados em vermelho.</li>
+  <li><strong>Contratos Recentes:</strong> Últimos 5 contratos criados com situação atual.</li>
+</ul>
+
+<!-- ══════════════════ SEÇÃO 4 ══════════════════ -->
+<div class="page-break"></div>
+<p class="h1"><span class="h1-num">4.</span> Módulo Frota</p>
+
+<p>Acesse pelo menu lateral em <strong>Frota</strong>. A estrutura da frota segue uma hierarquia: <strong>Categoria → Grupo → Veículo</strong>.</p>
+
+<p class="h2">4.1 Categorias de Veículo</p>
+<p>Categorias organizam os veículos por tipo (ex.: Econômico, SUV, Utilitário). Configure nome, ícone, cor e ordem de exibição.</p>
+
+<p class="h2">4.2 Grupos de Veículo</p>
+<p>Grupos definem as <strong>tarifas padrão</strong> aplicadas automaticamente aos contratos.</p>
+<table class="data">
+  <thead><tr><th>Campo</th><th>Descrição</th></tr></thead>
+  <tbody>
+    <tr><td>Nome</td><td>Ex.: "Grupo A — Hatch Básico"</td></tr>
+    <tr><td>Categoria</td><td>Categoria à qual o grupo pertence</td></tr>
+    <tr><td>Diária (R$)</td><td>Valor padrão por dia de locação</td></tr>
+    <tr><td>Semanal / Mensal</td><td>Tarifas diferenciadas (opcionais)</td></tr>
+    <tr><td>Franquia km/dia</td><td>Quilômetros inclusos por dia (ex.: 200)</td></tr>
+    <tr><td>Valor km excedente</td><td>Custo por km além da franquia (ex.: R$ 0,50)</td></tr>
+    <tr><td>Caução (R$)</td><td>Valor de caução exigido no check-out</td></tr>
+  </tbody>
+</table>
+
+<p class="h2">4.3 Veículos</p>
+<p>Cada veículo pertence a um grupo e tem situação monitorada em tempo real.</p>
+
+<table class="data">
+  <thead><tr><th>Situação</th><th>Cor</th><th>Significado</th><th>Alteração</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Disponível</strong></td><td>Verde</td><td>Pode ser locado</td><td>Manual ou automática (check-in)</td></tr>
+    <tr><td><strong>Reservado</strong></td><td>Amarelo</td><td>Reserva confirmada pendente</td><td>Automática (criação de reserva)</td></tr>
+    <tr><td><strong>Em Uso</strong></td><td>Azul</td><td>Contrato ativo em andamento</td><td>Automática (check-out)</td></tr>
+    <tr><td><strong>Em Manutenção</strong></td><td>Vermelho</td><td>Indisponível temporariamente</td><td>Manual</td></tr>
+    <tr><td><strong>Inativo</strong></td><td>Cinza</td><td>Retirado da frota</td><td>Manual</td></tr>
+  </tbody>
+</table>
+
+<div class="tip-box">
+  <strong>Dica:</strong> O sistema atualiza a situação do veículo automaticamente ao realizar check-out (→ Em Uso) e check-in (→ Disponível). Não é necessário alterar manualmente nesses momentos.
+</div>
+
+<p class="h2">4.4 Fotos do Veículo</p>
+<p>Na página de detalhe do veículo, clique em <strong>Fotos</strong>. Defina uma foto como <strong>principal</strong> (exibida na listagem). Informe a posição (frente, traseira, lateral, interior, motor) e adicione legenda.</p>
+
+<p class="h2">4.5 Documentos do Veículo</p>
+<p>Cadastre documentos com data de validade. O campo <strong>Dias de Alerta</strong> define com quantos dias de antecedência o sistema avisa sobre o vencimento.</p>
+<table class="data">
+  <thead><tr><th>Tipo</th><th>Alerta Recomendado</th></tr></thead>
+  <tbody>
+    <tr><td>CRLV</td><td>30 dias antes</td></tr>
+    <tr><td>Seguro</td><td>30 dias antes</td></tr>
+    <tr><td>Revisão Periódica</td><td>15 dias antes</td></tr>
+    <tr><td>Licença de Operação</td><td>60 dias antes</td></tr>
+  </tbody>
+</table>
+
+<p class="h2">4.6 Disponibilidade</p>
+<p>Na página de detalhe do veículo, clique em <strong>Disponibilidade</strong> para visualizar um calendário com os períodos em que o veículo está ocupado.</p>
+
+<!-- ══════════════════ SEÇÃO 5 ══════════════════ -->
+<div class="page-break"></div>
+<p class="h1"><span class="h1-num">5.</span> Módulo Clientes</p>
+
+<p class="h2">5.1 Cadastro de Cliente</p>
+<p>Selecione o tipo (<strong>Pessoa Física</strong> ou <strong>Pessoa Jurídica</strong>) e preencha os dados:</p>
+
+<table class="data">
+  <thead><tr><th>Campo</th><th>PF</th><th>PJ</th><th>Observação</th></tr></thead>
+  <tbody>
+    <tr><td>Nome / Razão Social</td><td>Obrigatório</td><td>Obrigatório</td><td>—</td></tr>
+    <tr><td>CPF</td><td>Validado</td><td>—</td><td>Verifica dígito verificador</td></tr>
+    <tr><td>CNPJ</td><td>—</td><td>Validado</td><td>Verifica dígito verificador</td></tr>
+    <tr><td>Data de Nascimento</td><td>Opcional</td><td>—</td><td>—</td></tr>
+    <tr><td>Nome do Contato</td><td>—</td><td>Opcional</td><td>Responsável na empresa</td></tr>
+    <tr><td>E-mail / Telefone / Celular</td><td colspan="2" style="text-align:center">Ambos</td><td>—</td></tr>
+    <tr><td>Endereço completo</td><td colspan="2" style="text-align:center">Ambos</td><td>CEP, Logradouro, Número, Bairro, Cidade, Estado</td></tr>
+  </tbody>
+</table>
+
+<div class="warn-box">
+  <strong>Atenção:</strong> CPF e CNPJ são validados matematicamente. O sistema rejeita documentos inválidos e avisa se outro cliente já possui o mesmo documento.
+</div>
+
+<p><strong>Situação do Cliente:</strong></p>
+<ul>
+  <li><strong>Ativo:</strong> Pode realizar locações normalmente.</li>
+  <li><strong>Bloqueado:</strong> Não pode fazer check-out. É obrigatório informar o motivo do bloqueio.</li>
+</ul>
+
+<p class="h2">5.2 CNH do Cliente</p>
+<p>Na página de detalhe do cliente, acesse a aba <strong>CNH</strong>. Defina uma CNH como <strong>Principal</strong> — o sistema usa essa CNH para verificar a validade no momento do check-out.</p>
+<table class="data">
+  <thead><tr><th>Campo</th><th>Descrição</th></tr></thead>
+  <tbody>
+    <tr><td>Número</td><td>11 dígitos sem formatação</td></tr>
+    <tr><td>Estado Emissor</td><td>UF que emitiu a habilitação</td></tr>
+    <tr><td>Categoria</td><td>A, B, C, D, E ou combinações (AB, AC...)</td></tr>
+    <tr><td>Validade</td><td>Verificada automaticamente no check-out</td></tr>
+    <tr><td>Fotos Frente/Verso</td><td>Upload da imagem da CNH</td></tr>
+  </tbody>
+</table>
+
+<!-- ══════════════════ SEÇÃO 6 ══════════════════ -->
+<div class="page-break"></div>
+<p class="h1"><span class="h1-num">6.</span> Módulo Contratos</p>
+
+<p>Este é o módulo central do sistema. Gerencia todo o ciclo de locação.</p>
+
+<p class="h2">6.1 Fluxo de um Contrato</p>
+<div class="fluxo">
+Reserva (opcional)
+    ↓
+Criação do Contrato  [status: Aguardando Saída]
+    ↓
+Check-Out            [status: Ativo]       ← veículo vai para "Em Uso"
+    ↓
+Check-In             [status: Aguardando Devolução] ← veículo volta para "Disponível"
+    ↓
+Encerramento         [status: Encerrado]
+</div>
+
+<p>Número gerado automaticamente no formato: <code>AF-2026-0001</code></p>
+
+<p class="h2">6.2 Reservas</p>
+<p>Reservas permitem pré-alocar um veículo para uma data futura.</p>
+<table class="data">
+  <thead><tr><th>Situação</th><th>Significado</th></tr></thead>
+  <tbody>
+    <tr><td>Pendente</td><td>Aguardando confirmação do cliente</td></tr>
+    <tr><td>Confirmada</td><td>Confirmada, aguardando saída</td></tr>
+    <tr><td>Ativa</td><td>Convertida em contrato</td></tr>
+    <tr><td>Concluída</td><td>Contrato encerrado</td></tr>
+    <tr><td>Cancelada</td><td>Reserva cancelada</td></tr>
+    <tr><td>No Show</td><td>Cliente não compareceu</td></tr>
+  </tbody>
+</table>
+<p>Para converter uma reserva em contrato: na página de detalhe da reserva, clique em <strong>Converter em Contrato</strong>.</p>
+
+<p class="h2">6.3 Criação de Contrato</p>
+<p>Preencha cliente, veículo (somente disponíveis e reservados são listados), data de devolução prevista e tarifas. Os valores são pré-preenchidos com o padrão do grupo do veículo.</p>
+
+<p class="h2">6.4 Check-Out (Saída do Veículo)</p>
+<p>O sistema executa um <strong>checklist automático</strong> antes de liberar o check-out:</p>
+<table class="data">
+  <thead><tr><th>Item verificado</th><th>Se falhar...</th></tr></thead>
+  <tbody>
+    <tr><td>Cliente ativo (não bloqueado)</td><td>Check-out bloqueado</td></tr>
+    <tr><td>CNH do cliente válida e não vencida</td><td>Check-out bloqueado</td></tr>
+    <tr><td>CRLV do veículo em dia</td><td>Check-out bloqueado</td></tr>
+    <tr><td>Seguro do veículo em dia</td><td>Check-out bloqueado</td></tr>
+    <tr><td>Caução registrado como pago</td><td>Check-out bloqueado</td></tr>
+  </tbody>
+</table>
+<p>Após o checklist: informe KM de saída, nível de combustível, observações e envie fotos do veículo. Confirme para ativar o contrato.</p>
+<div class="tip-box">
+  Parcelas de cobrança são geradas <strong>automaticamente</strong> após o check-out: uma de caução (se aplicável) + parcelas semanais para o período contratado.
+</div>
+
+<p class="h2">6.5 Prorrogação de Contrato</p>
+<p>Para estender a data de devolução: no contrato ativo, clique em <strong>Prorrogar</strong>, informe a nova data. As parcelas adicionais são geradas automaticamente.</p>
+
+<p class="h2">6.6 Adicionais</p>
+<p>Serviços extras cobrados durante a locação (GPS, cadeirinha, motorista adicional etc.). Valor calculado como: <code>diária × quantidade × dias</code>.</p>
+
+<p class="h2">6.7 Avarias</p>
+<p>Registre danos identificados no veículo: descrição, localização, valor cobrado, foto e situação (Identificada / Cobrada / Sem Cobrança).</p>
+
+<p class="h2">6.8 Check-In (Devolução)</p>
+<p>Informe KM de devolução (deve ser ≥ KM de saída), nível de combustível e fotos. O sistema calcula automaticamente: dias totais, KM excedente e dias extras.</p>
+
+<p class="h2">6.9 Encerramento</p>
+<p>Com o cliente devolvendo o veículo e saldo zerado, clique em <strong>Encerrar Contrato</strong>. Parcelas pendentes são canceladas automaticamente.</p>
+
+<p class="h2">6.10 Pagamentos</p>
+<p>Registre pagamentos avulsos informando: forma de pagamento (Dinheiro, PIX, Cartão de Crédito/Débito, Transferência, Cheque), referência (Locação, Caução, Adicional, Avaria, Multa), valor e data.</p>
+
+<p class="h2">6.11 Parcelas</p>
+<p>Geradas automaticamente no check-out. Parcelas em atraso são marcadas automaticamente pelo sistema às 06h. O <strong>valor corrigido</strong> com multa de 2% + juros diários (0,033%) é calculado automaticamente.</p>
+
+<p class="h2">6.12 PDF do Contrato</p>
+<p>No detalhe do contrato, clique em <strong>PDF</strong>. O documento inclui: partes do contrato, condições, adicionais, resumo financeiro e campo de assinatura.</p>
+
+<p class="h2">6.13 Assinatura Digital</p>
+<p>No contrato, clique em <strong>Link Assinatura</strong> e envie ao cliente. Ele acessa o link e assina eletronicamente. O sistema registra data, hora e IP da assinatura.</p>
+
+<!-- ══════════════════ SEÇÃO 7 ══════════════════ -->
+<div class="page-break"></div>
+<p class="h1"><span class="h1-num">7.</span> Módulo Financeiro</p>
+
+<p class="h2">7.1 Agenda de Cobranças</p>
+<p>Visão centralizada de todas as parcelas, dividida em três grupos:</p>
+<table class="data">
+  <thead><tr><th>Grupo</th><th>Critério</th><th>Destaque</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Em Atraso</strong></td><td>Vencidas sem pagamento</td><td>Vermelho</td></tr>
+    <tr><td><strong>Esta Semana</strong></td><td>Vencem nos próximos 7 dias</td><td>Laranja</td></tr>
+    <tr><td><strong>Próximas</strong></td><td>Vencem após 7 dias</td><td>Normal</td></tr>
+  </tbody>
+</table>
+
+<p class="h2">7.2 Contas a Receber</p>
+<table class="data">
+  <thead><tr><th>Situação</th><th>Significado</th></tr></thead>
+  <tbody>
+    <tr><td>Pendente</td><td>Aguardando pagamento</td></tr>
+    <tr><td>Pago Parcialmente</td><td>Recebimentos parciais registrados</td></tr>
+    <tr><td>Pago</td><td>Totalmente quitado</td></tr>
+    <tr><td>Vencido</td><td>Prazo ultrapassado sem pagamento completo</td></tr>
+    <tr><td>Cancelado</td><td>Contrato foi cancelado</td></tr>
+  </tbody>
+</table>
+
+<p class="h2">7.3 Despesas Operacionais</p>
+<p>Registre custos da locadora para compor o DRE. Categorias disponíveis:</p>
+<div class="no-break">
+<table class="data">
+  <thead><tr><th>Categoria</th></tr></thead>
+  <tbody>
+    <tr><td>Manutenção · Seguro · IPVA · Licenciamento/CRLV · Combustível</td></tr>
+    <tr><td>Lavagem/Higienização · Aluguel · Folha de Pagamento · Marketing · Outros</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p class="h2">7.4 Multas de Trânsito</p>
+<div class="fluxo">
+Multa recebida → Pendente (identificar condutor) → Condutor Identificado → Cobrada ao Cliente / Paga / Contestada
+</div>
+<p>O sistema vincula automaticamente a multa ao contrato ativo na data da infração. Multas com prazo de indicação faltando ≤ 5 dias aparecem em laranja; vencidas em vermelho.</p>
+
+<p class="h2">7.5 Fluxo de Caixa</p>
+<p>Visão mensal de entradas (pagamentos de contratos) vs. saídas (despesas pagas) com saldo do período. Use os filtros de mês e ano.</p>
+
+<!-- ══════════════════ SEÇÃO 8 ══════════════════ -->
+<div class="page-break"></div>
+<p class="h1"><span class="h1-num">8.</span> Módulo Manutenção</p>
+
+<p class="h2">8.1 Ordens de Manutenção (OS)</p>
+<table class="data">
+  <thead><tr><th>Campo</th><th>Descrição</th></tr></thead>
+  <tbody>
+    <tr><td>Tipo</td><td>Preventiva, Corretiva, Sinistro/Acidente</td></tr>
+    <tr><td>Situação</td><td>Agendada → Em Andamento → Concluída / Cancelada</td></tr>
+    <tr><td>KM na manutenção</td><td>Odômetro no momento do serviço</td></tr>
+    <tr><td>Oficina / Fornecedor</td><td>Nome da empresa prestadora</td></tr>
+    <tr><td>Custo total</td><td>Pode ser preenchido após conclusão</td></tr>
+    <tr><td>Contrato relacionado</td><td>Para sinistros ocorridos durante locação</td></tr>
+  </tbody>
+</table>
+
+<div class="warn-box">
+  Ao abrir uma OS com veículo na oficina, altere manualmente a situação do veículo para <strong>Em Manutenção</strong> para impedir que ele seja locado.
+</div>
+
+<p class="h2">8.2 Alertas de Manutenção</p>
+<p>Configure alertas automáticos para manutenções preventivas:</p>
+<table class="data">
+  <thead><tr><th>Tipo</th><th>Configuração</th><th>Dispara quando...</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Por KM</strong></td><td>KM do próximo serviço + intervalo de repetição</td><td>KM atual ≥ KM configurado</td></tr>
+    <tr><td><strong>Por Data</strong></td><td>Data do próximo serviço</td><td>Data atual = data configurada</td></tr>
+  </tbody>
+</table>
+<p>Alertas vencidos aparecem como aviso no Dashboard. Alertas próximos do vencimento (500 km antes ou 7 dias antes) são exibidos em estado de atenção.</p>
+
+<!-- ══════════════════ SEÇÃO 9 ══════════════════ -->
+<div class="page-break"></div>
+<p class="h1"><span class="h1-num">9.</span> Relatórios</p>
+
+<p>Acesse pelo menu <strong>Relatórios</strong>. Todos possuem filtros de mês/ano e permitem exportação em CSV.</p>
+
+<p class="h2">9.1 Contratos</p>
+<p>Visão analítica do período: resumo por situação, gráfico mensal de contratos e receita, lista paginada completa.</p>
+
+<p class="h2">9.2 Frota / Ocupação</p>
+<p>Desempenho de cada veículo: quantidade de contratos, dias locados, <strong>taxa de ocupação</strong> (% dos dias utilizados) e receita gerada.</p>
+
+<p class="h2">9.3 DRE — Demonstração do Resultado</p>
+<table class="data">
+  <thead><tr><th>Seção</th><th>Conteúdo</th></tr></thead>
+  <tbody>
+    <tr><td>Receitas</td><td>Total recebido por tipo (locação, caução, adicionais, avarias, multas)</td></tr>
+    <tr><td>Despesas</td><td>Total por categoria operacional</td></tr>
+    <tr><td>Multas Cobradas</td><td>Multas de trânsito cobradas ao cliente</td></tr>
+    <tr><td>Resultado Líquido</td><td>Receitas − Despesas + Multas recuperadas</td></tr>
+    <tr><td>Margem Operacional</td><td>Percentual de lucro sobre a receita total</td></tr>
+  </tbody>
+</table>
+
+<p class="h2">9.4 Clientes</p>
+<p>Ranking dos 20 melhores clientes do período: locações realizadas e receita total gerada.</p>
+
+<p class="h2">9.5 Inadimplência</p>
+<p>Lista clientes com parcelas em atraso, quantidade de parcelas vencidas, valor total e maior atraso em dias. Mostra o total geral da inadimplência.</p>
+
+<!-- ══════════════════ SEÇÃO 10 ══════════════════ -->
+<p class="h1"><span class="h1-num">10.</span> Perfis de Acesso</p>
+
+<table class="data">
+  <thead><tr><th>Grupo</th><th>Acesso</th></tr></thead>
+  <tbody>
+    <tr><td><strong>admin_locadora</strong></td><td>Acesso completo a todos os módulos e configurações</td></tr>
+    <tr><td><strong>atendente</strong></td><td>Clientes, Contratos (check-out, check-in, pagamentos), Frota (consulta)</td></tr>
+    <tr><td><strong>financeiro</strong></td><td>Módulo Financeiro completo, consulta de contratos</td></tr>
+    <tr><td><strong>mecanico</strong></td><td>Módulo Manutenção completo, consulta de frota</td></tr>
+  </tbody>
+</table>
+<p>O administrador do sistema pode atribuir usuários aos grupos pelo painel de administração Django (<code>/admin/</code>).</p>
+
+<!-- ══════════════════ SEÇÃO 11 ══════════════════ -->
+<div class="page-break"></div>
+<p class="h1"><span class="h1-num">11.</span> Fluxo Operacional Completo</p>
+
+<p class="h2">Passo 1 — Configuração Inicial (uma vez)</p>
+<ol>
+  <li>Cadastre as <strong>categorias</strong> de veículo (Econômico, SUV etc.)</li>
+  <li>Crie os <strong>grupos</strong> com tarifas (diária, franquia km, caução)</li>
+  <li>Cadastre os <strong>veículos</strong> e vincule a um grupo</li>
+  <li>Adicione <strong>fotos e documentos</strong> (CRLV, seguro) de cada veículo</li>
+</ol>
+
+<p class="h2">Passo 2 — Cadastrar Cliente</p>
+<ol>
+  <li>Acesse <strong>Clientes → Novo Cliente</strong></li>
+  <li>Preencha dados pessoais/empresariais e endereço</li>
+  <li>Cadastre a <strong>CNH</strong> do cliente (para Pessoa Física)</li>
+</ol>
+
+<p class="h2">Passo 3 — Reserva (opcional)</p>
+<ol>
+  <li>Acesse <strong>Contratos → Reservas → Nova Reserva</strong></li>
+  <li>Vincule cliente, grupo, veículo (opcional) e datas</li>
+  <li>Confirme quando o cliente confirmar por telefone/WhatsApp</li>
+</ol>
+
+<p class="h2">Passo 4 — Abrir Contrato</p>
+<ol>
+  <li>Converta a reserva em contrato OU crie novo contrato direto</li>
+  <li>Selecione cliente e veículo disponível</li>
+  <li>Ajuste tarifas se necessário e salve</li>
+</ol>
+
+<p class="h2">Passo 5 — Check-Out (saída do veículo)</p>
+<ol>
+  <li>Abra o contrato → clique em <strong>Check-Out</strong></li>
+  <li>Verifique o checklist automático (CNH, CRLV, seguro, caução)</li>
+  <li>Informe KM e nível de combustível</li>
+  <li>Tire fotos do estado do veículo e envie</li>
+  <li>Confirme — veículo vai para "Em Uso"</li>
+</ol>
+
+<p class="h2">Passo 6 — Durante a Locação</p>
+<ul>
+  <li>Monitore <strong>Agenda de Cobranças</strong> para parcelas pendentes</li>
+  <li>Registre <strong>adicionais</strong> ou <strong>avarias</strong> se necessário</li>
+  <li>Receba pagamentos e registre no contrato</li>
+  <li>Use <strong>Prorrogar</strong> se o cliente precisar de mais tempo</li>
+</ul>
+
+<p class="h2">Passo 7 — Check-In (devolução)</p>
+<ol>
+  <li>Abra o contrato → clique em <strong>Check-In</strong></li>
+  <li>Informe KM de devolução e nível de combustível</li>
+  <li>Tire fotos do estado na devolução</li>
+  <li>Confirme — veículo retorna para "Disponível"</li>
+</ol>
+
+<p class="h2">Passo 8 — Encerramento</p>
+<ol>
+  <li>Verifique o <strong>saldo devedor</strong> na tela do contrato</li>
+  <li>Receba qualquer saldo pendente</li>
+  <li>Clique em <strong>Encerrar Contrato</strong></li>
+</ol>
+
+<!-- ══════════════════ SEÇÃO 12 ══════════════════ -->
+<div class="page-break"></div>
+<p class="h1"><span class="h1-num">12.</span> Dicas e Solução de Problemas</p>
+
+<table class="data">
+  <thead><tr><th>Problema</th><th>Causa Provável</th><th>Solução</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Placa rejeitada no cadastro</td>
+      <td>Formato inválido</td>
+      <td>Use padrão antigo (ABC-1234) ou Mercosul (ABC1D23)</td>
+    </tr>
+    <tr>
+      <td>CPF/CNPJ inválido</td>
+      <td>Dígito verificador incorreto</td>
+      <td>Verifique o documento digitado; o sistema valida matematicamente</td>
+    </tr>
+    <tr>
+      <td>Veículo não aparece na seleção do contrato</td>
+      <td>Situação não é Disponível/Reservado</td>
+      <td>Altere a situação do veículo ou escolha outro</td>
+    </tr>
+    <tr>
+      <td>Check-out bloqueado</td>
+      <td>Item no checklist reprovado</td>
+      <td>Leia o checklist exibido — resolva cada pendência (CNH vencida, CRLV vencido, cliente bloqueado etc.)</td>
+    </tr>
+    <tr>
+      <td>Parcelas não geradas após check-out</td>
+      <td>Data de devolução inválida</td>
+      <td>Verifique se a data de devolução prevista está preenchida corretamente</td>
+    </tr>
+    <tr>
+      <td>Parcelas não marcadas como "Em Atraso"</td>
+      <td>Celery não está rodando</td>
+      <td>Contate o administrador do sistema para verificar o serviço de tarefas automáticas</td>
+    </tr>
+    <tr>
+      <td>PDF do contrato não abre</td>
+      <td>Erro no servidor</td>
+      <td>Tente novamente; se persistir, contate o suporte</td>
+    </tr>
+    <tr>
+      <td>Relatório sem dados</td>
+      <td>Filtro de período sem movimentações</td>
+      <td>Ajuste os filtros de mês/ano para o período correto</td>
+    </tr>
+    <tr>
+      <td>Alerta de manutenção não aparece no dashboard</td>
+      <td>Alerta inativo ou KM/data não atingida</td>
+      <td>Verifique se o alerta está com status Ativo e se a KM do veículo foi atualizada</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="info-box">
+  <strong>Suporte:</strong> Em caso de dúvidas não cobertas por este manual, entre em contato com o administrador do sistema ou com a equipe de suporte técnico do Aluga Fácil.
+</div>
+
+<!-- ══════════════════ CRÉDITOS ══════════════════ -->
+<div class="page-break"></div>
+<div class="creditos">
+  <div style="text-align:center; margin-bottom:20pt">
+    <div style="width:60pt; height:60pt; background:#6366f1; border-radius:15pt; margin:0 auto 12pt; display:flex; align-items:center; justify-content:center">
+      <span style="font-size:28pt; color:#fff">&#128663;</span>
+    </div>
+    <div class="creditos-titulo">Desenvolvido por</div>
+    <div class="creditos-nome">Leandro Lopes</div>
+    <div class="creditos-produto">Aluga Fácil ERP — Sistema de Gestão para Locadoras de Veículos</div>
+  </div>
+
+  <hr style="border:none; border-top:1px solid #e2e8f0; margin:16pt auto; width:50%">
+
+  <div class="creditos-meta">
+    <strong>Produto:</strong> Aluga Fácil ERP<br>
+    <strong>Versão:</strong> 1.0<br>
+    <strong>Plataforma:</strong> Django 5.2 · PostgreSQL · SaaS Multi-Tenant<br>
+    <strong>Data de Geração:</strong> {{ data_geracao }}<br>
+    <br>
+    <span style="font-size:8pt; color:#cbd5e1">
+      Este documento foi gerado automaticamente pelo sistema Aluga Fácil ERP.<br>
+      Todos os direitos reservados. Uso exclusivamente interno.
+    </span>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,87 @@
+[
+  {
+    "model": "financeiro.contareceber",
+    "pk": 1,
+    "fields": {
+      "contrato": 1,
+      "cliente": 1,
+      "descricao": "Locação AF-2026-0001 — Cruze GHI9J01 (João Carlos Silva)",
+      "valor_total": "1393.00",
+      "valor_pago": "0.00",
+      "data_emissao": "2026-05-20",
+      "data_vencimento": "2026-05-27",
+      "situacao": "vencido",
+      "observacoes": "Venceu em 27/05/2026 sem pagamento. Contrato em atraso.",
+      "criado_em": "2026-05-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "financeiro.contareceber",
+    "pk": 2,
+    "fields": {
+      "contrato": 2,
+      "cliente": 4,
+      "descricao": "Locação AF-2026-0002 — Corolla JKL3M45 (Tech Solutions)",
+      "valor_total": "973.00",
+      "valor_pago": "500.00",
+      "data_emissao": "2026-05-23",
+      "data_vencimento": "2026-05-30",
+      "situacao": "pago_parcial",
+      "observacoes": "Adiantamento de R$ 500,00 recebido no checkout.",
+      "criado_em": "2026-05-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "financeiro.contareceber",
+    "pk": 3,
+    "fields": {
+      "contrato": 4,
+      "cliente": 2,
+      "descricao": "Locação AF-2026-0004 — HB20 DEF5G67 (Maria Fernanda Souza)",
+      "valor_total": "2070.00",
+      "valor_pago": "973.00",
+      "data_emissao": "2026-05-10",
+      "data_vencimento": "2026-05-17",
+      "situacao": "pago_parcial",
+      "observacoes": "Inclui 8 dias extras (R$ 712), diferença combustível (R$ 160) e avaria (R$ 350). Parcialmente pago: R$ 623 locação + R$ 350 avaria.",
+      "criado_em": "2026-05-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "financeiro.contareceber",
+    "pk": 4,
+    "fields": {
+      "contrato": 5,
+      "cliente": 6,
+      "descricao": "Locação AF-2025-0001 — Onix ABC1D23 (Roberto Costa Almeida)",
+      "valor_total": "534.00",
+      "valor_pago": "534.00",
+      "data_emissao": "2025-11-01",
+      "data_vencimento": "2025-11-07",
+      "situacao": "pago",
+      "observacoes": "Locação quitada. Caução devolvida.",
+      "criado_em": "2026-05-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "financeiro.contareceber",
+    "pk": 5,
+    "fields": {
+      "contrato": 6,
+      "cliente": 1,
+      "descricao": "Locação AF-2025-0002 — Renegade PQR1S23 (João Carlos Silva)",
+      "valor_total": "1773.00",
+      "valor_pago": "1773.00",
+      "data_emissao": "2025-12-15",
+      "data_vencimento": "2025-12-22",
+      "situacao": "pago",
+      "observacoes": "Quitado no ato da devolução. Inclui 450km excedente e cadeirinha. Caução devolvida.",
+      "criado_em": "2026-05-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  }
+]

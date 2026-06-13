@@ -1,0 +1,74 @@
+[
+  {
+    "model": "auth.user",
+    "pk": 1,
+    "fields": {
+      "username": "admin",
+      "first_name": "Administrador",
+      "last_name": "Sistema",
+      "email": "admin@autoflexlocadora.com.br",
+      "password": "pbkdf2_sha256$1000000$EuBXca3SxynCAe8OS6I8FG$81LaodqPKF+DoJjH3+hahOhifZWQRO1CSJaUW/h9ZW4=",
+      "is_staff": true,
+      "is_active": true,
+      "is_superuser": true,
+      "date_joined": "2026-01-01T08:00:00Z",
+      "last_login": "2026-05-28T09:00:00Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "auth.user",
+    "pk": 2,
+    "fields": {
+      "username": "gerente",
+      "first_name": "Carlos",
+      "last_name": "Mendes",
+      "email": "gerente@autoflexlocadora.com.br",
+      "password": "pbkdf2_sha256$1000000$91z7BiZQGKVzEn3JISkVXn$Lha0aUqTXay2U4ERc+25PQLgHr5LGmGgkWJ71PBAqvk=",
+      "is_staff": true,
+      "is_active": true,
+      "is_superuser": false,
+      "date_joined": "2026-01-02T08:00:00Z",
+      "last_login": "2026-05-28T08:30:00Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "auth.user",
+    "pk": 3,
+    "fields": {
+      "username": "atendente1",
+      "first_name": "Juliana",
+      "last_name": "Santos",
+      "email": "juliana@autoflexlocadora.com.br",
+      "password": "pbkdf2_sha256$1000000$L150Qv5FYCsWXwL5yedFAp$5ha4DnlXClnPI+jO9yKFoeHZOQeqkFHbqTqFlPKzKdE=",
+      "is_staff": false,
+      "is_active": true,
+      "is_superuser": false,
+      "date_joined": "2026-01-10T08:00:00Z",
+      "last_login": "2026-05-28T07:45:00Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "auth.user",
+    "pk": 4,
+    "fields": {
+      "username": "atendente2",
+      "first_name": "Rafael",
+      "last_name": "Lima",
+      "email": "rafael@autoflexlocadora.com.br",
+      "password": "pbkdf2_sha256$1000000$L150Qv5FYCsWXwL5yedFAp$5ha4DnlXClnPI+jO9yKFoeHZOQeqkFHbqTqFlPKzKdE=",
+      "is_staff": false,
+      "is_active": true,
+      "is_superuser": false,
+      "date_joined": "2026-02-01T08:00:00Z",
+      "last_login": "2026-05-27T17:00:00Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  }
+]

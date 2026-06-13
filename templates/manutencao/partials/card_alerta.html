@@ -1,0 +1,32 @@
+<div class="col-md-4 col-lg-3">
+  <div class="card h-100 border-{{ cor }} border-opacity-50">
+    <div class="card-body">
+      <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+        <div>
+          <a href="{% url 'frota:detalhe' alerta.veiculo.pk %}" class="fw-bold text-mono text-decoration-none text-primary">{{ alerta.veiculo.placa }}</a>
+          <div class="small text-muted">{{ alerta.veiculo.marca }} {{ alerta.veiculo.modelo }}</div>
+        </div>
+        <span class="badge bg-{{ cor }}{% if cor == 'warning' %} text-dark{% endif %} flex-shrink-0">
+          {% if alerta.tipo_alerta == 'km' %}KM{% else %}Data{% endif %}
+        </span>
+      </div>
+      <p class="small fw-semibold mb-2">{{ alerta.descricao }}</p>
+      {% if alerta.tipo_alerta == 'km' %}
+      <div class="small text-muted">Próximo serviço: <strong class="text-mono">{{ alerta.km_proximo_servico|floatformat:0 }} km</strong></div>
+      <div class="small text-muted">KM atual: <strong class="text-mono">{{ alerta.veiculo.km_atual|floatformat:0 }} km</strong></div>
+      {% if alerta.vencido %}
+      <div class="small text-danger fw-semibold mt-1">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ alerta.veiculo.km_atual|add:0|add:0 }} km excedido
+      </div>
+      {% endif %}
+      {% else %}
+      <div class="small text-muted">Data: <strong>{{ alerta.data_proximo_servico|date:"d/m/Y" }}</strong></div>
+      {% endif %}
+    </div>
+    <div class="card-footer bg-transparent py-2">
+      <a href="{% url 'manutencao:nova' %}?veiculo={{ alerta.veiculo.pk }}" class="btn btn-sm btn-{{ cor }}{% if cor == 'warning' %} text-dark{% endif %} w-100">
+        <i class="bi bi-tools me-1"></i>Criar OS
+      </a>
+    </div>
+  </div>
+</div>

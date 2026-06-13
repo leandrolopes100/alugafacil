@@ -1,0 +1,202 @@
+{% extends 'core/relatorios/base_relatorio.html' %}
+{% load core_tags %}
+{% block titulo %}DRE Financeiro{% endblock %}
+{% block titulo_breadcrumb %}DRE{% endblock %}
+{% block titulo_relatorio %}DRE — Demonstração do Resultado{% endblock %}
+{% block descricao %}{{ mes_nome }}{% if mes_sel %} de{% endif %} {{ ano_sel }} · Margem operacional: <strong>{{ margem }}%</strong>{% endblock %}
+
+{% block filtro_periodo %}
+<form method="get" class="periodo-form">
+  <select name="mes">
+    <option value="">Ano completo</option>
+    {% for num, nome in meses_disp %}
+    <option value="{{ num }}" {% if mes_sel == num %}selected{% endif %}>{{ nome }}</option>
+    {% endfor %}
+  </select>
+  <select name="ano">
+    {% for a in anos_disp %}<option value="{{ a }}" {% if ano_sel == a %}selected{% endif %}>{{ a }}</option>{% endfor %}
+  </select>
+  <button type="submit" class="btn btn-primary btn-sm">Buscar</button>
+</form>
+{% endblock %}
+
+{% block conteudo_relatorio %}
+
+<!-- DRE Resumo -->
+<div class="row g-3 mb-4">
+  <!-- Receita -->
+  <div class="col-md-4">
+    <div class="card h-100" style="border-left:3px solid #10b981">
+      <div class="card-header" style="color:#065f46">
+        <i class="bi bi-arrow-up-circle-fill" style="color:#10b981"></i> Receitas
+      </div>
+      <div class="card-body">
+        <div style="font-size:26px; font-weight:700; color:#10b981; margin-bottom:12px">
+          R$ {{ receita_total|floatformat:2 }}
+        </div>
+        {% for item in receita_por_tipo %}
+        <div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:5px">
+          <span style="color:#64748b">{{ tipo_labels|get_item:item.tipo|default:item.tipo }}</span>
+          <span style="font-weight:600">R$ {{ item.total|floatformat:2 }}</span>
+        </div>
+        {% endfor %}
+        {% if multas_receita %}
+        <div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:5px">
+          <span style="color:#64748b">Multas cobradas</span>
+          <span style="font-weight:600">R$ {{ multas_receita|floatformat:2 }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Despesas -->
+  <div class="col-md-4">
+    <div class="card h-100" style="border-left:3px solid #ef4444">
+      <div class="card-header" style="color:#991b1b">
+        <i class="bi bi-arrow-down-circle-fill" style="color:#ef4444"></i> Despesas
+      </div>
+      <div class="card-body">
+        <div style="font-size:26px; font-weight:700; color:#ef4444; margin-bottom:12px">
+          R$ {{ despesa_total|floatformat:2 }}
+        </div>
+        {% for item in despesa_por_cat %}
+        <div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:5px">
+          <span style="color:#64748b">{{ cat_labels|get_item:item.categoria|default:item.categoria }}</span>
+          <span style="font-weight:600">R$ {{ item.total|floatformat:2 }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Resultado -->
+  <div class="col-md-4">
+    <div class="card h-100" style="border-left:3px solid {% if resultado >= 0 %}#6366f1{% else %}#ef4444{% endif %}">
+      <div class="card-header">
+        <i class="bi bi-calculator"></i> Resultado Líquido
+      </div>
+      <div class="card-body text-center" style="display:flex; flex-direction:column; justify-content:center">
+        <div style="font-size:32px; font-weight:700; letter-spacing:-.03em; color:{% if resultado >= 0 %}#6366f1{% else %}#ef4444{% endif %}">
+          R$ {{ resultado|floatformat:2 }}
+        </div>
+        <div style="margin-top:12px; font-size:13px; color:#64748b">Margem operacional</div>
+        <div style="font-size:28px; font-weight:700; color:{% if margem >= 20 %}#10b981{% elif margem >= 0 %}#f59e0b{% else %}#ef4444{% endif %}">
+          {{ margem }}%
+        </div>
+        <div style="margin-top:16px; font-size:12px; color:#94a3b8">
+          Receita: R$ {{ receita_total|floatformat:2 }}<br>
+          Despesas: R$ {{ despesa_total|floatformat:2 }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Gráfico receita vs despesa por mês -->
+<div class="card mb-4">
+  <div class="card-header"><i class="bi bi-graph-up"></i> Receita vs Despesa por Mês — {{ ano_sel }}</div>
+  <div class="card-body" style="padding:16px">
+    <canvas id="chartDRE" style="max-height:280px"></canvas>
+  </div>
+</div>
+
+<!-- Forma de pagamento -->
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-credit-card"></i> Receita por Forma de Pagamento</div>
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead><tr><th>Forma</th><th class="text-end">Total R$</th><th class="text-end">%</th></tr></thead>
+          <tbody>
+            {% for item in receita_por_forma %}
+            <tr>
+              <td style="font-size:13px">{{ forma_labels|get_item:item.forma_pagamento|default:item.forma_pagamento }}</td>
+              <td class="text-end" style="font-weight:600">R$ {{ item.total|floatformat:2 }}</td>
+              <td class="text-end" style="font-size:12px; color:#64748b">
+                {% if receita_total %}{% widthratio item.total receita_total 100 %}%{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-center text-muted" style="padding:20px">Sem dados</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-tag"></i> Despesas por Categoria</div>
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead><tr><th>Categoria</th><th class="text-end">Total R$</th><th class="text-end">%</th></tr></thead>
+          <tbody>
+            {% for item in despesa_por_cat %}
+            <tr>
+              <td style="font-size:13px">{{ cat_labels|get_item:item.categoria|default:item.categoria }}</td>
+              <td class="text-end" style="font-weight:600; color:#ef4444">R$ {{ item.total|floatformat:2 }}</td>
+              <td class="text-end" style="font-size:12px; color:#64748b">
+                {% if despesa_total %}{% widthratio item.total despesa_total 100 %}%{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-center text-muted" style="padding:20px">Sem despesas registradas</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const dre = {{ chart_dre|safe }};
+
+new Chart(document.getElementById('chartDRE'), {
+  type: 'bar',
+  data: {
+    labels: dre.labels,
+    datasets: [
+      {
+        label: 'Receitas R$',
+        data: dre.receitas,
+        backgroundColor: 'rgba(16,185,129,.7)',
+        borderRadius: 4,
+      },
+      {
+        label: 'Despesas R$',
+        data: dre.despesas,
+        backgroundColor: 'rgba(239,68,68,.6)',
+        borderRadius: 4,
+      },
+      {
+        label: 'Resultado R$',
+        data: dre.resultados,
+        type: 'line',
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99,102,241,.08)',
+        borderWidth: 2.5,
+        pointRadius: 4,
+        pointBackgroundColor: '#6366f1',
+        tension: 0.4,
+        fill: true,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { position: 'top', labels: { font: { size: 12 }, boxWidth: 12 } } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: '#f1f5f9' }, ticks: { callback: v => 'R$ ' + v.toLocaleString('pt-BR') } },
+    }
+  }
+});
+</script>
+{% endblock %}

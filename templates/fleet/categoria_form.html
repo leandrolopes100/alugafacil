@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'frota:grupos' %}" class="text-decoration-none text-secondary">Grupos</a></li>
+<li class="breadcrumb-item"><a href="{% url 'frota:categorias' %}" class="text-decoration-none text-secondary">Categorias</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header">
+  <h1 class="page-title">{{ titulo }}</h1>
+</div>
+
+<div class="row">
+  <div class="col-lg-6">
+    <form method="post" class="card">
+      {% csrf_token %}
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+      <div class="card-header">
+        <i class="bi bi-tags me-2 text-primary"></i>Dados da Categoria
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12">
+            <label class="form-label fw-semibold small">Nome *</label>
+            {{ form.nome }}
+            {% if form.nome.errors %}
+            <div class="invalid-feedback d-block">{{ form.nome.errors.0 }}</div>
+            {% endif %}
+            <div class="form-text">Ex: Econômico, Executivo, SUV, Utilitário, Van</div>
+          </div>
+
+          <div class="col-md-8">
+            <label class="form-label fw-semibold small">
+              Ícone Bootstrap
+              <a href="https://icons.getbootstrap.com/" target="_blank" class="small text-primary ms-1">
+                <i class="bi bi-box-arrow-up-right"></i> Ver ícones
+              </a>
+            </label>
+            {{ form.icone }}
+            <div class="form-text">Cole a classe do ícone, ex: <code>bi-car-front-fill</code></div>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold small">Cor</label>
+            {{ form.cor }}
+          </div>
+
+          <!-- Pré-visualização -->
+          <div class="col-12" x-data="{ icone: '{{ form.icone.value|default:'bi-car-front-fill' }}', cor: '{{ form.cor.value|default:'#3B82F6' }}' }">
+            <label class="form-label fw-semibold small">Pré-visualização</label>
+            <div class="d-flex align-items-center gap-3 p-3 bg-light rounded-3 border">
+              <div class="rounded-3 d-flex align-items-center justify-content-center"
+                   :style="`width:52px; height:52px; background-color:${cor}20; border: 2px solid ${cor}40`">
+                <i :class="'bi ' + icone" :style="`color:${cor}; font-size:1.5rem`"></i>
+              </div>
+              <div>
+                <input type="text" class="form-control form-control-sm"
+                       placeholder="Nome da categoria" readonly
+                       value="{{ form.nome.value|default:'Categoria' }}">
+                <div class="small text-muted mt-1">Assim aparecerá nos grupos</div>
+              </div>
+            </div>
+            <!-- Atualiza pré-visualização ao digitar -->
+            <script>
+            document.addEventListener('DOMContentLoaded', () => {
+              const iconeInput = document.getElementById('id_icone');
+              const corInput = document.getElementById('id_cor');
+              const preview = document.querySelector('[x-data]').__x;
+              if (iconeInput) iconeInput.addEventListener('input', e => {
+                document.querySelector('[x-data]')._x_dataStack[0].icone = e.target.value || 'bi-car-front-fill';
+              });
+              if (corInput) corInput.addEventListener('input', e => {
+                document.querySelector('[x-data]')._x_dataStack[0].cor = e.target.value;
+              });
+            });
+            </script>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label fw-semibold small">Ordem de exibição</label>
+            {{ form.ordem }}
+            <div class="form-text">Menor número aparece primeiro</div>
+          </div>
+
+          <div class="col-12">
+            <div class="form-check">
+              {{ form.ativo }}
+              <label class="form-check-label small">Categoria ativa</label>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card-footer bg-transparent d-flex gap-2 justify-content-end">
+        <a href="{% url 'frota:categorias' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg me-1"></i>Salvar Categoria
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Sugestões de categorias -->
+  <div class="col-lg-6">
+    <div class="card border-0 bg-light">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3"><i class="bi bi-lightbulb text-warning me-2"></i>Categorias sugeridas</h6>
+        <p class="small text-muted mb-3">Clique em uma sugestão para preencher o formulário automaticamente:</p>
+        <div class="d-flex flex-wrap gap-2">
+          {% for sugestao in sugestoes %}
+          <button type="button" class="btn btn-sm btn-outline-secondary"
+                  onclick="preencherCategoria('{{ sugestao.nome }}', '{{ sugestao.icone }}', '{{ sugestao.cor }}')">
+            <i class="bi {{ sugestao.icone }} me-1" style="color:{{ sugestao.cor }}"></i>
+            {{ sugestao.nome }}
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function preencherCategoria(nome, icone, cor) {
+  document.getElementById('id_nome').value = nome;
+  document.getElementById('id_icone').value = icone;
+  document.getElementById('id_cor').value = cor;
+  // Dispara eventos para atualizar Alpine.js
+  document.getElementById('id_icone').dispatchEvent(new Event('input'));
+  document.getElementById('id_cor').dispatchEvent(new Event('input'));
+}
+</script>
+{% endblock %}

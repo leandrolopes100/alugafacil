@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% block titulo %}Configurações Financeiras{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'financeiro:index' %}" class="text-decoration-none text-secondary">Financeiro</a></li>
+<li class="breadcrumb-item active">Configurações</li>
+{% endblock %}
+
+{% block conteudo %}
+<div class="page-header"><h1 class="page-title">Configurações Financeiras</h1></div>
+<div class="row">
+  <div class="col-lg-6">
+    <form method="post" class="card">
+      {% csrf_token %}
+      <div class="card-header"><i class="bi bi-gear me-2 text-primary"></i>Parâmetros de Cobrança</div>
+      <div class="card-body">
+
+        {% if form.non_field_errors %}
+        <div class="form-error-banner mb-3">
+          <i class="bi bi-exclamation-triangle-fill flex-shrink-0" style="font-size:16px;margin-top:1px"></i>
+          <div>
+            <div class="fw-semibold mb-1">Corrija os erros abaixo:</div>
+            <ul>{% for erro in form.non_field_errors %}<li>{{ erro }}</li>{% endfor %}</ul>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="row g-3">
+          <div class="col-md-6 {% if form.percentual_multa_atraso.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Multa por atraso (%)</label>
+            {{ form.percentual_multa_atraso }}
+            <div class="form-text">{{ form.percentual_multa_atraso.help_text }}</div>
+            {% if form.percentual_multa_atraso.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.percentual_multa_atraso.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-md-6 {% if form.percentual_juros_diario.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Juros diário (%)</label>
+            {{ form.percentual_juros_diario }}
+            <div class="form-text">{{ form.percentual_juros_diario.help_text }}</div>
+            {% if form.percentual_juros_diario.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.percentual_juros_diario.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-md-6 {% if form.dias_carencia.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Dias de carência</label>
+            {{ form.dias_carencia }}
+            <div class="form-text">{{ form.dias_carencia.help_text }}</div>
+            {% if form.dias_carencia.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.dias_carencia.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-md-6 {% if form.custo_reposicao_combustivel.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Reposição combustível (R$/¼ tanque)</label>
+            {{ form.custo_reposicao_combustivel }}
+            <div class="form-text">{{ form.custo_reposicao_combustivel.help_text }}</div>
+            {% if form.custo_reposicao_combustivel.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.custo_reposicao_combustivel.errors.0 }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="card-footer bg-transparent d-flex gap-2 justify-content-end">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Salvar configurações</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="alert alert-info">
+      <h6 class="fw-bold"><i class="bi bi-info-circle me-1"></i>Como funcionam as configurações</h6>
+      <ul class="small mb-0">
+        <li><strong>Multa por atraso:</strong> percentual único aplicado sobre o valor da parcela no primeiro dia de atraso (após a carência).</li>
+        <li><strong>Juros diário:</strong> incidência diária a partir do primeiro dia de atraso efetivo. 1% ao mês = 0,0333% ao dia.</li>
+        <li><strong>Dias de carência:</strong> prazo de tolerância antes de aplicar multa e juros.</li>
+        <li><strong>Reposição combustível:</strong> valor cobrado por cada ¼ de tanque faltante no check-in em relação ao check-out. Ex: saiu com o tanque cheio, voltou com ½ tanque = 2 quartos × tarifa. 0 = não cobrar.</li>
+      </ul>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header"><i class="bi bi-calculator me-2 text-secondary"></i>Valores atuais</div>
+      <div class="card-body">
+        <table class="table table-sm mb-0">
+          <tbody>
+            <tr><td class="text-secondary small">Multa</td><td class="fw-semibold">{{ object.percentual_multa_atraso }}%</td></tr>
+            <tr><td class="text-secondary small">Juros diário</td><td class="fw-semibold">{{ object.percentual_juros_diario }}%</td></tr>
+            <tr><td class="text-secondary small">Carência</td><td class="fw-semibold">{{ object.dias_carencia }} dia(s)</td></tr>
+            <tr><td class="text-secondary small">Combustível</td>
+              <td class="fw-semibold">
+                {% if object.custo_reposicao_combustivel %}
+                  R$ {{ object.custo_reposicao_combustivel }}/¼ tanque
+                {% else %}
+                  Não cobrado
+                {% endif %}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

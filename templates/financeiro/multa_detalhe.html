@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block titulo %}Multa — {{ multa.veiculo.placa }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'financeiro:multas' %}" class="text-decoration-none text-secondary">Multas</a></li>
+<li class="breadcrumb-item active">{{ multa.veiculo.placa }} — {{ multa.data_infracao|date:"d/m/Y" }}</li>
+{% endblock %}
+
+{% block conteudo %}
+<div class="page-header d-flex align-items-start justify-content-between gap-3 flex-wrap">
+  <div>
+    <h1 class="page-title">Multa — <span class="text-mono">{{ multa.veiculo.placa }}</span></h1>
+    <div class="mt-1">
+      <span class="badge badge-status
+        {% if multa.situacao == 'paga' %}bg-success
+        {% elif multa.situacao == 'pendente_identificacao' %}bg-danger
+        {% elif multa.situacao == 'identificada' %}bg-warning text-dark
+        {% else %}bg-secondary{% endif %}">
+        {{ multa.get_situacao_display }}
+      </span>
+      {% if multa.prazo_critico %}<span class="badge bg-danger ms-1"><i class="bi bi-clock me-1"></i>Prazo crítico</span>{% endif %}
+      {% if multa.prazo_vencido %}<span class="badge bg-dark ms-1">Prazo vencido</span>{% endif %}
+    </div>
+  </div>
+  <a href="{% url 'financeiro:multa-editar' multa.pk %}" class="btn btn-warning btn-sm">
+    <i class="bi bi-pencil me-1"></i>Editar
+  </a>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-exclamation-triangle me-2 text-warning"></i>Dados da Infração</div>
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2"><span class="text-muted">Veículo</span><a href="{% url 'frota:detalhe' multa.veiculo.pk %}" class="text-primary text-mono fw-semibold text-decoration-none">{{ multa.veiculo.placa }}</a></li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2"><span class="text-muted">Auto de Infração</span><span class="text-mono">{{ multa.numero_auto|default:"—" }}</span></li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2"><span class="text-muted">Data</span><span>{{ multa.data_infracao|date:"d/m/Y" }}</span></li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2"><span class="text-muted">Notificação</span><span>{% if multa.data_notificacao %}{{ multa.data_notificacao|date:"d/m/Y" }}{% else %}—{% endif %}</span></li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Prazo Indicação</span>
+          <span class="{% if multa.prazo_vencido %}text-danger fw-bold{% elif multa.prazo_critico %}text-warning fw-semibold{% endif %}">
+            {% if multa.prazo_indicacao %}{{ multa.prazo_indicacao|date:"d/m/Y" }}{% else %}—{% endif %}
+          </span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2"><span class="text-muted">Pontos</span><span>{{ multa.pontos }}</span></li>
+        <li class="list-group-item d-flex justify-content-between px-3 py-2 fw-bold"><span>Valor</span><span class="text-danger">R$ {{ multa.valor|floatformat:2 }}</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-person me-2 text-primary"></i>Condutor</div>
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2"><span class="text-muted">Nome</span><span>{{ multa.condutor_nome|default:"Não identificado" }}</span></li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2"><span class="text-muted">CPF</span><span class="text-mono">{{ multa.condutor_cpf|default:"—" }}</span></li>
+      </ul>
+    </div>
+    {% if multa.contrato %}
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-file-earmark-text me-2 text-primary"></i>Contrato Vinculado</div>
+      <div class="card-body">
+        <a href="{% url 'contratos:detalhe' multa.contrato.pk %}" class="text-primary text-mono fw-bold text-decoration-none">{{ multa.contrato.numero }}</a>
+        <div class="text-muted small mt-1">{{ multa.contrato.cliente.nome_exibicao }}</div>
+        <div class="text-muted small">{{ multa.contrato.data_saida|date:"d/m/Y" }} → {{ multa.contrato.data_devolucao_prevista|date:"d/m/Y" }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if multa.descricao %}
+    <div class="card">
+      <div class="card-header small text-muted">Descrição</div>
+      <div class="card-body small">{{ multa.descricao }}</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'clientes:lista' %}" class="text-decoration-none text-secondary">Clientes</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header">
+  <h1 class="page-title">{{ titulo }}</h1>
+</div>
+
+<form method="post" x-data="{ tipo: '{{ form.tipo.value|default:'pf' }}' }">
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+  <div class="form-error-banner mb-4">
+    <i class="bi bi-exclamation-triangle-fill flex-shrink-0" style="font-size:16px; margin-top:1px"></i>
+    <div>
+      <div class="fw-semibold mb-1">Corrija os erros abaixo:</div>
+      <ul>{% for erro in form.non_field_errors %}<li>{{ erro }}</li>{% endfor %}</ul>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="row g-4">
+
+    <div class="col-lg-8">
+
+      <!-- Tipo -->
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-person-badge me-2 text-primary"></i>Tipo de Cliente</div>
+        <div class="card-body">
+          <div class="d-flex gap-4">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="tipo" id="tipoPF" value="pf"
+                     @change="tipo = 'pf'" {% if form.tipo.value != 'pj' %}checked{% endif %}>
+              <label class="form-check-label" for="tipoPF">
+                <i class="bi bi-person-fill me-1"></i>Pessoa Física
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="tipo" id="tipoPJ" value="pj"
+                     @change="tipo = 'pj'" {% if form.tipo.value == 'pj' %}checked{% endif %}>
+              <label class="form-check-label" for="tipoPJ">
+                <i class="bi bi-building me-1"></i>Pessoa Jurídica
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dados PF -->
+      <div class="card mb-4" x-show="tipo === 'pf'">
+        <div class="card-header"><i class="bi bi-person me-2 text-primary"></i>Dados Pessoais</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12 {% if form.nome.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Nome Completo *</label>
+              {{ form.nome }}
+              {% if form.nome.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.nome.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6 {% if form.cpf.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">CPF</label>
+              {{ form.cpf }}
+              {% if form.cpf.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.cpf.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6 {% if form.data_nascimento.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Data de Nascimento</label>
+              {{ form.data_nascimento }}
+              {% if form.data_nascimento.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.data_nascimento.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dados PJ -->
+      <div class="card mb-4" x-show="tipo === 'pj'" x-cloak>
+        <div class="card-header"><i class="bi bi-building me-2 text-primary"></i>Dados da Empresa</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12 {% if form.razao_social.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Razão Social *</label>
+              {{ form.razao_social }}
+              {% if form.razao_social.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.razao_social.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6 {% if form.cnpj.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">CNPJ</label>
+              {{ form.cnpj }}
+              {% if form.cnpj.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.cnpj.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6 {% if form.contato.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Nome do Contato</label>
+              {{ form.contato }}
+              {% if form.contato.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.contato.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contato -->
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-telephone me-2 text-primary"></i>Contato</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4 {% if form.email.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">E-mail</label>
+              {{ form.email }}
+              {% if form.email.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.email.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4 {% if form.telefone.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Telefone</label>
+              {{ form.telefone }}
+              {% if form.telefone.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.telefone.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4 {% if form.celular.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Celular</label>
+              {{ form.celular }}
+              {% if form.celular.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.celular.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Endereço -->
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-geo-alt me-2 text-primary"></i>Endereço</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-3 {% if form.cep.errors %}field-has-error{% endif %}" style="position:relative">
+              <label class="form-label fw-semibold small">CEP</label>
+              {{ form.cep }}
+              <span id="cep-spinner" style="display:none; position:absolute; right:28px; top:38px; color:#6366f1">
+                <span class="spinner-border spinner-border-sm"></span>
+              </span>
+              {% if form.cep.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.cep.errors.0 }}</div>
+              {% endif %}
+              <div id="cep-erro" style="display:none; font-size:11.5px; color:#ef4444; margin-top:4px">
+                <i class="bi bi-exclamation-circle me-1"></i>CEP não encontrado.
+              </div>
+            </div>
+            <div class="col-md-7 {% if form.logradouro.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Logradouro</label>
+              {{ form.logradouro }}
+              {% if form.logradouro.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.logradouro.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-2 {% if form.numero.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Número</label>
+              {{ form.numero }}
+              {% if form.numero.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.numero.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4 {% if form.bairro.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Bairro</label>
+              {{ form.bairro }}
+              {% if form.bairro.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.bairro.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4 {% if form.cidade.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Cidade</label>
+              {{ form.cidade }}
+              {% if form.cidade.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.cidade.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-2 {% if form.estado.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Estado</label>
+              {{ form.estado }}
+              {% if form.estado.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.estado.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-2 {% if form.complemento.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Complemento</label>
+              {{ form.complemento }}
+              {% if form.complemento.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.complemento.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Coluna lateral -->
+    <div class="col-lg-4">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-sliders me-2 text-primary"></i>Configurações</div>
+        <div class="card-body">
+          <div class="mb-3 {% if form.situacao.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Situação</label>
+            {{ form.situacao }}
+            {% if form.situacao.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.situacao.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="mb-3 {% if form.observacoes.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Observações</label>
+            {{ form.observacoes }}
+            {% if form.observacoes.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.observacoes.errors.0 }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg me-1"></i>{{ acao }}
+        </button>
+        <a href="{% url 'clientes:lista' %}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </div>
+
+  </div>
+</form>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const cepInput = document.getElementById('id_cep');
+  const spinner  = document.getElementById('cep-spinner');
+  const erroDiv  = document.getElementById('cep-erro');
+  const campos   = {
+    logradouro: document.getElementById('id_logradouro'),
+    bairro:     document.getElementById('id_bairro'),
+    cidade:     document.getElementById('id_cidade'),
+    estado:     document.getElementById('id_estado'),
+  };
+
+  if (!cepInput) return;
+
+  cepInput.addEventListener('input', function () {
+    let v = this.value.replace(/\D/g, '').slice(0, 8);
+    if (v.length > 5) v = v.slice(0, 5) + '-' + v.slice(5);
+    this.value = v;
+    erroDiv.style.display = 'none';
+  });
+
+  cepInput.addEventListener('blur', function () {
+    const cep = this.value.replace(/\D/g, '');
+    if (cep.length !== 8) return;
+
+    spinner.style.display = 'inline';
+    erroDiv.style.display  = 'none';
+
+    fetch('https://viacep.com.br/ws/' + cep + '/json/')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.erro) { erroDiv.style.display = 'block'; return; }
+        if (campos.logradouro && !campos.logradouro.value) campos.logradouro.value = data.logradouro  || '';
+        if (campos.bairro     && !campos.bairro.value)     campos.bairro.value     = data.bairro      || '';
+        if (campos.cidade     && !campos.cidade.value)     campos.cidade.value     = data.localidade   || '';
+        if (campos.estado     && !campos.estado.value)     campos.estado.value     = data.uf           || '';
+        const numInput = document.getElementById('id_numero');
+        if (numInput) numInput.focus();
+      })
+      .catch(function () { /* falha silenciosa – offline */ })
+      .finally(function () { spinner.style.display = 'none'; });
+  });
+})();
+</script>
+{% endblock %}

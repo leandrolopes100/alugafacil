@@ -1,0 +1,226 @@
+[
+  {
+    "model": "manutencao.ordemmanutencao",
+    "pk": 1,
+    "fields": {
+      "veiculo": 7,
+      "tipo": "preventiva",
+      "situacao": "agendada",
+      "descricao": "Revisão 120.000km — troca de óleo, filtros, correia dentada e verificação de freios",
+      "observacoes": "Agendamento confirmado com a oficina. Veículo entrará dia 05/06/2026 às 08h.",
+      "km_na_manutencao": null,
+      "data_agendada": "2026-06-05",
+      "data_entrada": null,
+      "data_saida": null,
+      "fornecedor": "Oficina Central Auto — (11) 3344-5500",
+      "custo_total": null,
+      "contrato": null,
+      "criado_em": "2026-04-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "manutencao.ordemmanutencao",
+    "pk": 2,
+    "fields": {
+      "veiculo": 7,
+      "tipo": "corretiva",
+      "situacao": "em_andamento",
+      "descricao": "Troca de pastilhas e discos de freio dianteiros — desgaste além do limite",
+      "observacoes": "Veículo entrou com barulho no freio dianteiro. Inspeção confirmou desgaste crítico. Aguardando peças.",
+      "km_na_manutencao": 112000,
+      "data_agendada": "2026-05-25",
+      "data_entrada": "2026-05-26",
+      "data_saida": null,
+      "fornecedor": "Oficina Central Auto — (11) 3344-5500",
+      "custo_total": null,
+      "contrato": null,
+      "criado_em": "2026-04-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "manutencao.ordemmanutencao",
+    "pk": 3,
+    "fields": {
+      "veiculo": 1,
+      "tipo": "preventiva",
+      "situacao": "concluida",
+      "descricao": "Revisão 50.000km — troca de óleo, filtro de ar, filtro de combustível e velas",
+      "observacoes": "Revisão completa executada conforme manual. Sem anomalias identificadas.",
+      "km_na_manutencao": 49800,
+      "data_agendada": "2026-04-15",
+      "data_entrada": "2026-04-18",
+      "data_saida": "2026-04-20",
+      "fornecedor": "AutoCenter Silva — (11) 2255-3344",
+      "custo_total": "380.00",
+      "contrato": null,
+      "criado_em": "2026-04-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "manutencao.ordemmanutencao",
+    "pk": 4,
+    "fields": {
+      "veiculo": 4,
+      "tipo": "preventiva",
+      "situacao": "concluida",
+      "descricao": "Revisão 90.000km — troca de óleo, filtros e correia dentada",
+      "observacoes": "Correia dentada substituída preventivamente. Serviço executado pela concessionária.",
+      "km_na_manutencao": 88500,
+      "data_agendada": "2025-12-01",
+      "data_entrada": "2025-12-03",
+      "data_saida": "2025-12-05",
+      "fornecedor": "Toyota Center SP — (11) 3000-5500",
+      "custo_total": "520.00",
+      "contrato": null,
+      "criado_em": "2026-04-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "manutencao.ordemmanutencao",
+    "pk": 5,
+    "fields": {
+      "veiculo": 2,
+      "tipo": "preventiva",
+      "situacao": "cancelada",
+      "descricao": "Revisão semestral — troca de óleo e filtros",
+      "observacoes": "Cancelado — cliente agendou retomada de contrato com antecedência. Reagendar para após devolução do veículo.",
+      "km_na_manutencao": null,
+      "data_agendada": "2026-04-10",
+      "data_entrada": null,
+      "data_saida": null,
+      "fornecedor": "AutoCenter Silva — (11) 2255-3344",
+      "custo_total": null,
+      "contrato": null,
+      "criado_em": "2026-04-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "manutencao.alertamanutencao",
+    "pk": 1,
+    "fields": {
+      "veiculo": 1,
+      "descricao": "Troca de óleo e filtros",
+      "tipo_alerta": "km",
+      "km_proximo_servico": 60000,
+      "km_intervalo": 10000,
+      "data_proximo_servico": null,
+      "ativo": true,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "manutencao.alertamanutencao",
+    "pk": 2,
+    "fields": {
+      "veiculo": 2,
+      "descricao": "Revisão semestral",
+      "tipo_alerta": "km",
+      "km_proximo_servico": 40000,
+      "km_intervalo": 10000,
+      "data_proximo_servico": null,
+      "ativo": true,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "manutencao.alertamanutencao",
+    "pk": 3,
+    "fields": {
+      "veiculo": 3,
+      "descricao": "Troca de óleo e filtros",
+      "tipo_alerta": "km",
+      "km_proximo_servico": 70000,
+      "km_intervalo": 10000,
+      "data_proximo_servico": null,
+      "ativo": true,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "manutencao.alertamanutencao",
+    "pk": 4,
+    "fields": {
+      "veiculo": 4,
+      "descricao": "Revisão anual (Toyota)",
+      "tipo_alerta": "data",
+      "km_proximo_servico": null,
+      "km_intervalo": null,
+      "data_proximo_servico": "2026-07-01",
+      "ativo": true,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "manutencao.alertamanutencao",
+    "pk": 5,
+    "fields": {
+      "veiculo": 7,
+      "descricao": "Troca de pneus traseiros (desgaste)",
+      "tipo_alerta": "km",
+      "km_proximo_servico": 110000,
+      "km_intervalo": 0,
+      "data_proximo_servico": null,
+      "ativo": true,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "manutencao.alertamanutencao",
+    "pk": 6,
+    "fields": {
+      "veiculo": 6,
+      "descricao": "Revisão anual e alinhamento/balanceamento",
+      "tipo_alerta": "data",
+      "km_proximo_servico": null,
+      "km_intervalo": null,
+      "data_proximo_servico": "2026-08-15",
+      "ativo": true,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "financeiro.despesaoperacional",
+    "pk": 7,
+    "fields": {
+      "categoria": "manutencao",
+      "descricao": "Manutencao OS #3 — Revisão 50.000km — troca de óleo, filtro de ar, filtro de combustível e velas",
+      "valor": "380.00",
+      "data_competencia": "2026-04-20",
+      "data_pagamento": "2026-04-20",
+      "parcelado": false,
+      "numero_parcelas": null,
+      "forma_pagamento": "",
+      "veiculo": 1,
+      "os_origem": 3,
+      "debito_automatico": false,
+      "observacoes": "Gerada automaticamente pela OS #3. Fornecedor: AutoCenter Silva — (11) 2255-3344.",
+      "criado_por": null,
+      "criado_em": "2026-04-20T10:00:00Z"
+    }
+  },
+  {
+    "model": "financeiro.despesaoperacional",
+    "pk": 8,
+    "fields": {
+      "categoria": "manutencao",
+      "descricao": "Manutencao OS #4 — Revisão 90.000km — troca de óleo, filtros e correia dentada",
+      "valor": "520.00",
+      "data_competencia": "2025-12-05",
+      "data_pagamento": "2025-12-05",
+      "parcelado": false,
+      "numero_parcelas": null,
+      "forma_pagamento": "",
+      "veiculo": 4,
+      "os_origem": 4,
+      "debito_automatico": false,
+      "observacoes": "Gerada automaticamente pela OS #4. Fornecedor: Toyota Center SP — (11) 3000-5500.",
+      "criado_por": null,
+      "criado_em": "2025-12-05T10:00:00Z"
+    }
+  }
+]

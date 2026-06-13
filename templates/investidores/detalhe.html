@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+{% block titulo %}{{ investidor.nome_exibicao }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'investidores:lista' %}">Investidores</a></li>
+<li class="breadcrumb-item active">{{ investidor.nome_exibicao }}</li>
+{% endblock %}
+
+{% block conteudo %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ investidor.nome_exibicao }}</h1>
+    <p class="page-subtitle">{{ investidor.get_tipo_display }} — {{ investidor.documento|default:"sem documento" }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'investidores:vincular' investidor.pk %}" class="btn btn-outline-primary">
+      <i class="bi bi-link-45deg me-1"></i>Vincular Veículo
+    </a>
+    <a href="{% url 'investidores:editar' investidor.pk %}" class="btn btn-outline-secondary">
+      <i class="bi bi-pencil me-1"></i>Editar
+    </a>
+  </div>
+</div>
+
+<!-- Alerta: vínculos sem cobrança da semana anterior -->
+{% if vinculos_sem_cobranca_semana %}
+<div class="alert alert-warning d-flex align-items-center gap-3 mb-4" style="border-left:3px solid var(--warning)">
+  <i class="bi bi-exclamation-triangle-fill flex-shrink-0" style="font-size:16px"></i>
+  <div style="font-size:13px; font-weight:500">
+    {{ vinculos_sem_cobranca_semana|length }} vínculo{{ vinculos_sem_cobranca_semana|length|pluralize }} sem cobrança gerada para a semana anterior.
+    <a href="{% url 'investidores:gerar-lote' %}" class="ms-2 fw-semibold" style="color:inherit">
+      Gerar agora <i class="bi bi-arrow-right ms-1"></i>
+    </a>
+  </div>
+</div>
+{% endif %}
+
+<!-- KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-4">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#eef2ff; color:var(--primary)">
+        <i class="bi bi-car-front-fill"></i>
+      </div>
+      <div class="kpi-value">{{ vinculos_ativos.count }}</div>
+      <div class="kpi-label">Veículos ativos</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--warning-bg); color:var(--warning)">
+        <i class="bi bi-clock-fill"></i>
+      </div>
+      <div class="kpi-value" style="font-size:20px; color:var(--warning)">R$ {{ total_pendente|floatformat:2 }}</div>
+      <div class="kpi-label">Total pendente</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--success-bg); color:var(--success)">
+        <i class="bi bi-check-circle-fill"></i>
+      </div>
+      <div class="kpi-value" style="font-size:20px; color:var(--success)">R$ {{ total_pago_mes|floatformat:2 }}</div>
+      <div class="kpi-label">Pago este mês</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Coluna esquerda: dados do investidor -->
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header">
+        <i class="bi bi-person-badge"></i> Dados do Investidor
+      </div>
+      <div class="card-body" style="font-size:13.5px">
+        {% if investidor.email %}
+        <div class="mb-2">
+          <span class="text-muted">E-mail</span><br>
+          <strong>{{ investidor.email }}</strong>
+        </div>
+        {% endif %}
+        {% if investidor.celular or investidor.telefone %}
+        <div class="mb-2">
+          <span class="text-muted">Contato</span><br>
+          <strong>{{ investidor.celular|default:investidor.telefone }}</strong>
+        </div>
+        {% endif %}
+        <div class="mb-2">
+          <span class="text-muted">Situação</span><br>
+          {% if investidor.situacao == 'ativo' %}
+            <span class="status-badge status-success">Ativo</span>
+          {% else %}
+            <span class="status-badge status-neutral">Inativo</span>
+          {% endif %}
+        </div>
+        {% if investidor.dados_bancarios %}
+        <hr class="section-divider">
+        <div>
+          <span class="text-muted">Dados bancários</span><br>
+          <pre style="font-size:12.5px; white-space:pre-wrap; margin:0; font-family:inherit; color:var(--text-primary)">{{ investidor.dados_bancarios }}</pre>
+        </div>
+        {% endif %}
+        {% if investidor.observacoes %}
+        <hr class="section-divider">
+        <div>
+          <span class="text-muted">Observações</span><br>
+          {{ investidor.observacoes }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Coluna direita: veículos e cobranças -->
+  <div class="col-lg-8">
+
+    <!-- Veículos ativos -->
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-car-front-fill"></i> Veículos sob Gestão</span>
+        <a href="{% url 'investidores:vincular' investidor.pk %}" class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-link-45deg me-1"></i>Vincular
+        </a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Veículo</th>
+              <th class="text-end">Taxa semanal</th>
+              <th class="text-center">Venc. dia</th>
+              <th>Desde</th>
+              <th class="text-center">Pendentes</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for v in vinculos_ativos %}
+            <tr>
+              <td>
+                <a href="{% url 'frota:detalhe' v.veiculo.pk %}" class="table-link">{{ v.veiculo.placa }}</a>
+                <div style="font-size:12px; color:var(--text-muted)">{{ v.veiculo.marca }} {{ v.veiculo.modelo }} — {{ v.veiculo.grupo.nome }}</div>
+                {% if v.pk in vinculos_sem_cobranca_semana %}
+                <span class="badge mt-1 d-inline-flex align-items-center gap-1"
+                      style="background:var(--warning-bg); color:var(--warning-text); border:1px solid #fcd34d; font-size:10.5px; font-weight:600">
+                  <i class="bi bi-exclamation-triangle-fill"></i> Sem cobrança semana ant.
+                </span>
+                {% endif %}
+              </td>
+              <td class="text-end fw-semibold">R$ {{ v.taxa_gestao_semanal|floatformat:2 }}</td>
+              <td class="text-center">{{ v.dia_vencimento }}</td>
+              <td style="font-size:12.5px">{{ v.data_inicio|date:"d/m/Y" }}</td>
+              <td class="text-center">
+                {% if v.cobrancas_pendentes %}
+                  <span class="status-badge status-warning">{{ v.cobrancas_pendentes }}</span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="d-flex gap-1 justify-content-end">
+                  <a href="{% url 'investidores:gerar-cobranca' v.pk %}" class="btn btn-outline-secondary btn-sm" title="Gerar cobrança">
+                    <i class="bi bi-plus-circle"></i>
+                  </a>
+                  <form method="post" action="{% url 'investidores:desvincular' v.pk %}"
+                        onsubmit="return confirm('Encerrar vínculo do veículo {{ v.veiculo.placa }}?')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger btn-sm" title="Encerrar vínculo">
+                      <i class="bi bi-x-circle"></i>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6">
+                <div class="empty-state" style="padding:30px 24px">
+                  <div class="empty-state-icon" style="font-size:28px"><i class="bi bi-car-front"></i></div>
+                  <div class="empty-state-title">Nenhum veículo vinculado</div>
+                  <a href="{% url 'investidores:vincular' investidor.pk %}" class="btn btn-primary btn-sm mt-2">
+                    Vincular veículo
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Cobranças recentes -->
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-receipt"></i> Cobranças Recentes</span>
+        <a href="{% url 'investidores:cobrancas' %}?investidor={{ investidor.pk }}" class="btn btn-outline-secondary btn-sm">
+          Ver todas
+        </a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Período</th>
+              <th>Veículo</th>
+              <th class="text-end">Valor</th>
+              <th>Vencimento</th>
+              <th class="text-center">Situação</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in cobrancas_recentes %}
+            <tr>
+              <td style="font-size:12.5px">
+                {{ c.semana_inicio|date:"d/m" }} a {{ c.semana_fim|date:"d/m/Y" }}
+              </td>
+              <td style="font-size:12.5px">{{ c.veiculo_investidor.veiculo.placa }}</td>
+              <td class="text-end fw-semibold">R$ {{ c.valor|floatformat:2 }}</td>
+              <td style="font-size:12.5px {% if c.em_atraso %}; color:var(--danger){% endif %}">
+                {{ c.data_vencimento|date:"d/m/Y" }}
+                {% if c.em_atraso %}<i class="bi bi-exclamation-circle-fill ms-1"></i>{% endif %}
+              </td>
+              <td class="text-center">
+                {% if c.situacao == 'pago' %}
+                  <span class="status-badge status-success">Pago</span>
+                {% elif c.situacao == 'cancelado' %}
+                  <span class="status-badge status-neutral">Cancelado</span>
+                {% elif c.em_atraso %}
+                  <span class="status-badge status-danger">Em atraso</span>
+                {% else %}
+                  <span class="status-badge status-warning">Pendente</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if c.situacao == 'pendente' %}
+                <a href="{% url 'investidores:pagar-cobranca' c.pk %}" class="btn btn-outline-secondary btn-sm">
+                  <i class="bi bi-check-lg"></i>
+                </a>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6">
+                <div class="empty-state" style="padding:24px">
+                  <div class="empty-state-title">Sem cobranças ainda</div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Vínculos encerrados -->
+    {% if vinculos_encerrados %}
+    <div class="card mt-4">
+      <div class="card-header">
+        <i class="bi bi-archive"></i> Vínculos Encerrados (últimos)
+      </div>
+      <div class="card-body" style="padding:0">
+        <ul class="list-group list-group-flush">
+          {% for v in vinculos_encerrados %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>
+              <span class="fw-semibold text-mono" style="font-size:12.5px">{{ v.veiculo.placa }}</span>
+              <span class="text-muted ms-2" style="font-size:12px">{{ v.veiculo.marca }} {{ v.veiculo.modelo }}</span>
+            </span>
+            <span style="font-size:12px; color:var(--text-muted)">
+              {{ v.data_inicio|date:"d/m/Y" }} → {{ v.data_fim|date:"d/m/Y" }}
+            </span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

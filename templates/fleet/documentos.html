@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block titulo %}Documentos — {{ veiculo.placa }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'frota:lista' %}" class="text-decoration-none text-secondary">Frota</a></li>
+<li class="breadcrumb-item"><a href="{% url 'frota:detalhe' veiculo.pk %}" class="text-decoration-none text-secondary">{{ veiculo.placa }}</a></li>
+<li class="breadcrumb-item active">Documentos</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header d-flex align-items-center justify-content-between">
+  <div>
+    <h1 class="page-title">Documentos do Veículo</h1>
+    <p class="page-subtitle mb-0">{{ veiculo.marca }} {{ veiculo.modelo }} — <span class="text-mono">{{ veiculo.placa }}</span></p>
+  </div>
+  <a href="{% url 'frota:detalhe' veiculo.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Voltar
+  </a>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-file-earmark-check me-2 text-primary"></i>Documentos Cadastrados</div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr><th>Tipo</th><th>Número</th><th>Validade</th><th>Arquivo</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for doc in documentos %}
+            <tr class="{% if doc.vencido %}table-danger{% elif doc.proximo_vencimento %}table-warning{% endif %}">
+              <td class="fw-semibold small">{{ doc.get_tipo_display }}</td>
+              <td class="text-mono small text-muted">{{ doc.numero|default:"—" }}</td>
+              <td class="small">
+                {% if doc.data_validade %}
+                {% if doc.vencido %}
+                <span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>VENCIDO — {{ doc.data_validade|date:"d/m/Y" }}</span>
+                {% elif doc.proximo_vencimento %}
+                <span class="text-warning fw-semibold"><i class="bi bi-clock-history me-1"></i>{{ doc.data_validade|date:"d/m/Y" }}</span>
+                {% else %}
+                <span class="text-muted">{{ doc.data_validade|date:"d/m/Y" }}</span>
+                {% endif %}
+                {% else %}—{% endif %}
+              </td>
+              <td>{% if doc.arquivo %}<a href="{{ doc.arquivo.url }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0"><i class="bi bi-download"></i></a>{% else %}—{% endif %}</td>
+              <td class="text-end table-action">
+                <form method="post" action="{% url 'frota:documento-excluir' veiculo.pk doc.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Excluir documento?')">
+                    <i class="bi bi-trash3"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-4 small">Nenhum documento cadastrado.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-plus-circle me-2 text-primary"></i>Adicionar Documento</div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          {% if form.non_field_errors %}
+          <div class="form-error-banner mb-3">
+            <i class="bi bi-exclamation-triangle-fill flex-shrink-0" style="font-size:14px; margin-top:1px"></i>
+            <div>{% for erro in form.non_field_errors %}<div>{{ erro }}</div>{% endfor %}</div>
+          </div>
+          {% endif %}
+          <div class="mb-3 {% if form.tipo.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Tipo *</label>
+            {{ form.tipo }}
+            {% if form.tipo.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.tipo.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="mb-3"><label class="form-label fw-semibold small">Número</label>{{ form.numero }}</div>
+          <div class="mb-3"><label class="form-label fw-semibold small">Validade</label>{{ form.data_validade }}</div>
+          <div class="mb-3"><label class="form-label fw-semibold small">Arquivo</label>{{ form.arquivo }}</div>
+          <div class="mb-3"><label class="form-label fw-semibold small">Alertar X dias antes</label>{{ form.dias_alerta }}</div>
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-check-lg me-1"></i>Salvar Documento
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block titulo %}Vincular Veículo{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'investidores:lista' %}">Investidores</a></li>
+<li class="breadcrumb-item"><a href="{% url 'investidores:detalhe' investidor.pk %}">{{ investidor.nome_exibicao }}</a></li>
+<li class="breadcrumb-item active">Vincular Veículo</li>
+{% endblock %}
+
+{% block conteudo %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Vincular Veículo</h1>
+    <p class="page-subtitle">Investidor: <strong>{{ investidor.nome_exibicao }}</strong></p>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header">
+        <i class="bi bi-link-45deg"></i> Dados do Vínculo
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+          <div class="form-error-banner mb-3">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <ul>{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
+          </div>
+          {% endif %}
+
+          <!-- Veículo -->
+          <div class="mb-3 {% if form.veiculo.errors %}field-has-error{% endif %}">
+            <label class="form-label">Veículo *</label>
+            {{ form.veiculo }}
+            {% if not form.veiculo.queryset.exists %}
+            <div class="form-text text-warning">
+              <i class="bi bi-exclamation-triangle me-1"></i>
+              Todos os veículos já estão vinculados a um investidor ativo.
+            </div>
+            {% else %}
+            <div class="form-text">Apenas veículos sem vínculo ativo são exibidos.</div>
+            {% endif %}
+            {% if form.veiculo.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.veiculo.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Taxa e Dia vencimento -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-7 {% if form.taxa_gestao_semanal.errors %}field-has-error{% endif %}">
+              <label class="form-label">Taxa de gestão semanal (R$) *</label>
+              {{ form.taxa_gestao_semanal }}
+              {% if form.taxa_gestao_semanal.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.taxa_gestao_semanal.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-5 {% if form.dia_vencimento.errors %}field-has-error{% endif %}">
+              <label class="form-label">Dia de vencimento *</label>
+              {{ form.dia_vencimento }}
+              <div class="form-text">Dia do mês seguinte (1–28)</div>
+              {% if form.dia_vencimento.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.dia_vencimento.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Data início -->
+          <div class="mb-3 {% if form.data_inicio.errors %}field-has-error{% endif %}">
+            <label class="form-label">Data de início *</label>
+            {{ form.data_inicio }}
+            {% if form.data_inicio.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.data_inicio.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Observações -->
+          <div class="mb-4 {% if form.observacoes.errors %}field-has-error{% endif %}">
+            <label class="form-label">Observações</label>
+            {{ form.observacoes }}
+            {% if form.observacoes.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.observacoes.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-link-45deg me-1"></i>Vincular
+            </button>
+            <a href="{% url 'investidores:detalhe' investidor.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

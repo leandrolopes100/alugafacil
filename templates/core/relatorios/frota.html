@@ -1,0 +1,225 @@
+{% extends 'core/relatorios/base_relatorio.html' %}
+{% block titulo %}Frota e Ocupação{% endblock %}
+{% block titulo_breadcrumb %}Frota{% endblock %}
+{% block titulo_relatorio %}Relatório de Frota e Ocupação{% endblock %}
+{% block descricao %}
+  {{ mes_nome }}{% if mes_sel %} de{% endif %} {{ ano_sel }} ·
+  Ocupação média: <strong>{{ ocupacao_media }}%</strong>
+{% endblock %}
+
+{% block acoes_extras %}
+<a href="{% url 'core:relatorio-exportar' 'frota' %}?ano={{ ano_sel }}&mes={{ mes_sel }}"
+   class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+  <i class="bi bi-download"></i> CSV
+</a>
+{% endblock %}
+
+{% block conteudo_relatorio %}
+
+<!-- KPIs -->
+<div class="stat-row">
+  <div class="stat-box">
+    <div class="stat-label">Total de Veículos</div>
+    <div class="stat-value">{{ total_veiculos }}</div>
+    <div class="stat-sub">ativos na frota</div>
+  </div>
+  <div class="stat-box" style="border-left:3px solid #6366f1">
+    <div class="stat-label" style="color:#6366f1">Ocupação Média</div>
+    <div class="stat-value" style="color:{% if ocupacao_media >= 70 %}#10b981{% elif ocupacao_media >= 40 %}#f59e0b{% else %}#ef4444{% endif %}">{{ ocupacao_media }}%</div>
+    <div class="stat-sub">da frota no período</div>
+  </div>
+  <div class="stat-box" style="border-left:3px solid #10b981">
+    <div class="stat-label" style="color:#10b981">Receita Total</div>
+    <div class="stat-value" style="color:#10b981; font-size:18px">R$ {{ receita_total|floatformat:2 }}</div>
+    <div class="stat-sub">recebido no período</div>
+  </div>
+  <div class="stat-box" style="border-left:3px solid #ef4444">
+    <div class="stat-label" style="color:#ef4444">Custos (por veículo)</div>
+    <div class="stat-value" style="color:#ef4444; font-size:18px">R$ {{ custo_total|floatformat:2 }}</div>
+    <div class="stat-sub">despesas vinculadas</div>
+  </div>
+  <div class="stat-box" style="border-left:3px solid {% if lucro_total >= 0 %}#10b981{% else %}#ef4444{% endif %}">
+    <div class="stat-label" style="color:{% if lucro_total >= 0 %}#10b981{% else %}#ef4444{% endif %}">Lucro Líquido</div>
+    <div class="stat-value" style="color:{% if lucro_total >= 0 %}#10b981{% else %}#ef4444{% endif %}; font-size:18px">R$ {{ lucro_total|floatformat:2 }}</div>
+    <div class="stat-sub">receita menos custos</div>
+  </div>
+</div>
+
+<!-- Gráficos -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-bar-chart-horizontal"></i> Top 10 — Ocupação (%)</div>
+      <div class="card-body" style="padding:16px">
+        <canvas id="chartOcupacao" style="max-height:280px"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-bar-chart-horizontal"></i> Top 10 — Receita (R$)</div>
+      <div class="card-body" style="padding:16px">
+        <canvas id="chartReceita" style="max-height:280px"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Por grupo -->
+{% if dados_grupo %}
+<div class="card mb-4">
+  <div class="card-header"><i class="bi bi-collection"></i> Por Grupo de Veículos</div>
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead>
+        <tr><th>Grupo</th><th class="text-center">Veículos</th><th class="text-center">Ocupação Média</th><th class="text-end">Receita Total</th></tr>
+      </thead>
+      <tbody>
+        {% for g in dados_grupo %}
+        <tr>
+          <td style="font-weight:600">{{ g.grupo.nome }}</td>
+          <td class="text-center text-muted">{{ g.n }}</td>
+          <td class="text-center">
+            <div style="display:flex; align-items:center; gap:8px; justify-content:center">
+              <div style="flex:1; max-width:100px; height:6px; background:#f1f5f9; border-radius:3px; overflow:hidden">
+                <div style="height:100%; width:{{ g.ocupacao_media }}%; background:{% if g.ocupacao_media >= 70 %}#10b981{% elif g.ocupacao_media >= 40 %}#f59e0b{% else %}#ef4444{% endif %}; border-radius:3px"></div>
+              </div>
+              <span style="font-size:13px; font-weight:600; width:38px; text-align:right">{{ g.ocupacao_media }}%</span>
+            </div>
+          </td>
+          <td class="text-end" style="font-weight:600; color:#10b981">R$ {{ g.receita|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Nota metodológica -->
+<div class="alert alert-info py-2 mb-3 small d-flex align-items-start gap-2">
+  <i class="bi bi-info-circle-fill flex-shrink-0 mt-1"></i>
+  <div>
+    <strong>Metodologia:</strong> Ocupação considera apenas contratos
+    <strong>ativos</strong>, <strong>em fechamento</strong> e <strong>encerrados</strong>
+    com saída registrada. Contratos cancelados <em>antes</em> do check-out não entram
+    no cálculo de dias locados. A coluna <strong>Cancelamentos</strong> mostra os
+    contratos cancelados <em>após</em> a saída do veículo — casos que podem indicar
+    devolução antecipada ou rescisão.
+  </div>
+</div>
+
+<!-- Tabela detalhada por veículo -->
+<div class="card">
+  <div class="card-header"><i class="bi bi-table"></i> Desempenho por Veículo</div>
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Placa</th><th>Modelo</th><th>Grupo</th>
+          <th class="text-center">Locações</th>
+          <th class="text-center" title="Contratos cancelados após o check-out (saída registrada)">Cancelamentos</th>
+          <th class="text-center">Dias Locados</th>
+          <th class="text-center">Ocupação</th>
+          <th class="text-end">Ticket Médio</th>
+          <th class="text-end">Receita</th>
+          <th class="text-end">Custo</th>
+          <th class="text-end">Lucro</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in dados_veiculos %}
+        <tr>
+          <td>
+            <a href="{% url 'frota:detalhe' d.veiculo.pk %}" class="table-link text-mono">{{ d.veiculo.placa }}</a>
+          </td>
+          <td style="font-size:13px">{{ d.veiculo.marca }} {{ d.veiculo.modelo }}</td>
+          <td style="font-size:12.5px; color:#64748b">{{ d.veiculo.grupo.nome }}</td>
+          <td class="text-center" style="font-size:13px">{{ d.n_locacoes }}</td>
+          <td class="text-center" style="font-size:13px">
+            {% if d.cancelamentos %}
+            <span class="text-warning fw-semibold">{{ d.cancelamentos }}</span>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td class="text-center" style="font-size:13px">{{ d.dias_locados }}</td>
+          <td>
+            <div style="display:flex; align-items:center; gap:8px; justify-content:center">
+              <div style="width:70px; height:6px; background:#f1f5f9; border-radius:3px; overflow:hidden">
+                <div style="height:100%; width:{{ d.ocupacao }}%; background:{% if d.ocupacao >= 70 %}#10b981{% elif d.ocupacao >= 40 %}#f59e0b{% else %}#ef4444{% endif %}; border-radius:3px"></div>
+              </div>
+              <span style="font-size:12.5px; font-weight:600; min-width:38px">{{ d.ocupacao }}%</span>
+            </div>
+          </td>
+          <td class="text-end" style="font-size:12.5px; color:#64748b">R$ {{ d.ticket_medio|floatformat:2 }}</td>
+          <td class="text-end" style="font-weight:600; {% if d.receita > 0 %}color:#10b981{% else %}color:#94a3b8{% endif %}">
+            R$ {{ d.receita|floatformat:2 }}
+          </td>
+          <td class="text-end" style="font-size:12.5px; {% if d.custo > 0 %}color:#ef4444{% else %}color:#94a3b8{% endif %}">
+            R$ {{ d.custo|floatformat:2 }}
+          </td>
+          <td class="text-end" style="font-weight:600; {% if d.lucro >= 0 %}color:#10b981{% else %}color:#ef4444{% endif %}">
+            R$ {{ d.lucro|floatformat:2 }}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="11"><div class="empty-state"><div class="empty-state-icon"><i class="bi bi-car-front"></i></div><div class="empty-state-title">Nenhum dado no período</div></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const ocupacao = {{ chart_ocupacao|safe }};
+const receita  = {{ chart_receita|safe }};
+
+new Chart(document.getElementById('chartOcupacao'), {
+  type: 'bar',
+  data: {
+    labels: ocupacao.labels,
+    datasets: [{
+      label: 'Ocupação %',
+      data: ocupacao.data,
+      backgroundColor: ocupacao.data.map(v => v >= 70 ? 'rgba(16,185,129,.8)' : v >= 40 ? 'rgba(245,158,11,.8)' : 'rgba(239,68,68,.8)'),
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { max: 100, grid: { color: '#f1f5f9' }, ticks: { callback: v => v + '%' } },
+      y: { grid: { display: false } }
+    }
+  }
+});
+
+new Chart(document.getElementById('chartReceita'), {
+  type: 'bar',
+  data: {
+    labels: receita.labels,
+    datasets: [{
+      label: 'Receita R$',
+      data: receita.data,
+      backgroundColor: 'rgba(99,102,241,.7)',
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: '#f1f5f9' }, ticks: { callback: v => 'R$ ' + v.toLocaleString('pt-BR') } },
+      y: { grid: { display: false } }
+    }
+  }
+});
+</script>
+{% endblock %}

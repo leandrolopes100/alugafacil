@@ -1,0 +1,525 @@
+[
+  {
+    "model": "fleet.categoriaVeiculo",
+    "pk": 1,
+    "fields": {
+      "nome": "Econômico",
+      "icone": "bi-car-front",
+      "cor": "#3B82F6",
+      "ordem": 1,
+      "ativo": true
+    }
+  },
+  {
+    "model": "fleet.categoriaVeiculo",
+    "pk": 2,
+    "fields": {
+      "nome": "Intermediário",
+      "icone": "bi-car-front-fill",
+      "cor": "#8B5CF6",
+      "ordem": 2,
+      "ativo": true
+    }
+  },
+  {
+    "model": "fleet.categoriaVeiculo",
+    "pk": 3,
+    "fields": {
+      "nome": "SUV",
+      "icone": "bi-truck-front",
+      "cor": "#10B981",
+      "ordem": 3,
+      "ativo": true
+    }
+  },
+  {
+    "model": "fleet.categoriaVeiculo",
+    "pk": 4,
+    "fields": {
+      "nome": "Utilitário",
+      "icone": "bi-truck",
+      "cor": "#F59E0B",
+      "ordem": 4,
+      "ativo": true
+    }
+  },
+  {
+    "model": "fleet.categoriaVeiculo",
+    "pk": 5,
+    "fields": {
+      "nome": "Premium",
+      "icone": "bi-gem",
+      "cor": "#EF4444",
+      "ordem": 5,
+      "ativo": true
+    }
+  },
+  {
+    "model": "fleet.grupoveiculo",
+    "pk": 1,
+    "fields": {
+      "nome": "Hatch Básico",
+      "categoria": 1,
+      "descricao": "Hatchbacks compactos, econômicos, ideais para uso urbano.",
+      "diaria": "89.00",
+      "semanal": "530.00",
+      "mensal": "1950.00",
+      "km_franquia_diaria": 200,
+      "valor_km_excedente": "0.50",
+      "caucao": "500.00",
+      "ativo": true
+    }
+  },
+  {
+    "model": "fleet.grupoveiculo",
+    "pk": 2,
+    "fields": {
+      "nome": "Sedan Compacto",
+      "categoria": 2,
+      "descricao": "Sedans e hatches intermediários, conforto para viagens.",
+      "diaria": "119.00",
+      "semanal": "699.00",
+      "mensal": "2590.00",
+      "km_franquia_diaria": 250,
+      "valor_km_excedente": "0.75",
+      "caucao": "800.00",
+      "ativo": true
+    }
+  },
+  {
+    "model": "fleet.grupoveiculo",
+    "pk": 3,
+    "fields": {
+      "nome": "SUV Compacto",
+      "categoria": 3,
+      "descricao": "SUVs compactos com tração, conforto e espaço.",
+      "diaria": "179.00",
+      "semanal": "1050.00",
+      "mensal": "3800.00",
+      "km_franquia_diaria": 250,
+      "valor_km_excedente": "1.00",
+      "caucao": "1200.00",
+      "ativo": true
+    }
+  },
+  {
+    "model": "fleet.grupoveiculo",
+    "pk": 4,
+    "fields": {
+      "nome": "Pickup",
+      "categoria": 4,
+      "descricao": "Pickups para carga e uso em terreno misto.",
+      "diaria": "149.00",
+      "semanal": "880.00",
+      "mensal": "3200.00",
+      "km_franquia_diaria": 300,
+      "valor_km_excedente": "0.80",
+      "caucao": "1000.00",
+      "ativo": true
+    }
+  },
+  {
+    "model": "fleet.grupoveiculo",
+    "pk": 5,
+    "fields": {
+      "nome": "Sedan Premium",
+      "categoria": 5,
+      "descricao": "Sedans premium com alto equipamento e desempenho.",
+      "diaria": "299.00",
+      "semanal": "1750.00",
+      "mensal": "6200.00",
+      "km_franquia_diaria": 300,
+      "valor_km_excedente": "1.50",
+      "caucao": "2000.00",
+      "ativo": true
+    }
+  },
+  {
+    "model": "fleet.veiculo",
+    "pk": 1,
+    "fields": {
+      "placa": "ABC1D23",
+      "chassi": "9BWZZZ377VT004251",
+      "renavam": "01234567890",
+      "marca": "Chevrolet",
+      "modelo": "Onix Plus LT",
+      "ano_fabricacao": 2022,
+      "ano_modelo": 2023,
+      "cor": "Branco Summit",
+      "combustivel": "flex",
+      "transmissao": "manual",
+      "portas": 4,
+      "lugares": 5,
+      "km_atual": 50200,
+      "grupo": 1,
+      "situacao": "disponivel",
+      "data_aquisicao": "2022-08-15",
+      "valor_aquisicao": "75900.00",
+      "valor_fipe": "71500.00",
+      "criado_em": "2026-01-10T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.veiculo",
+    "pk": 2,
+    "fields": {
+      "placa": "DEF5G67",
+      "chassi": "9BHBG41BAJA201234",
+      "renavam": "02345678901",
+      "marca": "Hyundai",
+      "modelo": "HB20 Comfort",
+      "ano_fabricacao": 2021,
+      "ano_modelo": 2021,
+      "cor": "Prata",
+      "combustivel": "flex",
+      "transmissao": "manual",
+      "portas": 4,
+      "lugares": 5,
+      "km_atual": 32950,
+      "grupo": 1,
+      "situacao": "disponivel",
+      "data_aquisicao": "2021-11-10",
+      "valor_aquisicao": "68500.00",
+      "valor_fipe": "62000.00",
+      "criado_em": "2026-01-10T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.veiculo",
+    "pk": 3,
+    "fields": {
+      "placa": "GHI9J01",
+      "chassi": "9BGRD08X04G117962",
+      "renavam": "03456789012",
+      "marca": "Chevrolet",
+      "modelo": "Cruze Sport6 LTZ",
+      "ano_fabricacao": 2020,
+      "ano_modelo": 2021,
+      "cor": "Preto Ouro Negro",
+      "combustivel": "flex",
+      "transmissao": "automatico",
+      "portas": 4,
+      "lugares": 5,
+      "km_atual": 67000,
+      "grupo": 2,
+      "situacao": "em_uso",
+      "data_aquisicao": "2020-06-20",
+      "valor_aquisicao": "115000.00",
+      "valor_fipe": "98000.00",
+      "criado_em": "2026-01-10T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.veiculo",
+    "pk": 4,
+    "fields": {
+      "placa": "JKL3M45",
+      "chassi": "JTDBF32E700086437",
+      "renavam": "04567890123",
+      "marca": "Toyota",
+      "modelo": "Corolla XEI",
+      "ano_fabricacao": 2021,
+      "ano_modelo": 2022,
+      "cor": "Prata Metálico",
+      "combustivel": "flex",
+      "transmissao": "automatico",
+      "portas": 4,
+      "lugares": 5,
+      "km_atual": 89000,
+      "grupo": 2,
+      "situacao": "em_uso",
+      "data_aquisicao": "2021-03-12",
+      "valor_aquisicao": "142000.00",
+      "valor_fipe": "128000.00",
+      "criado_em": "2026-01-10T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.veiculo",
+    "pk": 5,
+    "fields": {
+      "placa": "MNO7P89",
+      "chassi": "9BFUG5610LB310219",
+      "renavam": "05678901234",
+      "marca": "Hyundai",
+      "modelo": "Creta Pulse Plus",
+      "ano_fabricacao": 2022,
+      "ano_modelo": 2023,
+      "cor": "Azul Topázio",
+      "combustivel": "flex",
+      "transmissao": "automatico",
+      "portas": 4,
+      "lugares": 5,
+      "km_atual": 28000,
+      "grupo": 3,
+      "situacao": "reservado",
+      "data_aquisicao": "2022-10-05",
+      "valor_aquisicao": "139900.00",
+      "valor_fipe": "132000.00",
+      "criado_em": "2026-01-10T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.veiculo",
+    "pk": 6,
+    "fields": {
+      "placa": "PQR1S23",
+      "chassi": "9BFPG27L0JB204881",
+      "renavam": "06789012345",
+      "marca": "Jeep",
+      "modelo": "Renegade Longitude",
+      "ano_fabricacao": 2021,
+      "ano_modelo": 2022,
+      "cor": "Vermelho Colorado",
+      "combustivel": "flex",
+      "transmissao": "automatico",
+      "portas": 4,
+      "lugares": 5,
+      "km_atual": 54200,
+      "grupo": 3,
+      "situacao": "disponivel",
+      "data_aquisicao": "2021-08-30",
+      "valor_aquisicao": "145000.00",
+      "valor_fipe": "128000.00",
+      "criado_em": "2026-01-10T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.veiculo",
+    "pk": 7,
+    "fields": {
+      "placa": "STU4V56",
+      "chassi": "9BFNG1DM0GB247510",
+      "renavam": "07890123456",
+      "marca": "Chevrolet",
+      "modelo": "S10 High Country 4x4",
+      "ano_fabricacao": 2019,
+      "ano_modelo": 2020,
+      "cor": "Branco Summit",
+      "combustivel": "diesel",
+      "transmissao": "automatico",
+      "portas": 4,
+      "lugares": 5,
+      "km_atual": 112000,
+      "grupo": 4,
+      "situacao": "manutencao",
+      "data_aquisicao": "2019-11-20",
+      "valor_aquisicao": "195000.00",
+      "valor_fipe": "158000.00",
+      "criado_em": "2026-01-10T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.veiculo",
+    "pk": 8,
+    "fields": {
+      "placa": "VWX7Y89",
+      "chassi": "9BGSC19B0JG458320",
+      "renavam": "08901234567",
+      "marca": "Citroën",
+      "modelo": "C3 Attraction",
+      "ano_fabricacao": 2016,
+      "ano_modelo": 2017,
+      "cor": "Cinza Alumínio",
+      "combustivel": "flex",
+      "transmissao": "manual",
+      "portas": 4,
+      "lugares": 5,
+      "km_atual": 145000,
+      "grupo": 1,
+      "situacao": "inativo",
+      "data_aquisicao": "2016-05-08",
+      "valor_aquisicao": "42000.00",
+      "valor_fipe": "25000.00",
+      "criado_em": "2026-01-10T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.documentoveiculo",
+    "pk": 1,
+    "fields": {
+      "veiculo": 1,
+      "tipo": "crlv",
+      "numero": "231234567890",
+      "emissor": "DETRAN-SP",
+      "data_emissao": "2026-01-10",
+      "data_validade": "2026-12-31",
+      "arquivo": "",
+      "dias_alerta": 30,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.documentoveiculo",
+    "pk": 2,
+    "fields": {
+      "veiculo": 2,
+      "tipo": "crlv",
+      "numero": "231234567891",
+      "emissor": "DETRAN-SP",
+      "data_emissao": "2026-01-10",
+      "data_validade": "2026-12-31",
+      "arquivo": "",
+      "dias_alerta": 30,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.documentoveiculo",
+    "pk": 3,
+    "fields": {
+      "veiculo": 3,
+      "tipo": "crlv",
+      "numero": "231234567892",
+      "emissor": "DETRAN-SP",
+      "data_emissao": "2026-01-10",
+      "data_validade": "2026-12-31",
+      "arquivo": "",
+      "dias_alerta": 30,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.documentoveiculo",
+    "pk": 4,
+    "fields": {
+      "veiculo": 4,
+      "tipo": "crlv",
+      "numero": "231234567893",
+      "emissor": "DETRAN-SP",
+      "data_emissao": "2026-01-10",
+      "data_validade": "2026-12-31",
+      "arquivo": "",
+      "dias_alerta": 30,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.documentoveiculo",
+    "pk": 5,
+    "fields": {
+      "veiculo": 5,
+      "tipo": "crlv",
+      "numero": "231234567894",
+      "emissor": "DETRAN-SP",
+      "data_emissao": "2026-01-10",
+      "data_validade": "2026-12-31",
+      "arquivo": "",
+      "dias_alerta": 30,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.documentoveiculo",
+    "pk": 6,
+    "fields": {
+      "veiculo": 6,
+      "tipo": "crlv",
+      "numero": "231234567895",
+      "emissor": "DETRAN-SP",
+      "data_emissao": "2026-01-10",
+      "data_validade": "2026-12-31",
+      "arquivo": "",
+      "dias_alerta": 30,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.documentoveiculo",
+    "pk": 7,
+    "fields": {
+      "veiculo": 7,
+      "tipo": "crlv",
+      "numero": "231234567896",
+      "emissor": "DETRAN-SP",
+      "data_emissao": "2026-01-10",
+      "data_validade": "2026-12-31",
+      "arquivo": "",
+      "dias_alerta": 30,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.documentoveiculo",
+    "pk": 8,
+    "fields": {
+      "veiculo": 8,
+      "tipo": "crlv",
+      "numero": "231234567897",
+      "emissor": "DETRAN-SP",
+      "data_emissao": "2025-01-10",
+      "data_validade": "2025-12-31",
+      "arquivo": "",
+      "dias_alerta": 30,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.documentoveiculo",
+    "pk": 9,
+    "fields": {
+      "veiculo": 3,
+      "tipo": "seguro",
+      "numero": "APL-2026-CR-00142",
+      "emissor": "Porto Seguro",
+      "data_emissao": "2026-01-15",
+      "data_validade": "2026-09-30",
+      "arquivo": "",
+      "dias_alerta": 45,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.documentoveiculo",
+    "pk": 10,
+    "fields": {
+      "veiculo": 5,
+      "tipo": "seguro",
+      "numero": "APL-2026-CR-00189",
+      "emissor": "Bradesco Seguros",
+      "data_emissao": "2026-01-20",
+      "data_validade": "2026-08-01",
+      "arquivo": "",
+      "dias_alerta": 60,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.documentoveiculo",
+    "pk": 11,
+    "fields": {
+      "veiculo": 7,
+      "tipo": "extintor",
+      "numero": "",
+      "emissor": "",
+      "data_emissao": "2025-05-10",
+      "data_validade": "2026-05-10",
+      "arquivo": "",
+      "dias_alerta": 30,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.documentoveiculo",
+    "pk": 12,
+    "fields": {
+      "veiculo": 1,
+      "tipo": "seguro",
+      "numero": "APL-2026-ON-00312",
+      "emissor": "Tokio Marine",
+      "data_emissao": "2026-01-10",
+      "data_validade": "2027-01-10",
+      "arquivo": "",
+      "dias_alerta": 30,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  }
+]

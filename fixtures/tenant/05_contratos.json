@@ -1,0 +1,1010 @@
+[
+  {
+    "model": "contracts.reserva",
+    "pk": 1,
+    "fields": {
+      "cliente": 1,
+      "grupo_veiculo": 2,
+      "veiculo": 3,
+      "canal": "balcao",
+      "situacao": "ativa",
+      "data_retirada": "2026-05-20T10:00:00Z",
+      "data_devolucao": "2026-05-27T10:00:00Z",
+      "diaria_cotada": "119.00",
+      "caucao_cotado": "800.00",
+      "adicionais_cotados": {},
+      "observacoes": "",
+      "criado_por": 3,
+      "criado_em": "2026-05-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.reserva",
+    "pk": 2,
+    "fields": {
+      "cliente": 4,
+      "grupo_veiculo": 2,
+      "veiculo": 4,
+      "canal": "telefone",
+      "situacao": "ativa",
+      "data_retirada": "2026-05-23T09:00:00Z",
+      "data_devolucao": "2026-05-30T09:00:00Z",
+      "diaria_cotada": "119.00",
+      "caucao_cotado": "800.00",
+      "adicionais_cotados": {},
+      "observacoes": "Nota fiscal em nome da empresa.",
+      "criado_por": 3,
+      "criado_em": "2026-05-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.reserva",
+    "pk": 3,
+    "fields": {
+      "cliente": 3,
+      "grupo_veiculo": 3,
+      "veiculo": 5,
+      "canal": "whatsapp",
+      "situacao": "confirmada",
+      "data_retirada": "2026-06-02T10:00:00Z",
+      "data_devolucao": "2026-06-06T10:00:00Z",
+      "diaria_cotada": "179.00",
+      "caucao_cotado": "1200.00",
+      "adicionais_cotados": {},
+      "observacoes": "Cliente solicitou GPS incluído.",
+      "criado_por": 4,
+      "criado_em": "2026-05-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.reserva",
+    "pk": 4,
+    "fields": {
+      "cliente": 2,
+      "grupo_veiculo": 1,
+      "veiculo": 2,
+      "canal": "balcao",
+      "situacao": "concluida",
+      "data_retirada": "2026-05-10T09:00:00Z",
+      "data_devolucao": "2026-05-17T09:00:00Z",
+      "diaria_cotada": "89.00",
+      "caucao_cotado": "500.00",
+      "adicionais_cotados": {},
+      "observacoes": "",
+      "criado_por": 3,
+      "criado_em": "2026-05-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.reserva",
+    "pk": 5,
+    "fields": {
+      "cliente": 1,
+      "grupo_veiculo": 3,
+      "veiculo": 6,
+      "canal": "site",
+      "situacao": "concluida",
+      "data_retirada": "2025-12-15T10:00:00Z",
+      "data_devolucao": "2025-12-22T10:00:00Z",
+      "diaria_cotada": "179.00",
+      "caucao_cotado": "1200.00",
+      "adicionais_cotados": {},
+      "observacoes": "",
+      "criado_por": 3,
+      "criado_em": "2026-05-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.reserva",
+    "pk": 6,
+    "fields": {
+      "cliente": 6,
+      "grupo_veiculo": 1,
+      "veiculo": 1,
+      "canal": "app",
+      "situacao": "no_show",
+      "data_retirada": "2026-05-15T09:00:00Z",
+      "data_devolucao": "2026-05-17T09:00:00Z",
+      "diaria_cotada": "89.00",
+      "caucao_cotado": "500.00",
+      "adicionais_cotados": {},
+      "observacoes": "Cliente não compareceu para retirada. Tentativas de contato sem resposta.",
+      "criado_por": 3,
+      "criado_em": "2026-05-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.reserva",
+    "pk": 7,
+    "fields": {
+      "cliente": 5,
+      "grupo_veiculo": 1,
+      "veiculo": 2,
+      "canal": "whatsapp",
+      "situacao": "cancelada",
+      "data_retirada": "2026-04-01T10:00:00Z",
+      "data_devolucao": "2026-04-05T10:00:00Z",
+      "diaria_cotada": "89.00",
+      "caucao_cotado": "500.00",
+      "adicionais_cotados": {},
+      "observacoes": "Cancelada após verificação de bloqueio do cliente por inadimplência.",
+      "criado_por": 4,
+      "criado_em": "2026-05-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.contrato",
+    "pk": 1,
+    "fields": {
+      "numero": "AF-2026-0001",
+      "reserva": 1,
+      "cliente": 1,
+      "veiculo": 3,
+      "situacao": "ativo",
+      "criado_por": 3,
+      "data_saida": "2026-05-20T10:00:00Z",
+      "km_saida": 67000,
+      "combustivel_saida": "cheio",
+      "obs_saida": "",
+      "data_devolucao_prevista": "2026-05-27T10:00:00Z",
+      "data_devolucao_real": null,
+      "km_devolucao": null,
+      "combustivel_devolucao": null,
+      "obs_devolucao": "",
+      "diaria": "119.00",
+      "km_franquia_diaria": 250,
+      "valor_km_excedente": "0.75",
+      "caucao_valor": "800.00",
+      "caucao_situacao": "pago",
+      "caucao_pago_em": "2026-05-20T10:00:00Z",
+      "total_dias": null,
+      "dias_extras": 0,
+      "km_total": null,
+      "km_excedente": 0,
+      "valor_km_excedente_total": "0.00",
+      "valor_dias_extras": "0.00",
+      "valor_diferenca_combustivel": "0.00",
+      "token_assinatura": "550e8400-e29b-41d4-a716-446655440001",
+      "assinado_em": "2026-05-20T10:00:00Z",
+      "ip_assinatura": "192.168.1.100",
+      "criado_em": "2026-05-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.contrato",
+    "pk": 2,
+    "fields": {
+      "numero": "AF-2026-0002",
+      "reserva": 2,
+      "cliente": 4,
+      "veiculo": 4,
+      "situacao": "ativo",
+      "criado_por": 3,
+      "data_saida": "2026-05-23T09:00:00Z",
+      "km_saida": 89000,
+      "combustivel_saida": "cheio",
+      "obs_saida": "",
+      "data_devolucao_prevista": "2026-05-30T09:00:00Z",
+      "data_devolucao_real": null,
+      "km_devolucao": null,
+      "combustivel_devolucao": null,
+      "obs_devolucao": "",
+      "diaria": "119.00",
+      "km_franquia_diaria": 250,
+      "valor_km_excedente": "0.75",
+      "caucao_valor": "800.00",
+      "caucao_situacao": "pago",
+      "caucao_pago_em": "2026-05-23T09:00:00Z",
+      "total_dias": null,
+      "dias_extras": 0,
+      "km_total": null,
+      "km_excedente": 0,
+      "valor_km_excedente_total": "0.00",
+      "valor_dias_extras": "0.00",
+      "valor_diferenca_combustivel": "0.00",
+      "token_assinatura": "550e8400-e29b-41d4-a716-446655440002",
+      "assinado_em": "2026-05-23T09:00:00Z",
+      "ip_assinatura": "192.168.1.101",
+      "criado_em": "2026-05-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.contrato",
+    "pk": 3,
+    "fields": {
+      "numero": "AF-2026-0003",
+      "reserva": 3,
+      "cliente": 3,
+      "veiculo": 5,
+      "situacao": "aberto",
+      "criado_por": 4,
+      "data_saida": null,
+      "km_saida": null,
+      "combustivel_saida": null,
+      "obs_saida": "",
+      "data_devolucao_prevista": "2026-06-06T10:00:00Z",
+      "data_devolucao_real": null,
+      "km_devolucao": null,
+      "combustivel_devolucao": null,
+      "obs_devolucao": "",
+      "diaria": "179.00",
+      "km_franquia_diaria": 250,
+      "valor_km_excedente": "1.00",
+      "caucao_valor": "1200.00",
+      "caucao_situacao": "pendente",
+      "caucao_pago_em": null,
+      "total_dias": null,
+      "dias_extras": 0,
+      "km_total": null,
+      "km_excedente": 0,
+      "valor_km_excedente_total": "0.00",
+      "valor_dias_extras": "0.00",
+      "valor_diferenca_combustivel": "0.00",
+      "token_assinatura": "550e8400-e29b-41d4-a716-446655440003",
+      "assinado_em": null,
+      "ip_assinatura": null,
+      "criado_em": "2026-05-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.contrato",
+    "pk": 4,
+    "fields": {
+      "numero": "AF-2026-0004",
+      "reserva": 4,
+      "cliente": 2,
+      "veiculo": 2,
+      "situacao": "aguardando_devolucao",
+      "criado_por": 3,
+      "data_saida": "2026-05-10T09:00:00Z",
+      "km_saida": 32000,
+      "combustivel_saida": "cheio",
+      "obs_saida": "",
+      "data_devolucao_prevista": "2026-05-17T09:00:00Z",
+      "data_devolucao_real": "2026-05-25T16:30:00Z",
+      "km_devolucao": 32950,
+      "combustivel_devolucao": "1/2",
+      "obs_devolucao": "Devolução com 8 dias de atraso. Avaria identificada na porta dianteira esquerda.",
+      "diaria": "89.00",
+      "km_franquia_diaria": 200,
+      "valor_km_excedente": "0.50",
+      "caucao_valor": "500.00",
+      "caucao_situacao": "pago",
+      "caucao_pago_em": "2026-05-10T09:00:00Z",
+      "total_dias": 15,
+      "dias_extras": 8,
+      "km_total": 950,
+      "km_excedente": 0,
+      "valor_km_excedente_total": "0.00",
+      "valor_dias_extras": "712.00",
+      "valor_diferenca_combustivel": "160.00",
+      "token_assinatura": "550e8400-e29b-41d4-a716-446655440004",
+      "assinado_em": "2026-05-10T09:00:00Z",
+      "ip_assinatura": "192.168.1.102",
+      "criado_em": "2026-05-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.contrato",
+    "pk": 5,
+    "fields": {
+      "numero": "AF-2025-0001",
+      "reserva": null,
+      "cliente": 6,
+      "veiculo": 1,
+      "situacao": "encerrado",
+      "criado_por": 3,
+      "data_saida": "2025-11-01T09:00:00Z",
+      "km_saida": 42000,
+      "combustivel_saida": "cheio",
+      "obs_saida": "",
+      "data_devolucao_prevista": "2025-11-08T09:00:00Z",
+      "data_devolucao_real": "2025-11-07T17:00:00Z",
+      "km_devolucao": 42750,
+      "combustivel_devolucao": "cheio",
+      "obs_devolucao": "Devolução antecipada. Veículo em bom estado.",
+      "diaria": "89.00",
+      "km_franquia_diaria": 200,
+      "valor_km_excedente": "0.50",
+      "caucao_valor": "500.00",
+      "caucao_situacao": "devolvido",
+      "caucao_pago_em": "2025-11-01T09:00:00Z",
+      "total_dias": 6,
+      "dias_extras": 0,
+      "km_total": 750,
+      "km_excedente": 0,
+      "valor_km_excedente_total": "0.00",
+      "valor_dias_extras": "0.00",
+      "valor_diferenca_combustivel": "0.00",
+      "token_assinatura": "550e8400-e29b-41d4-a716-446655440005",
+      "assinado_em": "2025-11-01T09:00:00Z",
+      "ip_assinatura": "192.168.1.103",
+      "criado_em": "2026-05-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.contrato",
+    "pk": 6,
+    "fields": {
+      "numero": "AF-2025-0002",
+      "reserva": 5,
+      "cliente": 1,
+      "veiculo": 6,
+      "situacao": "encerrado",
+      "criado_por": 3,
+      "data_saida": "2025-12-15T10:00:00Z",
+      "km_saida": 52000,
+      "combustivel_saida": "cheio",
+      "obs_saida": "",
+      "data_devolucao_prevista": "2025-12-22T10:00:00Z",
+      "data_devolucao_real": "2025-12-22T14:00:00Z",
+      "km_devolucao": 54200,
+      "combustivel_devolucao": "cheio",
+      "obs_devolucao": "Km excedente: 450km acima da franquia.",
+      "diaria": "179.00",
+      "km_franquia_diaria": 250,
+      "valor_km_excedente": "1.00",
+      "caucao_valor": "1200.00",
+      "caucao_situacao": "devolvido",
+      "caucao_pago_em": "2025-12-15T10:00:00Z",
+      "total_dias": 7,
+      "dias_extras": 0,
+      "km_total": 2200,
+      "km_excedente": 450,
+      "valor_km_excedente_total": "450.00",
+      "valor_dias_extras": "0.00",
+      "valor_diferenca_combustivel": "0.00",
+      "token_assinatura": "550e8400-e29b-41d4-a716-446655440006",
+      "assinado_em": "2025-12-15T10:00:00Z",
+      "ip_assinatura": "192.168.1.100",
+      "criado_em": "2026-05-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.contrato",
+    "pk": 7,
+    "fields": {
+      "numero": "AF-2026-0005",
+      "reserva": null,
+      "cliente": 5,
+      "veiculo": 1,
+      "situacao": "cancelado",
+      "criado_por": 4,
+      "data_saida": null,
+      "km_saida": null,
+      "combustivel_saida": null,
+      "obs_saida": "",
+      "data_devolucao_prevista": "2026-04-05T10:00:00Z",
+      "data_devolucao_real": null,
+      "km_devolucao": null,
+      "combustivel_devolucao": null,
+      "obs_devolucao": "",
+      "diaria": "89.00",
+      "km_franquia_diaria": 200,
+      "valor_km_excedente": "0.50",
+      "caucao_valor": "500.00",
+      "caucao_situacao": "pendente",
+      "caucao_pago_em": null,
+      "total_dias": null,
+      "dias_extras": 0,
+      "km_total": null,
+      "km_excedente": 0,
+      "valor_km_excedente_total": "0.00",
+      "valor_dias_extras": "0.00",
+      "valor_diferenca_combustivel": "0.00",
+      "token_assinatura": "550e8400-e29b-41d4-a716-446655440007",
+      "assinado_em": null,
+      "ip_assinatura": null,
+      "criado_em": "2026-05-01T08:00:00Z",
+      "atualizado_em": "2026-05-28T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.adicionalcontrato",
+    "pk": 1,
+    "fields": {
+      "contrato": 1,
+      "tipo": "gps",
+      "descricao": "GPS Garmin integrado",
+      "diaria": "15.00",
+      "quantidade": 1
+    }
+  },
+  {
+    "model": "contracts.adicionalcontrato",
+    "pk": 2,
+    "fields": {
+      "contrato": 1,
+      "tipo": "condutor_adicional",
+      "descricao": "Condutor adicional: Ana Silva (CPF 322.001.480-15)",
+      "diaria": "25.00",
+      "quantidade": 1
+    }
+  },
+  {
+    "model": "contracts.adicionalcontrato",
+    "pk": 3,
+    "fields": {
+      "contrato": 2,
+      "tipo": "seguro_basico",
+      "descricao": "Proteção básica contra terceiros",
+      "diaria": "20.00",
+      "quantidade": 1
+    }
+  },
+  {
+    "model": "contracts.adicionalcontrato",
+    "pk": 4,
+    "fields": {
+      "contrato": 4,
+      "tipo": "gps",
+      "descricao": "GPS Garmin integrado",
+      "diaria": "15.00",
+      "quantidade": 1
+    }
+  },
+  {
+    "model": "contracts.adicionalcontrato",
+    "pk": 5,
+    "fields": {
+      "contrato": 6,
+      "tipo": "cadeirinha",
+      "descricao": "Cadeirinha infantil grupo 1 (9-18kg)",
+      "diaria": "10.00",
+      "quantidade": 1
+    }
+  },
+  {
+    "model": "contracts.avariacontrato",
+    "pk": 1,
+    "fields": {
+      "contrato": 4,
+      "descricao": "Arranhão profundo na porta dianteira esquerda",
+      "localizacao": "Porta dianteira esquerda",
+      "valor_cobrado": "350.00",
+      "foto": "",
+      "situacao": "cobrada",
+      "criado_em": "2026-05-25T16:30:00Z"
+    }
+  },
+  {
+    "model": "contracts.avariacontrato",
+    "pk": 2,
+    "fields": {
+      "contrato": 6,
+      "descricao": "Pneu dianteiro direito furado durante período de locação",
+      "localizacao": "Pneu dianteiro direito",
+      "valor_cobrado": "0.00",
+      "foto": "",
+      "situacao": "isenta",
+      "criado_em": "2026-05-25T16:30:00Z"
+    }
+  },
+  {
+    "model": "contracts.avariacontrato",
+    "pk": 3,
+    "fields": {
+      "contrato": 1,
+      "descricao": "Farol traseiro esquerdo trincado",
+      "localizacao": "Traseira esquerda",
+      "valor_cobrado": "280.00",
+      "foto": "",
+      "situacao": "cobrada",
+      "criado_em": "2026-05-25T16:30:00Z"
+    }
+  },
+  {
+    "model": "contracts.pagamentocontrato",
+    "pk": 1,
+    "fields": {
+      "contrato": 1,
+      "forma_pagamento": "cartao_credito",
+      "tipo": "caucao",
+      "valor": "800.00",
+      "data_pagamento": "2026-05-20T10:05:00Z",
+      "observacoes": "Caução — cartão Visa final 1234",
+      "registrado_por": 3,
+      "criado_em": "2026-05-20T10:05:00Z"
+    }
+  },
+  {
+    "model": "contracts.pagamentocontrato",
+    "pk": 2,
+    "fields": {
+      "contrato": 2,
+      "forma_pagamento": "pix",
+      "tipo": "caucao",
+      "valor": "800.00",
+      "data_pagamento": "2026-05-23T09:10:00Z",
+      "observacoes": "Caução via PIX. Comprovante recebido.",
+      "registrado_por": 3,
+      "criado_em": "2026-05-20T10:05:00Z"
+    }
+  },
+  {
+    "model": "contracts.pagamentocontrato",
+    "pk": 3,
+    "fields": {
+      "contrato": 2,
+      "forma_pagamento": "pix",
+      "tipo": "locacao",
+      "valor": "500.00",
+      "data_pagamento": "2026-05-23T09:15:00Z",
+      "observacoes": "Adiantamento de locação.",
+      "registrado_por": 3,
+      "criado_em": "2026-05-20T10:05:00Z"
+    }
+  },
+  {
+    "model": "contracts.pagamentocontrato",
+    "pk": 4,
+    "fields": {
+      "contrato": 4,
+      "forma_pagamento": "dinheiro",
+      "tipo": "caucao",
+      "valor": "500.00",
+      "data_pagamento": "2026-05-10T09:10:00Z",
+      "observacoes": "",
+      "registrado_por": 3,
+      "criado_em": "2026-05-20T10:05:00Z"
+    }
+  },
+  {
+    "model": "contracts.pagamentocontrato",
+    "pk": 5,
+    "fields": {
+      "contrato": 4,
+      "forma_pagamento": "pix",
+      "tipo": "locacao",
+      "valor": "623.00",
+      "data_pagamento": "2026-05-17T09:00:00Z",
+      "observacoes": "Pagamento da 1ª semana de locação.",
+      "registrado_por": 3,
+      "criado_em": "2026-05-20T10:05:00Z"
+    }
+  },
+  {
+    "model": "contracts.pagamentocontrato",
+    "pk": 6,
+    "fields": {
+      "contrato": 4,
+      "forma_pagamento": "dinheiro",
+      "tipo": "avaria",
+      "valor": "350.00",
+      "data_pagamento": "2026-05-25T16:45:00Z",
+      "observacoes": "Cobrança de avaria — arranhão porta esquerda.",
+      "registrado_por": 3,
+      "criado_em": "2026-05-20T10:05:00Z"
+    }
+  },
+  {
+    "model": "contracts.pagamentocontrato",
+    "pk": 7,
+    "fields": {
+      "contrato": 5,
+      "forma_pagamento": "cartao_credito",
+      "tipo": "caucao",
+      "valor": "500.00",
+      "data_pagamento": "2025-11-01T09:05:00Z",
+      "observacoes": "",
+      "registrado_por": 3,
+      "criado_em": "2026-05-20T10:05:00Z"
+    }
+  },
+  {
+    "model": "contracts.pagamentocontrato",
+    "pk": 8,
+    "fields": {
+      "contrato": 5,
+      "forma_pagamento": "pix",
+      "tipo": "locacao",
+      "valor": "534.00",
+      "data_pagamento": "2025-11-07T17:10:00Z",
+      "observacoes": "Pagamento total da locação — 6 dias × R$ 89,00.",
+      "registrado_por": 3,
+      "criado_em": "2026-05-20T10:05:00Z"
+    }
+  },
+  {
+    "model": "contracts.pagamentocontrato",
+    "pk": 9,
+    "fields": {
+      "contrato": 6,
+      "forma_pagamento": "pix",
+      "tipo": "caucao",
+      "valor": "1200.00",
+      "data_pagamento": "2025-12-15T10:05:00Z",
+      "observacoes": "",
+      "registrado_por": 3,
+      "criado_em": "2026-05-20T10:05:00Z"
+    }
+  },
+  {
+    "model": "contracts.pagamentocontrato",
+    "pk": 10,
+    "fields": {
+      "contrato": 6,
+      "forma_pagamento": "cartao_credito",
+      "tipo": "locacao",
+      "valor": "1773.00",
+      "data_pagamento": "2025-12-22T14:20:00Z",
+      "observacoes": "Pagamento total: 7 dias (R$ 1.253) + 450km excedente (R$ 450) + cadeirinha (R$ 70).",
+      "registrado_por": 3,
+      "criado_em": "2026-05-20T10:05:00Z"
+    }
+  },
+  {
+    "model": "contracts.parcelacontrato",
+    "pk": 1,
+    "fields": {
+      "contrato": 1,
+      "numero": 1,
+      "tipo": "caucao",
+      "data_vencimento": "2026-05-20",
+      "valor": "800.00",
+      "situacao": "pago",
+      "data_pagamento": "2026-05-20T10:05:00Z",
+      "forma_pagamento": "cartao_credito",
+      "observacoes": "",
+      "origem": "original",
+      "criado_em": "2026-05-01T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.parcelacontrato",
+    "pk": 2,
+    "fields": {
+      "contrato": 1,
+      "numero": 2,
+      "tipo": "semanal",
+      "data_vencimento": "2026-05-27",
+      "valor": "833.00",
+      "situacao": "em_atraso",
+      "data_pagamento": null,
+      "forma_pagamento": null,
+      "observacoes": "",
+      "origem": "original",
+      "criado_em": "2026-05-01T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.parcelacontrato",
+    "pk": 3,
+    "fields": {
+      "contrato": 2,
+      "numero": 1,
+      "tipo": "caucao",
+      "data_vencimento": "2026-05-23",
+      "valor": "800.00",
+      "situacao": "pago",
+      "data_pagamento": "2026-05-23T09:10:00Z",
+      "forma_pagamento": "pix",
+      "observacoes": "",
+      "origem": "original",
+      "criado_em": "2026-05-01T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.parcelacontrato",
+    "pk": 4,
+    "fields": {
+      "contrato": 2,
+      "numero": 2,
+      "tipo": "semanal",
+      "data_vencimento": "2026-05-30",
+      "valor": "833.00",
+      "situacao": "pendente",
+      "data_pagamento": null,
+      "forma_pagamento": null,
+      "observacoes": "",
+      "origem": "original",
+      "criado_em": "2026-05-01T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.parcelacontrato",
+    "pk": 5,
+    "fields": {
+      "contrato": 3,
+      "numero": 1,
+      "tipo": "caucao",
+      "data_vencimento": "2026-06-02",
+      "valor": "1200.00",
+      "situacao": "pendente",
+      "data_pagamento": null,
+      "forma_pagamento": null,
+      "observacoes": "",
+      "origem": "original",
+      "criado_em": "2026-05-01T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.parcelacontrato",
+    "pk": 6,
+    "fields": {
+      "contrato": 3,
+      "numero": 2,
+      "tipo": "semanal",
+      "data_vencimento": "2026-06-09",
+      "valor": "716.00",
+      "situacao": "pendente",
+      "data_pagamento": null,
+      "forma_pagamento": null,
+      "observacoes": "",
+      "origem": "original",
+      "criado_em": "2026-05-01T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.parcelacontrato",
+    "pk": 7,
+    "fields": {
+      "contrato": 4,
+      "numero": 1,
+      "tipo": "caucao",
+      "data_vencimento": "2026-05-10",
+      "valor": "500.00",
+      "situacao": "pago",
+      "data_pagamento": "2026-05-10T09:10:00Z",
+      "forma_pagamento": "dinheiro",
+      "observacoes": "",
+      "origem": "original",
+      "criado_em": "2026-05-01T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.parcelacontrato",
+    "pk": 8,
+    "fields": {
+      "contrato": 4,
+      "numero": 2,
+      "tipo": "semanal",
+      "data_vencimento": "2026-05-17",
+      "valor": "623.00",
+      "situacao": "pago",
+      "data_pagamento": "2026-05-17T09:00:00Z",
+      "forma_pagamento": "pix",
+      "observacoes": "",
+      "origem": "original",
+      "criado_em": "2026-05-01T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.parcelacontrato",
+    "pk": 9,
+    "fields": {
+      "contrato": 4,
+      "numero": 3,
+      "tipo": "semanal",
+      "data_vencimento": "2026-05-24",
+      "valor": "712.00",
+      "situacao": "em_atraso",
+      "data_pagamento": null,
+      "forma_pagamento": null,
+      "observacoes": "Dias extras (8 dias). Aguardando fechamento financeiro.",
+      "origem": "original",
+      "criado_em": "2026-05-01T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.parcelacontrato",
+    "pk": 10,
+    "fields": {
+      "contrato": 5,
+      "numero": 1,
+      "tipo": "caucao",
+      "data_vencimento": "2025-11-01",
+      "valor": "500.00",
+      "situacao": "pago",
+      "data_pagamento": "2025-11-01T09:05:00Z",
+      "forma_pagamento": "cartao_credito",
+      "observacoes": "",
+      "origem": "original",
+      "criado_em": "2026-05-01T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.parcelacontrato",
+    "pk": 11,
+    "fields": {
+      "contrato": 5,
+      "numero": 2,
+      "tipo": "semanal",
+      "data_vencimento": "2025-11-07",
+      "valor": "534.00",
+      "situacao": "pago",
+      "data_pagamento": "2025-11-07T17:10:00Z",
+      "forma_pagamento": "pix",
+      "observacoes": "",
+      "origem": "original",
+      "criado_em": "2026-05-01T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.parcelacontrato",
+    "pk": 12,
+    "fields": {
+      "contrato": 6,
+      "numero": 1,
+      "tipo": "caucao",
+      "data_vencimento": "2025-12-15",
+      "valor": "1200.00",
+      "situacao": "pago",
+      "data_pagamento": "2025-12-15T10:05:00Z",
+      "forma_pagamento": "pix",
+      "observacoes": "",
+      "origem": "original",
+      "criado_em": "2026-05-01T08:00:00Z"
+    }
+  },
+  {
+    "model": "contracts.parcelacontrato",
+    "pk": 13,
+    "fields": {
+      "contrato": 6,
+      "numero": 2,
+      "tipo": "semanal",
+      "data_vencimento": "2025-12-22",
+      "valor": "1773.00",
+      "situacao": "pago",
+      "data_pagamento": "2025-12-22T14:20:00Z",
+      "forma_pagamento": "cartao_credito",
+      "observacoes": "",
+      "origem": "original",
+      "criado_em": "2026-05-01T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.historicokmveiculo",
+    "pk": 1,
+    "fields": {
+      "veiculo": 3,
+      "km": 67000,
+      "data": "2026-05-20T10:00:00Z",
+      "origem": "contrato_saida",
+      "contrato": 1,
+      "observacao": "Saída do contrato AF-2026-0001",
+      "registrado_por": 3,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.historicokmveiculo",
+    "pk": 2,
+    "fields": {
+      "veiculo": 4,
+      "km": 89000,
+      "data": "2026-05-23T09:00:00Z",
+      "origem": "contrato_saida",
+      "contrato": 2,
+      "observacao": "Saída do contrato AF-2026-0002",
+      "registrado_por": 3,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.historicokmveiculo",
+    "pk": 3,
+    "fields": {
+      "veiculo": 2,
+      "km": 32000,
+      "data": "2026-05-10T09:00:00Z",
+      "origem": "contrato_saida",
+      "contrato": 4,
+      "observacao": "Saída do contrato AF-2026-0004",
+      "registrado_por": 3,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.historicokmveiculo",
+    "pk": 4,
+    "fields": {
+      "veiculo": 2,
+      "km": 32950,
+      "data": "2026-05-25T16:30:00Z",
+      "origem": "contrato_devolucao",
+      "contrato": 4,
+      "observacao": "Devolução do contrato AF-2026-0004",
+      "registrado_por": 3,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.historicokmveiculo",
+    "pk": 5,
+    "fields": {
+      "veiculo": 1,
+      "km": 42000,
+      "data": "2025-11-01T09:00:00Z",
+      "origem": "contrato_saida",
+      "contrato": 5,
+      "observacao": "Saída do contrato AF-2025-0001",
+      "registrado_por": 3,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.historicokmveiculo",
+    "pk": 6,
+    "fields": {
+      "veiculo": 1,
+      "km": 42750,
+      "data": "2025-11-07T17:00:00Z",
+      "origem": "contrato_devolucao",
+      "contrato": 5,
+      "observacao": "Devolução do contrato AF-2025-0001",
+      "registrado_por": 3,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.historicokmveiculo",
+    "pk": 7,
+    "fields": {
+      "veiculo": 6,
+      "km": 52000,
+      "data": "2025-12-15T10:00:00Z",
+      "origem": "contrato_saida",
+      "contrato": 6,
+      "observacao": "Saída do contrato AF-2025-0002",
+      "registrado_por": 3,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.historicokmveiculo",
+    "pk": 8,
+    "fields": {
+      "veiculo": 6,
+      "km": 54200,
+      "data": "2025-12-22T14:00:00Z",
+      "origem": "contrato_devolucao",
+      "contrato": 6,
+      "observacao": "Devolução AF-2025-0002. KM excedente: 450km.",
+      "registrado_por": 3,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.historicokmveiculo",
+    "pk": 9,
+    "fields": {
+      "veiculo": 1,
+      "km": 49800,
+      "data": "2026-04-18T08:00:00Z",
+      "origem": "manutencao",
+      "contrato": null,
+      "observacao": "Entrada para revisão 50.000km — AutoCenter Silva",
+      "registrado_por": 2,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  },
+  {
+    "model": "fleet.historicokmveiculo",
+    "pk": 10,
+    "fields": {
+      "veiculo": 7,
+      "km": 112000,
+      "data": "2026-05-26T08:00:00Z",
+      "origem": "manutencao",
+      "contrato": null,
+      "observacao": "Entrada para troca de freios dianteiros — Oficina Central Auto",
+      "registrado_por": 2,
+      "criado_em": "2026-01-15T08:00:00Z"
+    }
+  }
+]

@@ -1,0 +1,294 @@
+{% extends 'base.html' %}
+{% block titulo %}Conta — {{ conta.contrato.numero }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'financeiro:index' %}" class="text-decoration-none text-secondary">Financeiro</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financeiro:contas-receber' %}" class="text-decoration-none text-secondary">Contas a Receber</a></li>
+<li class="breadcrumb-item active">{{ conta.contrato.numero }}</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<!-- Cabeçalho -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Conta a Receber</h1>
+    <div class="d-flex align-items-center gap-2 mt-1">
+      <span class="text-mono" style="font-size:13px; font-weight:700; color:#6366f1">{{ conta.contrato.numero }}</span>
+      <span class="status-badge
+        {% if conta.situacao == 'pendente' %}status-warning
+        {% elif conta.situacao == 'pago_parcial' %}status-primary
+        {% elif conta.situacao == 'pago' %}status-success
+        {% elif conta.situacao == 'vencido' %}status-danger
+        {% else %}status-neutral{% endif %}">
+        {{ conta.get_situacao_display }}
+      </span>
+      {% if conta.vencida %}
+      <span class="status-badge status-danger">
+        <i class="bi bi-clock me-1"></i>{{ conta.dias_em_atraso }} dias em atraso
+      </span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'contratos:detalhe' conta.contrato.pk %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-file-earmark-text me-1"></i>Ver Contrato
+    </a>
+    {% if conta.situacao != 'pago' and conta.situacao != 'cancelado' %}
+    <form method="post" action="{% url 'financeiro:conta-receber-cancelar' conta.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button type="button" class="btn btn-outline-danger btn-sm"
+              onclick="confirmarAcao(this, 'Cancelar esta conta?', 'Esta ação não pode ser desfeita.', 'danger')">
+        Cancelar
+      </button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- Coluna esquerda: resumo financeiro + form de pagamento -->
+  <div class="col-lg-4">
+
+    <!-- Resumo -->
+    <div class="card mb-3" style="border-left:3px solid {% if conta.situacao == 'pago' %}#10b981{% elif conta.situacao == 'vencido' %}#ef4444{% else %}#6366f1{% endif %}">
+      <div class="card-body p-0">
+        <!-- Total -->
+        <div style="padding:20px 20px 14px; border-bottom:1px solid #f1f5f9">
+          <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; margin-bottom:4px">Total da Conta</div>
+          <div style="font-size:28px; font-weight:700; color:#0f172a; letter-spacing:-.03em">R$ {{ conta.valor_total|floatformat:2 }}</div>
+        </div>
+        <!-- Detalhes -->
+        <div style="padding:14px 20px">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:13px">
+            <span style="color:#64748b">Recebido</span>
+            <span style="font-weight:600; color:#10b981">R$ {{ conta.valor_pago|floatformat:2 }}</span>
+          </div>
+          <!-- Barra de progresso -->
+          {% if conta.valor_total > 0 %}
+          {% with pct=conta.valor_pago|floatformat:0 %}
+          <div style="height:6px; background:#f1f5f9; border-radius:3px; overflow:hidden; margin-bottom:8px">
+            <div style="height:100%; width:{% widthratio conta.valor_pago conta.valor_total 100 %}%; background:{% if conta.situacao == 'pago' %}#10b981{% else %}#6366f1{% endif %}; border-radius:3px; transition:width .3s"></div>
+          </div>
+          {% endwith %}
+          {% endif %}
+          <div style="display:flex; justify-content:space-between; font-size:13px">
+            <span style="color:#64748b">Saldo devedor</span>
+            <span style="font-size:15px; font-weight:700; color:{% if conta.valor_saldo > 0 %}#ef4444{% else %}#10b981{% endif %}">
+              R$ {{ conta.valor_saldo|floatformat:2 }}
+            </span>
+          </div>
+          {% if conta.contrato.total_caucao_coletado %}
+          <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:8px; padding-top:8px; border-top:1px solid #f1f5f9; color:#64748b">
+            <span><i class="bi bi-shield-check me-1" style="color:#6366f1"></i>Caução coletado</span>
+            <span style="font-weight:600; color:#6366f1">R$ {{ conta.contrato.total_caucao_coletado|floatformat:2 }}</span>
+          </div>
+          <div style="font-size:10px; color:#94a3b8; text-align:right">Depósito — não incluso no saldo devedor</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Dados da conta -->
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-info-circle"></i>Dados</div>
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item d-flex justify-content-between small" style="padding:9px 20px">
+          <span style="color:#64748b">Cliente</span>
+          <a href="{% url 'clientes:detalhe' conta.cliente.pk %}" style="font-weight:600; color:#6366f1; text-decoration:none">{{ conta.cliente.nome_exibicao }}</a>
+        </li>
+        <li class="list-group-item d-flex justify-content-between small" style="padding:9px 20px">
+          <span style="color:#64748b">Emissão</span>
+          <span style="font-weight:500">{{ conta.data_emissao|date:"d/m/Y" }}</span>
+        </li>
+        <li class="list-group-item small" style="padding:9px 20px">
+          <div class="d-flex justify-content-between">
+            <span style="color:#64748b">Vencimento</span>
+            <span style="font-weight:600; {% if conta.vencida %}color:#ef4444{% endif %}">{{ conta.data_vencimento|date:"d/m/Y" }}</span>
+          </div>
+          <div style="font-size:10px; color:#94a3b8; margin-top:2px">Data de devolução prevista do contrato</div>
+        </li>
+        {% if conta.vencida %}
+        <li class="list-group-item small" style="padding:9px 20px; background:#fef2f2; color:#991b1b; font-weight:600">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ conta.dias_em_atraso }} dias em atraso
+        </li>
+        {% elif conta.dias_para_vencer is not None %}
+        <li class="list-group-item small" style="padding:9px 20px; color:#64748b">
+          <i class="bi bi-clock me-1"></i>
+          {% if conta.dias_para_vencer == 0 %}Vence hoje
+          {% elif conta.dias_para_vencer == 1 %}Vence amanhã
+          {% else %}Vence em {{ conta.dias_para_vencer }} dias{% endif %}
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+
+    <!-- Formulário de recebimento -->
+    {% if conta.situacao not in 'pago,cancelado' %}
+    <div class="card" style="border-color:#10b981; border-width:1px">
+      <div class="card-header" style="color:#065f46">
+        <i class="bi bi-cash-coin" style="color:#10b981"></i>
+        Registrar Recebimento
+      </div>
+      <div class="card-body">
+        <form method="post" action="{% url 'financeiro:receber' conta.pk %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">Forma de Pagamento</label>
+            {{ form.forma_pagamento }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Referente a</label>
+            {{ form.tipo }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">
+              Valor (R$)
+              {% if conta.valor_saldo > 0 %}
+              <span style="font-size:11px; color:#10b981; font-weight:600">— Saldo: R$ {{ conta.valor_saldo|floatformat:2 }}</span>
+              {% endif %}
+            </label>
+            {{ form.valor }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Data/hora</label>
+            {{ form.data_pagamento }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Observações</label>
+            {{ form.observacoes }}
+          </div>
+          <button type="submit" class="btn btn-primary w-100" style="background:#10b981; border-color:#10b981">
+            <i class="bi bi-check-lg me-1"></i>Confirmar Recebimento
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Coluna direita: histórico de pagamentos + info do contrato -->
+  <div class="col-lg-8">
+
+    <!-- Info do contrato -->
+    <div class="card mb-4">
+      <div class="card-header"><i class="bi bi-file-earmark-text"></i>Contrato</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-sm-3">
+            <div style="font-size:11px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:.05em">Número</div>
+            <div class="text-mono" style="font-weight:700; color:#6366f1; font-size:14px">{{ conta.contrato.numero }}</div>
+          </div>
+          <div class="col-sm-3">
+            <div style="font-size:11px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:.05em">Veículo</div>
+            <div class="text-mono" style="font-weight:700; font-size:14px">{{ conta.contrato.veiculo.placa }}</div>
+            <div style="font-size:12px; color:#64748b">{{ conta.contrato.veiculo.modelo }}</div>
+          </div>
+          <div class="col-sm-3">
+            <div style="font-size:11px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:.05em">Saída</div>
+            <div style="font-size:13px; font-weight:500">{% if conta.contrato.data_saida %}{{ conta.contrato.data_saida|date:"d/m/Y H:i" }}{% else %}—{% endif %}</div>
+          </div>
+          <div class="col-sm-3">
+            <div style="font-size:11px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:.05em">Devolução</div>
+            <div style="font-size:13px; font-weight:500">{% if conta.contrato.data_devolucao_real %}{{ conta.contrato.data_devolucao_real|date:"d/m/Y H:i" }}{% else %}{{ conta.contrato.data_devolucao_prevista|date:"d/m/Y H:i" }} (prev.){% endif %}</div>
+          </div>
+        </div>
+
+        <!-- Composição do valor -->
+        <div style="margin-top:16px; padding-top:16px; border-top:1px solid #f1f5f9">
+          <div style="font-size:11px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:.05em; margin-bottom:10px">Composição do Valor</div>
+          <div class="row g-2">
+            <div class="col-6 col-md-3">
+              <div style="font-size:11px; color:#64748b">Locação</div>
+              <div style="font-size:13.5px; font-weight:600">R$ {{ conta.contrato.total_locacao|floatformat:2 }}</div>
+            </div>
+            {% if conta.contrato.total_adicionais %}
+            <div class="col-6 col-md-3">
+              <div style="font-size:11px; color:#64748b">Adicionais</div>
+              <div style="font-size:13.5px; font-weight:600">R$ {{ conta.contrato.total_adicionais|floatformat:2 }}</div>
+            </div>
+            {% endif %}
+            {% if conta.contrato.total_avarias %}
+            <div class="col-6 col-md-3">
+              <div style="font-size:11px; color:#64748b">Avarias</div>
+              <div style="font-size:13.5px; font-weight:600; color:#ef4444">R$ {{ conta.contrato.total_avarias|floatformat:2 }}</div>
+            </div>
+            {% endif %}
+            <div class="col-6 col-md-3">
+              <div style="font-size:11px; color:#64748b; font-weight:700">Total</div>
+              <div style="font-size:15px; font-weight:700">R$ {{ conta.contrato.total_geral|floatformat:2 }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Histórico de pagamentos -->
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history"></i>Histórico de Pagamentos</span>
+        <span style="font-size:12px; font-weight:700; background:#ecfdf5; color:#065f46; padding:2px 10px; border-radius:20px; border:1px solid #a7f3d0">
+          {{ pagamentos|length }} registro{{ pagamentos|length|pluralize:"s" }}
+        </span>
+      </div>
+      {% if pagamentos %}
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Data/Hora</th>
+              <th>Referente a</th>
+              <th>Forma</th>
+              <th>Observações</th>
+              <th class="text-end">Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pag in pagamentos %}
+            <tr>
+              <td style="font-size:12.5px; color:#64748b">{{ pag.data_pagamento|date:"d/m/Y H:i" }}</td>
+              <td>
+                <span class="status-badge
+                  {% if pag.tipo == 'locacao' %}status-primary
+                  {% elif pag.tipo == 'caucao' %}status-info
+                  {% elif pag.tipo == 'avaria' %}status-danger
+                  {% else %}status-neutral{% endif %}">
+                  {{ pag.get_tipo_display }}
+                </span>
+              </td>
+              <td style="font-size:12.5px; color:#64748b">
+                <i class="bi
+                  {% if pag.forma_pagamento == 'pix' %}bi-qr-code
+                  {% elif pag.forma_pagamento == 'dinheiro' %}bi-cash-stack
+                  {% elif 'cartao' in pag.forma_pagamento %}bi-credit-card-fill
+                  {% elif pag.forma_pagamento == 'transferencia' %}bi-bank
+                  {% else %}bi-receipt{% endif %} me-1"></i>
+                {{ pag.get_forma_pagamento_display }}
+              </td>
+              <td style="font-size:12px; color:#94a3b8">{{ pag.observacoes|default:"—"|truncatechars:40 }}</td>
+              <td class="text-end" style="font-weight:700; color:#10b981; font-size:14px">R$ {{ pag.valor|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr style="background:#f8fafc">
+              <td colspan="4" style="font-weight:700; font-size:13px; text-align:right; padding:11px 16px">Total recebido:</td>
+              <td class="text-end" style="font-weight:700; color:#10b981; font-size:15px; padding:11px 16px">R$ {{ conta.valor_pago|floatformat:2 }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon"><i class="bi bi-cash-coin"></i></div>
+        <div class="empty-state-title">Nenhum pagamento registrado</div>
+        <div class="empty-state-text">Use o formulário ao lado para registrar o primeiro recebimento.</div>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

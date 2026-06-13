@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'contratos:reserva-lista' %}" class="text-decoration-none text-secondary">Reservas</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header">
+  <h1 class="page-title">{{ titulo }}</h1>
+</div>
+
+<div class="row">
+  <div class="col-lg-7">
+    <form method="post" class="card">
+      {% csrf_token %}
+      <div class="card-header"><i class="bi bi-calendar-plus me-2 text-primary"></i>Dados da Reserva</div>
+      <div class="card-body">
+
+        {% if form.non_field_errors %}
+        <div class="form-error-banner mb-3">
+          <i class="bi bi-exclamation-triangle-fill flex-shrink-0" style="font-size:16px; margin-top:1px"></i>
+          <div>
+            <div class="fw-semibold mb-1">Corrija os erros abaixo:</div>
+            <ul>{% for erro in form.non_field_errors %}<li>{{ erro }}</li>{% endfor %}</ul>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="row g-3">
+          <div class="col-md-6 {% if form.cliente.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Cliente *</label>
+            {{ form.cliente }}
+            {% if form.cliente.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.cliente.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-6 {% if form.grupo_veiculo.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Grupo de Veículo *</label>
+            {{ form.grupo_veiculo }}
+            {% if form.grupo_veiculo.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.grupo_veiculo.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-6 {% if form.veiculo.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Veículo Específico</label>
+            {{ form.veiculo }}
+            {% if not form.veiculo.errors %}
+            <div class="form-text">Obrigatório para gerar contrato. Exibe apenas os disponíveis.</div>
+            {% endif %}
+            {% if form.veiculo.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.veiculo.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-6 {% if form.canal.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Canal</label>
+            {{ form.canal }}
+            {% if form.canal.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.canal.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-6 {% if form.data_retirada.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Data/hora de Retirada *</label>
+            {{ form.data_retirada }}
+            {% if form.data_retirada.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.data_retirada.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-6 {% if form.data_devolucao.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Data/hora de Devolução *</label>
+            {{ form.data_devolucao }}
+            {% if form.data_devolucao.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.data_devolucao.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-6 {% if form.diaria_cotada.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Diária Cotada (R$)</label>
+            {{ form.diaria_cotada }}
+            {% if form.diaria_cotada.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.diaria_cotada.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-6 {% if form.caucao_cotado.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Caução Cotado (R$)</label>
+            {{ form.caucao_cotado }}
+            {% if form.caucao_cotado.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.caucao_cotado.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold small">Observações</label>
+            {{ form.observacoes }}
+          </div>
+        </div>
+      </div>
+      <div class="card-footer bg-transparent d-flex gap-2 justify-content-end">
+        <a href="{% url 'contratos:reserva-lista' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg me-1"></i>Salvar Reserva
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

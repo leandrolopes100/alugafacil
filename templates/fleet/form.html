@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'frota:lista' %}" class="text-decoration-none text-secondary">Frota</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header">
+  <h1 class="page-title">{{ titulo }}</h1>
+</div>
+
+<form method="post">
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+  <div class="form-error-banner mb-4">
+    <i class="bi bi-exclamation-triangle-fill flex-shrink-0" style="font-size:16px; margin-top:1px"></i>
+    <div>
+      <div class="fw-semibold mb-1">Corrija os erros abaixo:</div>
+      <ul>{% for erro in form.non_field_errors %}<li>{{ erro }}</li>{% endfor %}</ul>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="row g-4">
+
+    <!-- Coluna principal -->
+    <div class="col-lg-8">
+
+      <!-- Identificação -->
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-upc-scan me-2 text-primary"></i>Identificação</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4 {% if form.placa.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Placa *</label>
+              {{ form.placa }}
+              {% if form.placa.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.placa.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4 {% if form.chassi.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Chassi</label>
+              {{ form.chassi }}
+              {% if form.chassi.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.chassi.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4 {% if form.renavam.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">RENAVAM</label>
+              {{ form.renavam }}
+              {% if form.renavam.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.renavam.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dados do veículo -->
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-info-circle me-2 text-primary"></i>Dados do Veículo</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6 {% if form.marca.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Marca *</label>
+              {{ form.marca }}
+              {% if form.marca.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.marca.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6 {% if form.modelo.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Modelo *</label>
+              {{ form.modelo }}
+              {% if form.modelo.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.modelo.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-3 {% if form.ano_fabricacao.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Ano Fab.</label>
+              {{ form.ano_fabricacao }}
+              {% if form.ano_fabricacao.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.ano_fabricacao.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-3 {% if form.ano_modelo.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Ano Modelo</label>
+              {{ form.ano_modelo }}
+              {% if form.ano_modelo.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.ano_modelo.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6 {% if form.cor.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Cor</label>
+              {{ form.cor }}
+              {% if form.cor.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.cor.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4 {% if form.combustivel.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Combustível</label>
+              {{ form.combustivel }}
+              {% if form.combustivel.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.combustivel.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4 {% if form.transmissao.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Transmissão</label>
+              {{ form.transmissao }}
+              {% if form.transmissao.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.transmissao.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-2 {% if form.portas.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Portas</label>
+              {{ form.portas }}
+              {% if form.portas.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.portas.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-2 {% if form.lugares.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Lugares</label>
+              {{ form.lugares }}
+              {% if form.lugares.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.lugares.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Coluna lateral -->
+    <div class="col-lg-4">
+
+      <!-- Operacional -->
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-gear me-2 text-primary"></i>Operacional</div>
+        <div class="card-body">
+          <div class="mb-3 {% if form.grupo.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Grupo *</label>
+            {{ form.grupo }}
+            {% if form.grupo.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.grupo.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="mb-3 {% if form.situacao.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Situação</label>
+            {{ form.situacao }}
+            {% if form.situacao.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.situacao.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="{% if form.km_atual.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">KM Atual</label>
+            {{ form.km_atual }}
+            {% if form.km_atual.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.km_atual.errors.0 }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Financeiro -->
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-currency-dollar me-2 text-primary"></i>Financeiro</div>
+        <div class="card-body">
+          <div class="mb-3 {% if form.data_aquisicao.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Data de Aquisição</label>
+            {{ form.data_aquisicao }}
+            {% if form.data_aquisicao.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.data_aquisicao.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="mb-3 {% if form.valor_aquisicao.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Valor de Aquisição (R$)</label>
+            {{ form.valor_aquisicao }}
+            {% if form.valor_aquisicao.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.valor_aquisicao.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="{% if form.valor_fipe.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Valor FIPE (R$)</label>
+            {{ form.valor_fipe }}
+            {% if form.valor_fipe.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.valor_fipe.errors.0 }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Ações -->
+      <div class="d-flex gap-2">
+        <a href="{% url 'frota:lista' %}" class="btn btn-outline-secondary flex-grow-1">Cancelar</a>
+        <button type="submit" class="btn btn-primary flex-grow-1">
+          <i class="bi bi-check-lg me-1"></i>{{ acao }}
+        </button>
+      </div>
+
+    </div>
+  </div>
+</form>
+
+{% endblock %}

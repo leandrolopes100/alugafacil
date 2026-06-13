@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'financeiro:multas' %}" class="text-decoration-none text-secondary">Multas</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block conteudo %}
+<div class="page-header"><h1 class="page-title">{{ titulo }}</h1></div>
+<div class="row">
+  <div class="col-lg-7">
+    <form method="post" class="card">
+      {% csrf_token %}
+      <div class="card-header"><i class="bi bi-exclamation-triangle me-2 text-warning"></i>Dados da Multa</div>
+      <div class="card-body">
+
+        {% if form.non_field_errors %}
+        <div class="form-error-banner mb-3">
+          <i class="bi bi-exclamation-triangle-fill flex-shrink-0" style="font-size:16px; margin-top:1px"></i>
+          <div>
+            <div class="fw-semibold mb-1">Corrija os erros abaixo:</div>
+            <ul>{% for erro in form.non_field_errors %}<li>{{ erro }}</li>{% endfor %}</ul>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="row g-3">
+          <div class="col-md-6 {% if form.veiculo.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Veículo *</label>
+            {{ form.veiculo }}
+            {% if form.veiculo.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.veiculo.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-6"><label class="form-label fw-semibold small">Nº Auto de Infração</label>{{ form.numero_auto }}</div>
+          <div class="col-md-4 {% if form.data_infracao.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Data da Infração *</label>
+            {{ form.data_infracao }}
+            {% if form.data_infracao.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.data_infracao.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-4"><label class="form-label fw-semibold small">Data de Notificação</label>{{ form.data_notificacao }}</div>
+          <div class="col-md-4"><label class="form-label fw-semibold small">Prazo para Indicar</label>{{ form.prazo_indicacao }}</div>
+          <div class="col-12 {% if form.descricao.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Descrição *</label>
+            {{ form.descricao }}
+            {% if form.descricao.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.descricao.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-4"><label class="form-label fw-semibold small">Pontos</label>{{ form.pontos }}</div>
+          <div class="col-md-4 {% if form.valor.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Valor (R$) *</label>
+            {{ form.valor }}
+            {% if form.valor.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.valor.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-4"><label class="form-label fw-semibold small">Situação</label>{{ form.situacao }}</div>
+          <div class="col-md-6"><label class="form-label fw-semibold small">Condutor (nome)</label>{{ form.condutor_nome }}</div>
+          <div class="col-md-6"><label class="form-label fw-semibold small">Condutor (CPF)</label>{{ form.condutor_cpf }}</div>
+          <div class="col-12"><label class="form-label fw-semibold small">Observações</label>{{ form.observacoes }}</div>
+        </div>
+      </div>
+      <div class="card-footer bg-transparent d-flex gap-2 justify-content-end">
+        <a href="{% url 'financeiro:multas' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-warning"><i class="bi bi-check-lg me-1"></i>Salvar</button>
+      </div>
+    </form>
+  </div>
+  <div class="col-lg-5">
+    <div class="alert alert-warning">
+      <h6 class="fw-bold"><i class="bi bi-info-circle me-1"></i>Lembrete Legal</h6>
+      <ul class="small mb-0">
+        <li>A locadora tem prazo para indicar o condutor infrator ao DETRAN.</li>
+        <li>Selecione o veículo e a data correta para que o sistema identifique automaticamente o contrato ativo naquele período.</li>
+        <li>Após identificação, notifique o cliente e registre a cobrança.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

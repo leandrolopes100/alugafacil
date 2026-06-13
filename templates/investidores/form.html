@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'investidores:lista' %}">Investidores</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block conteudo %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ titulo }}</h1>
+    <p class="page-subtitle">Dados cadastrais do investidor</p>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header">
+        <i class="bi bi-person-badge"></i> {{ titulo }}
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+          <div class="form-error-banner mb-3">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <ul>{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
+          </div>
+          {% endif %}
+
+          <!-- Tipo -->
+          <div class="mb-3 {% if form.tipo.errors %}field-has-error{% endif %}">
+            <label class="form-label">Tipo de pessoa *</label>
+            {{ form.tipo }}
+            {% if form.tipo.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.tipo.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Dados PF -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-8 {% if form.nome.errors %}field-has-error{% endif %}">
+              <label class="form-label">Nome completo *</label>
+              {{ form.nome }}
+              {% if form.nome.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.nome.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4 {% if form.cpf.errors %}field-has-error{% endif %}">
+              <label class="form-label">CPF</label>
+              {{ form.cpf }}
+              {% if form.cpf.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.cpf.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Dados PJ -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-8 {% if form.razao_social.errors %}field-has-error{% endif %}">
+              <label class="form-label">Razão Social <small class="text-muted">(PJ)</small></label>
+              {{ form.razao_social }}
+              {% if form.razao_social.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.razao_social.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4 {% if form.cnpj.errors %}field-has-error{% endif %}">
+              <label class="form-label">CNPJ <small class="text-muted">(PJ)</small></label>
+              {{ form.cnpj }}
+              {% if form.cnpj.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.cnpj.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <hr class="section-divider">
+
+          <!-- Contato -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-4 {% if form.email.errors %}field-has-error{% endif %}">
+              <label class="form-label">E-mail</label>
+              {{ form.email }}
+              {% if form.email.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.email.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4 {% if form.telefone.errors %}field-has-error{% endif %}">
+              <label class="form-label">Telefone</label>
+              {{ form.telefone }}
+              {% if form.telefone.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.telefone.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4 {% if form.celular.errors %}field-has-error{% endif %}">
+              <label class="form-label">Celular</label>
+              {{ form.celular }}
+              {% if form.celular.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.celular.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <hr class="section-divider">
+
+          <!-- Dados bancários -->
+          <div class="mb-3 {% if form.dados_bancarios.errors %}field-has-error{% endif %}">
+            <label class="form-label">Dados bancários</label>
+            {{ form.dados_bancarios }}
+            <div class="form-text">Banco, agência, conta corrente, chave PIX…</div>
+            {% if form.dados_bancarios.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.dados_bancarios.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Observações -->
+          <div class="mb-3 {% if form.observacoes.errors %}field-has-error{% endif %}">
+            <label class="form-label">Observações</label>
+            {{ form.observacoes }}
+            {% if form.observacoes.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.observacoes.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Situação -->
+          <div class="mb-4 {% if form.situacao.errors %}field-has-error{% endif %}">
+            <label class="form-label">Situação *</label>
+            {{ form.situacao }}
+            {% if form.situacao.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.situacao.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-lg me-1"></i>{{ acao }}
+            </button>
+            <a href="{% url 'investidores:lista' %}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

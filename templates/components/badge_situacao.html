@@ -1,0 +1,12 @@
+{% comment %}
+Uso: {% include 'components/badge_situacao.html' with situacao=obj.situacao cor=obj.cor_situacao rotulo=obj.get_situacao_display %}
+{% endcomment %}
+<span class="status-badge
+  {% if cor == 'green' %}status-success
+  {% elif cor == 'blue' %}status-primary
+  {% elif cor == 'yellow' or cor == 'orange' %}status-warning
+  {% elif cor == 'red' %}status-danger
+  {% elif cor == 'info' %}status-info
+  {% else %}status-neutral{% endif %}">
+  {{ rotulo|default:situacao }}
+</span>

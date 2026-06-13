@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% block titulo %}CNH — {{ cliente.nome_exibicao }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'clientes:lista' %}" class="text-decoration-none text-secondary">Clientes</a></li>
+<li class="breadcrumb-item"><a href="{% url 'clientes:detalhe' cliente.pk %}" class="text-decoration-none text-secondary">{{ cliente.nome_exibicao }}</a></li>
+<li class="breadcrumb-item active">CNH</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header d-flex align-items-center justify-content-between">
+  <div>
+    <h1 class="page-title">Carteiras de Habilitação</h1>
+    <p class="page-subtitle mb-0">{{ cliente.nome_exibicao }}</p>
+  </div>
+  <a href="{% url 'clientes:detalhe' cliente.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Voltar
+  </a>
+</div>
+
+<div class="row g-4">
+
+  <!-- Lista de CNHs -->
+  <div class="col-lg-8">
+    {% if cnhs %}
+    <div class="card">
+      <div class="card-header"><i class="bi bi-card-text me-2 text-primary"></i>CNHs Cadastradas</div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr><th>Número</th><th>Categoria</th><th>Estado</th><th>Validade</th><th class="text-center">Principal</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for cnh in cnhs %}
+            <tr class="{% if cnh.vencida %}table-danger{% endif %}">
+              <td class="fw-semibold text-mono">{{ cnh.numero }}</td>
+              <td><span class="badge bg-secondary">{{ cnh.get_categoria_display }}</span></td>
+              <td class="text-muted small">{{ cnh.estado_emissor }}</td>
+              <td class="{% if cnh.vencida %}text-danger fw-bold{% else %}text-muted{% endif %} small">
+                {% if cnh.vencida %}<i class="bi bi-exclamation-triangle-fill me-1"></i>VENCIDA —{% endif %}
+                {{ cnh.validade|date:"d/m/Y" }}
+              </td>
+              <td class="text-center">
+                {% if cnh.principal %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}—{% endif %}
+              </td>
+              <td class="text-end">
+                <form method="post" action="{% url 'clientes:cnh-excluir' cliente.pk cnh.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Excluir esta CNH?')">
+                    <i class="bi bi-trash3"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Formulário adicionar CNH -->
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-plus-circle me-2 text-primary"></i>Adicionar CNH</div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          {% if form.non_field_errors %}
+          <div class="form-error-banner mb-3">
+            <i class="bi bi-exclamation-triangle-fill flex-shrink-0" style="font-size:15px; margin-top:1px"></i>
+            <div>{% for erro in form.non_field_errors %}<div>{{ erro }}</div>{% endfor %}</div>
+          </div>
+          {% endif %}
+          <div class="mb-3 {% if form.numero.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Número *</label>
+            {{ form.numero }}
+            {% if form.numero.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.numero.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-4 {% if form.estado_emissor.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Estado</label>
+              {{ form.estado_emissor }}
+              {% if form.estado_emissor.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.estado_emissor.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-8 {% if form.categoria.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Categoria *</label>
+              {{ form.categoria }}
+              {% if form.categoria.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.categoria.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="mb-3 {% if form.validade.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Validade *</label>
+            {{ form.validade }}
+            {% if form.validade.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.validade.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="mb-3"><label class="form-label fw-semibold small">Primeira Habilitação</label>{{ form.primeira_habilitacao }}</div>
+          <div class="mb-3"><label class="form-label fw-semibold small">Foto Frente</label>{{ form.foto_frente }}</div>
+          <div class="mb-3"><label class="form-label fw-semibold small">Foto Verso</label>{{ form.foto_verso }}</div>
+          <div class="form-check mb-3">{{ form.principal }}<label class="form-check-label small">CNH principal</label></div>
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-check-lg me-1"></i>Salvar CNH
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

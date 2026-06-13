@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block titulo %}Gerar Cobrança{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'investidores:lista' %}">Investidores</a></li>
+<li class="breadcrumb-item"><a href="{% url 'investidores:detalhe' vinculo.investidor.pk %}">{{ vinculo.investidor.nome_exibicao }}</a></li>
+<li class="breadcrumb-item active">Gerar Cobrança</li>
+{% endblock %}
+
+{% block conteudo %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Gerar Cobrança</h1>
+    <p class="page-subtitle">
+      Veículo: <strong>{{ vinculo.veiculo.placa }} — {{ vinculo.veiculo.marca }} {{ vinculo.veiculo.modelo }}</strong>
+      &nbsp;·&nbsp; Investidor: <strong>{{ vinculo.investidor.nome_exibicao }}</strong>
+    </p>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header">
+        <i class="bi bi-plus-circle"></i> Nova Cobrança de Gestão
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+          <div class="form-error-banner mb-3">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <ul>{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
+          </div>
+          {% endif %}
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6 {% if form.semana_inicio.errors %}field-has-error{% endif %}">
+              <label class="form-label">Início da semana *</label>
+              {{ form.semana_inicio }}
+              {% if form.semana_inicio.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.semana_inicio.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6 {% if form.semana_fim.errors %}field-has-error{% endif %}">
+              <label class="form-label">Fim da semana *</label>
+              {{ form.semana_fim }}
+              {% if form.semana_fim.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.semana_fim.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6 {% if form.valor.errors %}field-has-error{% endif %}">
+              <label class="form-label">Valor (R$) *</label>
+              {{ form.valor }}
+              <div class="form-text">Taxa configurada: R$ {{ vinculo.taxa_gestao_semanal|floatformat:2 }}</div>
+              {% if form.valor.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.valor.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6 {% if form.data_vencimento.errors %}field-has-error{% endif %}">
+              <label class="form-label">Data de vencimento *</label>
+              {{ form.data_vencimento }}
+              {% if form.data_vencimento.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.data_vencimento.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="mb-4 {% if form.observacoes.errors %}field-has-error{% endif %}">
+            <label class="form-label">Observações</label>
+            {{ form.observacoes }}
+            {% if form.observacoes.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.observacoes.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-lg me-1"></i>Gerar Cobrança
+            </button>
+            <a href="{% url 'investidores:detalhe' vinculo.investidor.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+{% block titulo %}Frota{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Frota</li>{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Frota</h1>
+    <p class="page-subtitle">{{ page_obj.paginator.count }} veículo{{ page_obj.paginator.count|pluralize:"s" }} cadastrado{{ page_obj.paginator.count|pluralize:"s" }}</p>
+  </div>
+  <a href="{% url 'frota:novo' %}" class="btn btn-primary d-flex align-items-center gap-2">
+    <i class="bi bi-plus-lg"></i> Novo Veículo
+  </a>
+</div>
+
+<!-- Filtros de situação -->
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <a href="?" style="font-size:12.5px; font-weight:600; padding:5px 12px; border-radius:20px; text-decoration:none; transition:all .15s;
+     {% if not filtro_situacao %}background:#0f172a; color:#fff{% else %}background:#f8fafc; color:#64748b; border:1px solid #e2e8f0{% endif %}">
+    Todos
+  </a>
+  {% for valor, rotulo, contagem in situacoes_contagem %}
+  <a href="?situacao={{ valor }}&busca={{ filtro_busca }}"
+     style="font-size:12.5px; font-weight:600; padding:5px 12px; border-radius:20px; text-decoration:none; transition:all .15s; display:flex; align-items:center; gap:6px;
+     {% if filtro_situacao == valor %}background:#0f172a; color:#fff{% else %}background:#f8fafc; color:#64748b; border:1px solid #e2e8f0{% endif %}">
+    {{ rotulo }}
+    <span style="{% if filtro_situacao == valor %}background:rgba(255,255,255,.2){% else %}background:#e2e8f0{% endif %}; border-radius:10px; padding:0 6px; font-size:11px">{{ contagem }}</span>
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Busca -->
+<form method="get" class="mb-4">
+  <input type="hidden" name="situacao" value="{{ filtro_situacao }}">
+  <div style="display:flex; gap:8px; max-width:400px">
+    <div style="position:relative; flex:1">
+      <i class="bi bi-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:14px; pointer-events:none"></i>
+      <input type="text" name="busca" value="{{ filtro_busca }}"
+             style="width:100%; padding:8px 12px 8px 36px; border:1px solid #e2e8f0; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none; transition:border-color .15s; background:#fff; color:#0f172a"
+             placeholder="Placa, marca ou modelo…"
+             onfocus="this.style.borderColor='#6366f1'; this.style.boxShadow='0 0 0 3px rgba(99,102,241,.15)'"
+             onblur="this.style.borderColor='#e2e8f0'; this.style.boxShadow='none'">
+    </div>
+    <button type="submit" class="btn btn-outline-secondary btn-sm">Buscar</button>
+    {% if filtro_busca or filtro_situacao %}
+    <a href="?" class="btn btn-outline-secondary btn-sm" title="Limpar filtros"><i class="bi bi-x-lg"></i></a>
+    {% endif %}
+  </div>
+</form>
+
+<!-- Grid de veículos -->
+<div class="row g-3">
+  {% for veiculo in veiculos %}
+  <div class="col-sm-6 col-xl-4">
+    <div class="card h-100" style="overflow:hidden; transition:box-shadow .2s, transform .2s"
+         onmouseover="this.style.boxShadow='0 8px 16px rgba(0,0,0,.1)'; this.style.transform='translateY(-2px)'"
+         onmouseout="this.style.boxShadow=''; this.style.transform=''">
+
+      <!-- Foto ou placeholder -->
+      <div style="height:180px; background:#f8fafc; position:relative; overflow:hidden">
+        {% with veiculo.foto_principal as foto %}
+        {% if foto %}
+        <img src="{{ foto.imagem.url }}" alt="{{ veiculo.placa }}"
+             style="width:100%; height:100%; object-fit:cover">
+        {% else %}
+        <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px">
+          <i class="bi bi-car-front" style="font-size:48px; color:#cbd5e1"></i>
+          <span style="font-size:11px; color:#94a3b8">Sem foto</span>
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Badge situação -->
+        <span style="position:absolute; top:10px; right:10px; font-size:11.5px; font-weight:700; padding:3px 10px; border-radius:20px;
+          {% if veiculo.situacao == 'disponivel' %}background:#ecfdf5; color:#065f46
+          {% elif veiculo.situacao == 'em_uso' %}background:#eef2ff; color:#4338ca
+          {% elif veiculo.situacao == 'reservado' %}background:#fffbeb; color:#92400e
+          {% elif veiculo.situacao == 'manutencao' %}background:#fef2f2; color:#991b1b
+          {% else %}background:#f8fafc; color:#475569{% endif %}">
+          {% if veiculo.situacao == 'disponivel' %}<span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#10b981; margin-right:4px"></span>{% endif %}
+          {{ veiculo.get_situacao_display }}
+        </span>
+      </div>
+
+      <!-- Informações -->
+      <div style="padding:14px 16px 10px">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px">
+          <div>
+            <div style="font-weight:700; font-size:14px; color:#0f172a">{{ veiculo.marca }} {{ veiculo.modelo }}</div>
+            <div style="font-size:12px; color:#94a3b8; margin-top:1px">{{ veiculo.ano_modelo }} &middot; {{ veiculo.cor }}</div>
+          </div>
+          <span class="text-mono" style="font-size:12px; font-weight:700; background:#f8fafc; border:1px solid #e2e8f0; padding:3px 8px; border-radius:6px; flex-shrink:0">
+            {{ veiculo.placa }}
+          </span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding-top:10px; border-top:1px solid #f1f5f9">
+          <span style="font-size:12px; color:#64748b">{{ veiculo.grupo.nome }}</span>
+          <span style="font-size:12px; color:#94a3b8"><i class="bi bi-speedometer2 me-1"></i>{{ veiculo.km_atual|floatformat:0 }} km</span>
+        </div>
+      </div>
+
+      <div style="display:flex; border-top:1px solid #f1f5f9">
+        <a href="{% url 'frota:detalhe' veiculo.pk %}"
+           style="flex:1; display:flex; align-items:center; justify-content:center; gap:5px; padding:10px 6px; font-size:12px; font-weight:600; color:#6366f1; text-decoration:none; border-right:1px solid #f1f5f9; transition:background .15s"
+           onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+          <i class="bi bi-eye"></i> Ver
+        </a>
+        <a href="{% url 'frota:editar' veiculo.pk %}"
+           style="flex:1; display:flex; align-items:center; justify-content:center; gap:5px; padding:10px 6px; font-size:12px; font-weight:600; color:#475569; text-decoration:none; {% if veiculo.situacao in 'disponivel,inativo' %}border-right:1px solid #f1f5f9;{% endif %} transition:background .15s"
+           onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+          <i class="bi bi-pencil"></i> Editar
+        </a>
+        {% if veiculo.situacao in 'disponivel,inativo' %}
+        <button type="button"
+          data-excluir-url="{% url 'frota:excluir' veiculo.pk %}"
+          data-excluir-nome="{{ veiculo.marca }} {{ veiculo.modelo }} — {{ veiculo.placa }}"
+          onclick="abrirModalExcluir(this)"
+          style="flex:1; display:flex; align-items:center; justify-content:center; gap:5px; padding:10px 6px; font-size:12px; font-weight:600; color:#ef4444; background:none; border:none; cursor:pointer; transition:background .15s"
+          onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background=''">
+          <i class="bi bi-trash"></i> Excluir
+        </button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="card">
+      <div class="empty-state">
+        <div class="empty-state-icon"><i class="bi bi-car-front"></i></div>
+        <div class="empty-state-title">Nenhum veículo encontrado</div>
+        <div class="empty-state-text">{% if filtro_busca or filtro_situacao %}Tente limpar os filtros.{% else %}Cadastre o primeiro veículo da frota.{% endif %}</div>
+        {% if not filtro_busca and not filtro_situacao %}
+        <a href="{% url 'frota:novo' %}" class="btn btn-primary btn-sm">Cadastrar veículo</a>
+        {% else %}
+        <a href="?" class="btn btn-outline-secondary btn-sm">Limpar filtros</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Paginação -->
+{% if is_paginated %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center mb-0">
+    {% if page_obj.has_previous %}
+    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&situacao={{ filtro_situacao }}&busca={{ filtro_busca }}"><i class="bi bi-chevron-left"></i></a></li>
+    {% endif %}
+    <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+    {% if page_obj.has_next %}
+    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&situacao={{ filtro_situacao }}&busca={{ filtro_busca }}"><i class="bi bi-chevron-right"></i></a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+<!-- Modal de confirmação de exclusão -->
+<div class="modal fade" id="modalExcluirVeiculo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px">
+    <div class="modal-content" style="border-radius:12px; border:none; box-shadow:0 20px 40px rgba(0,0,0,.15)">
+      <div class="modal-header border-0 pb-0 pt-4 px-4">
+        <div style="width:48px; height:48px; background:#fef2f2; border-radius:12px; display:flex; align-items:center; justify-content:center; margin-right:12px; flex-shrink:0">
+          <i class="bi bi-trash" style="color:#ef4444; font-size:22px"></i>
+        </div>
+        <div>
+          <h5 class="modal-title fw-bold mb-0" style="font-size:16px">Excluir veículo?</h5>
+          <p class="text-muted mb-0" style="font-size:12.5px">Esta ação não pode ser desfeita.</p>
+        </div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body px-4 py-3">
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px">
+          <span style="font-size:13.5px; font-weight:600; color:#0f172a" id="modalVeiculoNome">—</span>
+        </div>
+        <p class="text-muted mt-3 mb-0" style="font-size:12.5px">
+          <i class="bi bi-info-circle me-1"></i>Veículos com contratos vinculados não podem ser excluídos.
+        </p>
+      </div>
+      <div class="modal-footer border-0 pt-0 pb-4 px-4 gap-2">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <form id="formExcluirVeiculo" method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i>Excluir veículo</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function abrirModalExcluir(btn) {
+  document.getElementById('modalVeiculoNome').textContent = btn.dataset.excluirNome;
+  document.getElementById('formExcluirVeiculo').action = btn.dataset.excluirUrl;
+  new bootstrap.Modal(document.getElementById('modalExcluirVeiculo')).show();
+}
+</script>
+{% endblock %}

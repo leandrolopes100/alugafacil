@@ -1,0 +1,215 @@
+{% extends 'core/relatorios/base_relatorio.html' %}
+{% block titulo %}Inadimplência{% endblock %}
+{% block titulo_breadcrumb %}Inadimplência{% endblock %}
+{% block titulo_relatorio %}Relatório de Inadimplência{% endblock %}
+{% block descricao %}{{ hoje|date:"d/m/Y" }} · {{ vencidas|length }} conta{{ vencidas|length|pluralize:"s" }} vencida{{ vencidas|length|pluralize:"s" }}{% endblock %}
+
+{% block acoes_extras %}
+<a href="{% url 'core:relatorio-exportar' 'inadimplencia' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+  <i class="bi bi-download"></i> CSV
+</a>
+{% endblock %}
+
+{% block filtro_periodo %}
+<div style="display:flex; gap:8px; flex-wrap:wrap">
+  <a href="?" class="btn btn-sm {% if not situacao_filtro %}btn-primary{% else %}btn-outline-secondary{% endif %}">Todos</a>
+  <a href="?situacao=vencido" class="btn btn-sm {% if situacao_filtro == 'vencido' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Vencidos</a>
+  <a href="?situacao=pendente" class="btn btn-sm {% if situacao_filtro == 'pendente' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Pendentes</a>
+  <a href="?situacao=pago_parcial" class="btn btn-sm {% if situacao_filtro == 'pago_parcial' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Parciais</a>
+</div>
+{% endblock %}
+
+{% block conteudo_relatorio %}
+
+<!-- KPIs -->
+<div class="stat-row">
+  <div class="stat-box">
+    <div class="stat-label">Total em Aberto</div>
+    <div class="stat-value" style="font-size:20px">R$ {{ total_em_aberto|floatformat:2 }}</div>
+    <div class="stat-sub">{{ todas|length }} conta{{ todas|length|pluralize:"s" }}</div>
+  </div>
+  <div class="stat-box" style="border-left:3px solid #ef4444">
+    <div class="stat-label" style="color:#ef4444">Vencido</div>
+    <div class="stat-value" style="color:#ef4444; font-size:20px">R$ {{ total_vencido|floatformat:2 }}</div>
+    <div class="stat-sub">{{ vencidas|length }} conta{{ vencidas|length|pluralize:"s" }}</div>
+  </div>
+  <div class="stat-box" style="border-left:3px solid #f59e0b">
+    <div class="stat-label" style="color:#f59e0b">A Vencer</div>
+    <div class="stat-value" style="color:#f59e0b; font-size:20px">R$ {{ total_a_vencer|floatformat:2 }}</div>
+    <div class="stat-sub">{{ a_vencer|length }} conta{{ a_vencer|length|pluralize:"s" }}</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-label">Taxa Inadimplência</div>
+    <div class="stat-value" style="color:{% if inadimplencia_pct > 20 %}#ef4444{% elif inadimplencia_pct > 10 %}#f59e0b{% else %}#10b981{% endif %}">{{ inadimplencia_pct }}%</div>
+    <div class="stat-sub">do total em aberto</div>
+  </div>
+</div>
+
+<!-- Aging + gráfico -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-clock-history"></i> Aging por Faixa de Atraso</div>
+      <div class="card-body" style="padding:16px">
+        <canvas id="chartAging" style="max-height:220px"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-list-check"></i> Detalhe por Faixa</div>
+      <div class="card-body p-0">
+        {% for row in aging_rows %}
+        {% if row.contas %}
+        <div style="padding:14px 20px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:14px">
+          <div style="width:3px; height:44px; border-radius:3px; background:{{ row.cor }}; flex-shrink:0"></div>
+          <div style="flex:1">
+            <div style="font-size:13.5px; font-weight:600; color:#0f172a">{{ row.label }}</div>
+            <div style="font-size:12px; color:#94a3b8; margin-top:1px">{{ row.contas|length }} conta{{ row.contas|length|pluralize:"s" }}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:16px; font-weight:700; color:#0f172a">R$ {{ row.total|floatformat:2 }}</div>
+          </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+        {% if not vencidas %}
+        <div style="padding:40px; text-align:center">
+          <i class="bi bi-emoji-smile d-block mb-2" style="font-size:32px; color:#10b981; opacity:.4"></i>
+          <div style="font-size:13px; font-weight:600; color:#475569">Nenhuma conta vencida</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabela de inadimplentes -->
+{% if vencidas %}
+<div class="card mb-4">
+  <div class="card-header" style="color:#991b1b">
+    <i class="bi bi-exclamation-triangle-fill" style="color:#ef4444"></i>
+    Contas Vencidas — Para Cobrança
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Contrato</th><th>Cliente</th><th>Contato</th><th>Vencimento</th>
+          <th class="text-center">Atraso</th><th class="text-end">Saldo R$</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for conta in vencidas %}
+        <tr style="{% if conta.dias_em_atraso > 60 %}background:#fff5f5{% elif conta.dias_em_atraso > 30 %}background:#fffbeb{% endif %}">
+          <td>
+            <a href="{% url 'financeiro:conta-receber-detalhe' conta.pk %}" class="table-link text-mono">{{ conta.contrato.numero }}</a>
+          </td>
+          <td style="font-weight:500; font-size:13px">{{ conta.cliente.nome_exibicao }}</td>
+          <td style="font-size:12.5px; color:#64748b">{{ conta.cliente.celular|default:conta.cliente.telefone|default:"—" }}</td>
+          <td style="font-size:12.5px; color:#ef4444; font-weight:600">{{ conta.data_vencimento|date:"d/m/Y" }}</td>
+          <td class="text-center">
+            <span style="font-size:12px; font-weight:700; padding:2px 8px; border-radius:12px;
+              {% if conta.dias_em_atraso > 90 %}background:#fef2f2; color:#dc2626; border:1px solid #fca5a5
+              {% elif conta.dias_em_atraso > 60 %}background:#fef2f2; color:#ef4444; border:1px solid #fca5a5
+              {% elif conta.dias_em_atraso > 30 %}background:#fffbeb; color:#f97316; border:1px solid #fde68a
+              {% else %}background:#fffbeb; color:#f59e0b; border:1px solid #fde68a{% endif %}">
+              +{{ conta.dias_em_atraso }}d
+            </span>
+          </td>
+          <td class="text-end" style="font-weight:700; color:#ef4444; font-size:14px">
+            R$ {{ conta.valor_saldo|floatformat:2 }}
+          </td>
+          <td>
+            <a href="{% url 'financeiro:conta-receber-detalhe' conta.pk %}" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-cash-coin"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="background:#fef2f2">
+          <td colspan="5" style="text-align:right; font-weight:700; padding:11px 16px">Total vencido:</td>
+          <td style="text-align:right; font-weight:700; color:#ef4444; font-size:15px; padding:11px 16px">
+            R$ {{ total_vencido|floatformat:2 }}
+          </td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Contas a vencer -->
+{% if a_vencer %}
+<div class="card">
+  <div class="card-header" style="color:#92400e">
+    <i class="bi bi-clock" style="color:#f59e0b"></i>
+    Contas a Vencer — Atenção Preventiva
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead>
+        <tr><th>Contrato</th><th>Cliente</th><th>Vencimento</th><th class="text-center">Dias</th><th class="text-end">Saldo R$</th><th>Situação</th></tr>
+      </thead>
+      <tbody>
+        {% for conta in a_vencer %}
+        <tr>
+          <td><a href="{% url 'financeiro:conta-receber-detalhe' conta.pk %}" class="table-link text-mono">{{ conta.contrato.numero }}</a></td>
+          <td style="font-weight:500; font-size:13px">{{ conta.cliente.nome_exibicao }}</td>
+          <td style="font-size:13px; {% if conta.dias_para_vencer is not None and conta.dias_para_vencer <= 7 %}color:#f59e0b; font-weight:600{% else %}color:#64748b{% endif %}">
+            {{ conta.data_vencimento|date:"d/m/Y" }}
+          </td>
+          <td class="text-center">
+            {% if conta.dias_para_vencer is not None %}
+            <span style="font-size:12px; font-weight:600; {% if conta.dias_para_vencer <= 7 %}color:#f59e0b{% else %}color:#64748b{% endif %}">
+              {{ conta.dias_para_vencer }}d
+            </span>
+            {% endif %}
+          </td>
+          <td class="text-end" style="font-weight:600; font-size:14px">R$ {{ conta.valor_saldo|floatformat:2 }}</td>
+          <td>
+            <span class="status-badge {% if conta.situacao == 'pago_parcial' %}status-primary{% else %}status-warning{% endif %}">
+              {{ conta.get_situacao_display }}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const aging = {{ chart_aging|safe }};
+new Chart(document.getElementById('chartAging'), {
+  type: 'bar',
+  data: {
+    labels: aging.labels,
+    datasets: [
+      {
+        label: 'Valor R$',
+        data: aging.valores,
+        backgroundColor: ['rgba(245,158,11,.7)', 'rgba(249,115,22,.7)', 'rgba(239,68,68,.7)', 'rgba(220,38,38,.7)'],
+        borderRadius: 4,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: '#f1f5f9' }, ticks: { callback: v => 'R$ ' + v.toLocaleString('pt-BR') } }
+    }
+  }
+});
+</script>
+{% endblock %}

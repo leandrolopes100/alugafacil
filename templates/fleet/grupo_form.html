@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'frota:grupos' %}" class="text-decoration-none text-secondary">Grupos</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header">
+  <h1 class="page-title">{{ titulo }}</h1>
+</div>
+
+{% if sem_categorias %}
+<div class="alert alert-warning d-flex align-items-start gap-3 mb-4">
+  <i class="bi bi-exclamation-triangle-fill fs-5 flex-shrink-0 mt-1"></i>
+  <div>
+    <p class="fw-semibold mb-1">Nenhuma categoria disponível.</p>
+    <p class="mb-2 small">O campo "Categoria" é obrigatório. Crie pelo menos uma categoria antes de criar um grupo.</p>
+    <a href="{% url 'frota:categoria-nova' %}" class="btn btn-warning btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Criar categoria agora
+    </a>
+  </div>
+</div>
+{% endif %}
+
+<div class="row">
+  <div class="col-lg-7">
+    <form method="post" class="card">
+      {% csrf_token %}
+      <div class="card-header">
+        <i class="bi bi-collection me-2 text-primary"></i>Dados do Grupo
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-12">
+            <label class="form-label fw-semibold small">Nome do grupo *</label>
+            {{ form.nome }}
+            {% if form.nome.errors %}
+            <div class="invalid-feedback d-block">{{ form.nome.errors.0 }}</div>
+            {% endif %}
+            <div class="form-text">Ex: Econômico 5 Portas, SUV 7 Lugares, Utilitário</div>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label fw-semibold small d-flex align-items-center justify-content-between">
+              Categoria *
+              <a href="{% url 'frota:categoria-nova' %}?next={{ request.path }}" class="small text-primary text-decoration-none">
+                <i class="bi bi-plus-circle me-1"></i>Nova categoria
+              </a>
+            </label>
+            {{ form.categoria }}
+            {% if form.categoria.errors %}
+            <div class="invalid-feedback d-block">{{ form.categoria.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-12">
+            <label class="form-label fw-semibold small">Descrição</label>
+            {{ form.descricao }}
+          </div>
+
+        </div>
+
+        <hr class="my-4">
+        <p class="fw-semibold small text-muted text-uppercase tracking-wide mb-3">
+          <i class="bi bi-cash-coin me-1"></i>Tarifas
+        </p>
+
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold small">Diária (R$) *</label>
+            {{ form.diaria }}
+            {% if form.diaria.errors %}
+            <div class="invalid-feedback d-block">{{ form.diaria.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold small">Semanal (R$)</label>
+            {{ form.semanal }}
+            <div class="form-text">Opcional</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold small">Mensal (R$)</label>
+            {{ form.mensal }}
+            <div class="form-text">Opcional</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold small">Franquia km/dia</label>
+            {{ form.km_franquia_diaria }}
+            <div class="form-text">KM inclusos por dia</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold small">Valor km excedente (R$)</label>
+            {{ form.valor_km_excedente }}
+            <div class="form-text">Cobrado por km acima da franquia</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold small">Caução (R$)</label>
+            {{ form.caucao }}
+            <div class="form-text">Valor do depósito caução</div>
+          </div>
+
+          <div class="col-12">
+            <div class="form-check">
+              {{ form.ativo }}
+              <label class="form-check-label small">Grupo ativo (disponível para reservas)</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-footer bg-transparent d-flex gap-2 justify-content-end">
+        <a href="{% url 'frota:grupos' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg me-1"></i>Salvar Grupo
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Dica lateral -->
+  <div class="col-lg-5">
+    <div class="card border-0 bg-light">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3"><i class="bi bi-lightbulb text-warning me-2"></i>Como os grupos funcionam</h6>
+        <ul class="small text-muted mb-0 ps-3">
+          <li class="mb-2">Cada veículo pertence a um grupo. O grupo define as tarifas aplicadas no contrato.</li>
+          <li class="mb-2">Ao criar um contrato, as tarifas são preenchidas automaticamente com base no grupo do veículo selecionado.</li>
+          <li class="mb-2">Na <strong>franquia km/dia</strong>, coloque quantos quilômetros estão incluídos por diária. Quilômetros acima disso serão cobrados pelo valor de km excedente.</li>
+          <li class="mb-2">A <strong>caução</strong> é o depósito de segurança cobrado do cliente no check-out.</li>
+          <li>Grupos inativos não aparecem para criação de novas reservas.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
