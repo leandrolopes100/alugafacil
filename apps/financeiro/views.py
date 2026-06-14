@@ -429,12 +429,12 @@ class DespesaListView(GrupoRequiredMixin, ListView):
             qs = qs.filter(tem_atraso=True)
         elif situacao == 'quitado':
             qs = qs.filter(
-                Q(parcelado=False, pago=True) |
+                Q(parcelado=False, data_pagamento__isnull=False) |
                 Q(parcelado=True, tem_pendente=False)
             )
         elif situacao == 'pendente':
             qs = qs.filter(
-                Q(parcelado=False, pago=False) |
+                Q(parcelado=False, data_pagamento__isnull=True) |
                 Q(parcelado=True, tem_pendente=True, tem_atraso=False)
             )
 
@@ -449,7 +449,7 @@ class DespesaListView(GrupoRequiredMixin, ListView):
         pq = ParcelaDespesa.objects.filter(despesa__in=base)
         kpi_pago = (
             (pq.filter(situacao='pago').aggregate(s=Sum('valor'))['s'] or Decimal('0'))
-            + (base.filter(parcelado=False, pago=True).aggregate(s=Sum('valor'))['s'] or Decimal('0'))
+            + (base.filter(parcelado=False, data_pagamento__isnull=False).aggregate(s=Sum('valor'))['s'] or Decimal('0'))
         )
         kpi_em_atraso = (
             pq.filter(
@@ -462,7 +462,7 @@ class DespesaListView(GrupoRequiredMixin, ListView):
                 situacao__in=['pendente', 'em_atraso'],
                 data_vencimento__gte=hoje,
             ).aggregate(s=Sum('valor'))['s'] or Decimal('0'))
-            + (base.filter(parcelado=False, pago=False).aggregate(s=Sum('valor'))['s'] or Decimal('0'))
+            + (base.filter(parcelado=False, data_pagamento__isnull=True).aggregate(s=Sum('valor'))['s'] or Decimal('0'))
         )
 
         contexto['form'] = DespesaOperacionalForm(initial={'data_competencia': timezone.now().date()})
