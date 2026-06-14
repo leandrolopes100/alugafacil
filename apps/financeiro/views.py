@@ -176,8 +176,11 @@ class IndexFinanceiroView(GrupoRequiredMixin, View):
             data_vencimento__month=hoje.month,
         ).aggregate(s=Sum('valor'))['s'] or Decimal('0.00')
 
+        # Inclui 'pendente' com data passada: a property em_atraso do model
+        # cobre esse caso, mas o campo DB pode ainda estar como 'pendente'.
         total_pagar_vencido = ParcelaDespesa.objects.filter(
-            situacao='em_atraso',
+            situacao__in=['em_atraso', 'pendente'],
+            data_vencimento__lt=hoje,
         ).aggregate(s=Sum('valor'))['s'] or Decimal('0.00')
 
         count_pagar_mes = ParcelaDespesa.objects.filter(
