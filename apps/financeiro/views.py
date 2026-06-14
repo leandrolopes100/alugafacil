@@ -465,10 +465,20 @@ class DespesaListView(GrupoRequiredMixin, ListView):
             + (base.filter(parcelado=False, data_pagamento__isnull=True).aggregate(s=Sum('valor'))['s'] or Decimal('0'))
         )
 
+        from datetime import date as _date
+        from django.utils.formats import date_format
+        mes_filtro = self._mes_filtro()
+        try:
+            _ano, _m = mes_filtro.split('-')
+            mes_display = date_format(_date(int(_ano), int(_m), 1), 'F Y')
+        except Exception:
+            mes_display = mes_filtro
+
         contexto['form'] = DespesaOperacionalForm(initial={'data_competencia': timezone.now().date()})
         contexto['categorias'] = DespesaOperacional.CATEGORIA
-        contexto['mes_filtro'] = self._mes_filtro()
-        contexto['total_mes'] = base.aggregate(s=Sum('valor'))['s'] or Decimal('0.00')
+        contexto['mes_filtro'] = mes_filtro
+        contexto['mes_display'] = mes_display
+        contexto['total_mes'] = kpi_pago + kpi_pendente + kpi_em_atraso
         contexto['kpi_pago'] = kpi_pago
         contexto['kpi_em_atraso'] = kpi_em_atraso
         contexto['kpi_pendente'] = kpi_pendente

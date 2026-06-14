@@ -6,52 +6,72 @@
 {% endblock %}
 
 {% block conteudo %}
+<div x-data="{ mostrarForm: {% if form.errors %}true{% else %}false{% endif %} }">
 
+<!-- ── Header ─────────────────────────────────────────────────────────────── -->
 <div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
   <div>
     <h1 class="page-title">Despesas Operacionais</h1>
-    <p class="page-subtitle mb-0">Total do período: <strong class="text-danger">R$ {{ total_mes|floatformat:2 }}</strong></p>
+    <p class="page-subtitle mb-0">
+      Competência: <strong>{{ mes_display }}</strong>
+      <span class="text-muted mx-1">·</span>
+      Total: <strong>R$ {{ total_mes|floatformat:2 }}</strong>
+    </p>
   </div>
-  <a href="{% url 'financeiro:fluxo' %}" class="btn btn-outline-primary btn-sm">
-    <i class="bi bi-graph-up me-1"></i>Fluxo de Caixa
-  </a>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'financeiro:contas-pagar' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-list-check me-1"></i>Gerir Parcelas
+    </a>
+    <a href="{% url 'financeiro:fluxo' %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-graph-up me-1"></i>Fluxo de Caixa
+    </a>
+    <button type="button" @click="mostrarForm = !mostrarForm" class="btn btn-danger btn-sm">
+      <i class="bi bi-plus-circle me-1"></i>
+      <span x-text="mostrarForm ? 'Cancelar' : 'Nova Despesa'">Nova Despesa</span>
+    </button>
+  </div>
 </div>
 
-<!-- KPIs -->
+<!-- ── KPIs: Em atraso → A pagar → Já pago ───────────────────────────────── -->
 <div class="row g-3 mb-4">
   <div class="col-sm-4">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:var(--success-bg); color:var(--success)">
-        <i class="bi bi-check-circle-fill"></i>
-      </div>
-      <div class="kpi-value" style="font-size:22px; color:var(--success)">R$ {{ kpi_pago|floatformat:2 }}</div>
-      <div class="kpi-label">Já pago</div>
-    </div>
-  </div>
-  <div class="col-sm-4">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:var(--warning-bg); color:var(--warning)">
-        <i class="bi bi-clock-fill"></i>
-      </div>
-      <div class="kpi-value" style="font-size:22px; color:var(--warning)">R$ {{ kpi_pendente|floatformat:2 }}</div>
-      <div class="kpi-label">A pagar</div>
-    </div>
-  </div>
-  <div class="col-sm-4">
-    <div class="kpi-card">
+    <a href="?situacao=em_atraso&mes={{ mes_filtro }}" class="kpi-card text-decoration-none">
       <div class="kpi-icon" style="background:var(--danger-bg); color:var(--danger)">
         <i class="bi bi-exclamation-triangle-fill"></i>
       </div>
       <div class="kpi-value" style="font-size:22px; color:var(--danger)">R$ {{ kpi_em_atraso|floatformat:2 }}</div>
       <div class="kpi-label">Em atraso</div>
-    </div>
+      <div class="kpi-sub">vencido sem pagamento</div>
+    </a>
+  </div>
+  <div class="col-sm-4">
+    <a href="?situacao=pendente&mes={{ mes_filtro }}" class="kpi-card text-decoration-none">
+      <div class="kpi-icon" style="background:var(--warning-bg); color:var(--warning)">
+        <i class="bi bi-clock-fill"></i>
+      </div>
+      <div class="kpi-value" style="font-size:22px; color:var(--warning)">R$ {{ kpi_pendente|floatformat:2 }}</div>
+      <div class="kpi-label">A pagar</div>
+      <div class="kpi-sub">pendente a vencer</div>
+    </a>
+  </div>
+  <div class="col-sm-4">
+    <a href="?situacao=quitado&mes={{ mes_filtro }}" class="kpi-card text-decoration-none">
+      <div class="kpi-icon" style="background:var(--success-bg); color:var(--success)">
+        <i class="bi bi-check-circle-fill"></i>
+      </div>
+      <div class="kpi-value" style="font-size:22px; color:var(--success)">R$ {{ kpi_pago|floatformat:2 }}</div>
+      <div class="kpi-label">Já pago</div>
+      <div class="kpi-sub">quitado no período</div>
+    </a>
   </div>
 </div>
 
+<!-- ── Conteúdo principal ─────────────────────────────────────────────────── -->
 <div class="row g-4">
 
-  <!-- Tabela de despesas -->
-  <div class="col-lg-8">
+  <!-- Tabela -->
+  <div :class="mostrarForm ? 'col-lg-8' : 'col-12'">
+
     <!-- Filtros -->
     <form method="get" class="d-flex flex-wrap gap-2 mb-3 align-items-center">
       <select name="categoria" class="form-select form-select-sm" style="max-width:180px">
@@ -60,12 +80,12 @@
         <option value="{{ valor }}" {% if request.GET.categoria == valor %}selected{% endif %}>{{ rotulo }}</option>
         {% endfor %}
       </select>
-      <input type="month" name="mes" class="form-control form-control-sm" style="max-width:160px"
+      <input type="month" name="mes" class="form-control form-control-sm" style="max-width:150px"
              value="{{ mes_filtro }}">
       <select name="situacao" class="form-select form-select-sm" style="max-width:160px">
         <option value="">Todas as situações</option>
-        <option value="pendente"   {% if situacao_filtro == 'pendente'   %}selected{% endif %}>Pendente</option>
         <option value="em_atraso"  {% if situacao_filtro == 'em_atraso'  %}selected{% endif %}>Em atraso</option>
+        <option value="pendente"   {% if situacao_filtro == 'pendente'   %}selected{% endif %}>Pendente</option>
         <option value="quitado"    {% if situacao_filtro == 'quitado'    %}selected{% endif %}>Quitado / Pago</option>
       </select>
       <input type="text" name="busca" value="{{ busca }}"
@@ -94,8 +114,15 @@
           <tbody>
             {% for despesa in despesas %}
             <tr {% if despesa.tem_atraso %}class="table-warning"{% endif %}>
+
               <td class="text-muted small">{{ despesa.data_competencia|date:"d/m/Y" }}</td>
-              <td><span class="badge bg-secondary-subtle text-secondary border small">{{ despesa.get_categoria_display }}</span></td>
+
+              <td>
+                <span class="badge bg-secondary-subtle text-secondary border small">
+                  {{ despesa.get_categoria_display }}
+                </span>
+              </td>
+
               <td class="small">
                 {{ despesa.descricao }}
                 {% if despesa.parcelado %}
@@ -104,56 +131,68 @@
                 </span>
                 {% endif %}
                 {% if despesa.debito_automatico %}
-                <span class="badge bg-success-subtle text-success border small ms-1" title="Débito automático — parcelas confirmadas automaticamente">
-                  <i class="bi bi-lightning-charge-fill"></i>auto
+                <span class="badge bg-success-subtle text-success border small ms-1"
+                      title="Débito automático — parcelas confirmadas automaticamente">
+                  <i class="bi bi-lightning-charge-fill"></i> auto
                 </span>
                 {% endif %}
-                {% if despesa.forma_pagamento %}
-                <span class="badge bg-light text-secondary border small ms-1">{{ despesa.get_forma_pagamento_display }}</span>
-                {% endif %}
               </td>
-              <td class="small text-muted text-mono">{% if despesa.veiculo %}{{ despesa.veiculo.placa }}{% else %}—{% endif %}</td>
-              <td class="text-end fw-semibold text-danger">R$ {{ despesa.valor|floatformat:2 }}</td>
+
+              <td class="small text-muted text-mono">
+                {% if despesa.veiculo %}{{ despesa.veiculo.placa }}{% else %}—{% endif %}
+              </td>
+
+              <td class="text-end fw-semibold">
+                <span class="
+                  {% if despesa.tem_atraso %}text-danger
+                  {% elif despesa.pago %}text-success
+                  {% else %}text-body{% endif %}">
+                  R$ {{ despesa.valor|floatformat:2 }}
+                </span>
+              </td>
+
               <td class="text-center">
-                {% if despesa.tem_atraso %}
-                  <span class="badge bg-danger-subtle text-danger border small">Em atraso</span>
-                  {% if despesa.parcelado %}
-                  {% with prog=despesa.progresso_parcelas %}
-                  {% if prog %}<div class="text-muted" style="font-size:11px; margin-top:2px">{{ prog.0 }}/{{ prog.1 }} pagas</div>{% endif %}
-                  {% endwith %}
-                  {% endif %}
-                {% elif despesa.parcelado %}
+                {% if despesa.parcelado %}
                   {% with prog=despesa.progresso_parcelas %}
                   {% if prog %}
-                    {% if prog.0 == despesa.numero_parcelas %}
-                      <span class="badge bg-success-subtle text-success border small">Quitado</span>
+                    {% if despesa.tem_atraso %}
+                      <span class="status-badge status-danger">Em atraso</span>
+                    {% elif prog.0 == despesa.numero_parcelas %}
+                      <span class="status-badge status-success">Quitado</span>
                     {% elif prog.0 > 0 %}
-                      <span class="badge bg-info-subtle text-info border small">{{ prog.0 }}/{{ prog.1 }} pagas</span>
+                      <span class="status-badge status-primary">Em andamento</span>
                     {% else %}
-                      <span class="badge bg-warning-subtle text-warning border small">Pendente</span>
+                      <span class="status-badge status-warning">Pendente</span>
                     {% endif %}
-                  {% else %}
-                    <span class="badge bg-warning-subtle text-warning border small">Pendente</span>
+                    <div class="text-muted" style="font-size:11px; margin-top:3px">
+                      {{ prog.0 }}/{{ prog.1 }} pagas
+                    </div>
                   {% endif %}
                   {% endwith %}
                 {% else %}
                   {% if despesa.pago %}
-                  <span class="badge bg-success-subtle text-success border small">Pago</span>
+                    <span class="status-badge status-success">Pago</span>
                   {% else %}
-                  <span class="badge bg-warning-subtle text-warning border small">Pendente</span>
+                    <span class="status-badge status-warning">Pendente</span>
                   {% endif %}
                 {% endif %}
               </td>
+
               <td class="text-center">
-                <a href="{% url 'financeiro:despesa-detalhe' despesa.pk %}" class="btn btn-sm btn-outline-primary" title="Ver detalhes">
+                <a href="{% url 'financeiro:despesa-detalhe' despesa.pk %}"
+                   class="btn btn-sm btn-outline-primary" title="Ver detalhes">
                   <i class="bi bi-eye"></i>
                 </a>
               </td>
+
             </tr>
             {% empty %}
-            <tr><td colspan="7" class="text-center py-5 text-muted">
-              <i class="bi bi-receipt d-block fs-1 mb-2 opacity-25"></i>Nenhuma despesa registrada.
-            </td></tr>
+            <tr>
+              <td colspan="7" class="text-center py-5 text-muted">
+                <i class="bi bi-receipt d-block fs-1 mb-2 opacity-25"></i>
+                Nenhuma despesa registrada para este período.
+              </td>
+            </tr>
             {% endfor %}
           </tbody>
         </table>
@@ -168,11 +207,17 @@
       <nav>
         <ul class="pagination pagination-sm mb-0">
           {% if page_obj.has_previous %}
-          <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode }}">‹ Anterior</a></li>
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode }}">‹ Anterior</a>
+          </li>
           {% endif %}
-          <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+          <li class="page-item disabled">
+            <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+          </li>
           {% if page_obj.has_next %}
-          <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode }}">Próxima ›</a></li>
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode }}">Próxima ›</a>
+          </li>
           {% endif %}
         </ul>
       </nav>
@@ -180,12 +225,15 @@
     {% endif %}
   </div>
 
-  <!-- Formulário rápido -->
-  <div class="col-lg-4">
-    <div class="card" id="form-despesa">
-      <div class="card-header"><i class="bi bi-plus-circle me-2 text-danger"></i>Registrar Despesa</div>
+  <!-- ── Formulário colapsável ─────────────────────────────────────────────── -->
+  <div class="col-lg-4" x-show="mostrarForm" x-cloak id="form-despesa">
+    <div class="card">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-plus-circle me-2 text-danger"></i>Registrar Despesa</span>
+        <button type="button" @click="mostrarForm = false"
+                class="btn-close btn-sm" aria-label="Fechar"></button>
+      </div>
       <div class="card-body">
-        {# Inicializa parcelado=true se o form voltou com erro e parcelado estava marcado #}
         <form method="post" action="{% url 'financeiro:despesa-nova' %}"
               x-data="{ parcelado: {% if form.data.parcelado %}true{% else %}false{% endif %} }">
           {% csrf_token %}
@@ -218,10 +266,9 @@
           <div class="mb-3 {% if form.data_competencia.errors %}field-has-error{% endif %}">
             <label class="form-label fw-semibold small">Data de Competência *</label>{{ form.data_competencia }}
             {% if form.data_competencia.errors %}<div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.data_competencia.errors.0 }}</div>{% endif %}
-            <div class="form-text">Mês ao qual a despesa pertence contabilmente. Pode ser diferente da data de pagamento.</div>
+            <div class="form-text">Mês ao qual a despesa pertence contabilmente.</div>
           </div>
 
-          <!-- Toggle Parcelado -->
           <div class="mb-3">
             <div class="form-check form-switch">
               <input type="checkbox" name="parcelado" class="form-check-input" id="id_parcelado"
@@ -234,14 +281,13 @@
             <div class="form-text">Cartão de crédito, boleto parcelado, cheque pré, etc.</div>
           </div>
 
-          <!-- Forma de pagamento — sempre visível; obrigatória só quando parcelado -->
           <div class="mb-3 {% if form.forma_pagamento.errors %}field-has-error{% endif %}">
-            <label class="form-label fw-semibold small" x-text="parcelado ? 'Forma de Pagamento *' : 'Forma de Pagamento'">Forma de Pagamento</label>
+            <label class="form-label fw-semibold small"
+                   x-text="parcelado ? 'Forma de Pagamento *' : 'Forma de Pagamento'">Forma de Pagamento</label>
             {{ form.forma_pagamento }}
             {% if form.forma_pagamento.errors %}<div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.forma_pagamento.errors.0 }}</div>{% endif %}
           </div>
 
-          <!-- Campos de parcelamento (visíveis somente quando parcelado=true) -->
           <div x-show="parcelado" x-cloak>
             <div class="mb-3 {% if form.numero_parcelas.errors %}field-has-error{% endif %}">
               <label class="form-label fw-semibold small">Número de Parcelas *</label>
@@ -258,12 +304,11 @@
               </div>
               <div class="form-text mt-1">
                 <i class="bi bi-info-circle me-1 text-success"></i>
-                Marque para cartão de crédito ou débito em conta. O sistema confirmará cada parcela automaticamente na data de vencimento.
+                Marque para cartão de crédito ou débito em conta. O sistema confirma cada parcela automaticamente na data de vencimento.
               </div>
             </div>
           </div>
 
-          <!-- Data de pagamento (somente quando NÃO parcelado) -->
           <div x-show="!parcelado" class="mb-3">
             <label class="form-label fw-semibold small">Data de Pagamento</label>
             {{ form.data_pagamento }}
@@ -280,6 +325,7 @@
       </div>
     </div>
   </div>
-</div>
 
+</div><!-- /row -->
+</div><!-- /x-data -->
 {% endblock %}
