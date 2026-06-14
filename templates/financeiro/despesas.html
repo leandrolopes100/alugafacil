@@ -17,22 +17,62 @@
   </a>
 </div>
 
+<!-- KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-4">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--success-bg); color:var(--success)">
+        <i class="bi bi-check-circle-fill"></i>
+      </div>
+      <div class="kpi-value" style="font-size:22px; color:var(--success)">R$ {{ kpi_pago|floatformat:2 }}</div>
+      <div class="kpi-label">Já pago</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--warning-bg); color:var(--warning)">
+        <i class="bi bi-clock-fill"></i>
+      </div>
+      <div class="kpi-value" style="font-size:22px; color:var(--warning)">R$ {{ kpi_pendente|floatformat:2 }}</div>
+      <div class="kpi-label">A pagar</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--danger-bg); color:var(--danger)">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+      </div>
+      <div class="kpi-value" style="font-size:22px; color:var(--danger)">R$ {{ kpi_em_atraso|floatformat:2 }}</div>
+      <div class="kpi-label">Em atraso</div>
+    </div>
+  </div>
+</div>
+
 <div class="row g-4">
 
   <!-- Tabela de despesas -->
   <div class="col-lg-8">
     <!-- Filtros -->
-    <form method="get" class="d-flex gap-2 mb-3">
-      <select name="categoria" class="form-select form-select-sm" style="max-width:200px">
+    <form method="get" class="d-flex flex-wrap gap-2 mb-3 align-items-center">
+      <select name="categoria" class="form-select form-select-sm" style="max-width:180px">
         <option value="">Todas as categorias</option>
         {% for valor, rotulo in categorias %}
         <option value="{{ valor }}" {% if request.GET.categoria == valor %}selected{% endif %}>{{ rotulo }}</option>
         {% endfor %}
       </select>
-      <input type="month" name="mes" class="form-control form-control-sm" style="max-width:180px"
+      <input type="month" name="mes" class="form-control form-control-sm" style="max-width:160px"
              value="{{ mes_filtro }}">
+      <select name="situacao" class="form-select form-select-sm" style="max-width:160px">
+        <option value="">Todas as situações</option>
+        <option value="pendente"   {% if situacao_filtro == 'pendente'   %}selected{% endif %}>Pendente</option>
+        <option value="em_atraso"  {% if situacao_filtro == 'em_atraso'  %}selected{% endif %}>Em atraso</option>
+        <option value="quitado"    {% if situacao_filtro == 'quitado'    %}selected{% endif %}>Quitado / Pago</option>
+      </select>
+      <input type="text" name="busca" value="{{ busca }}"
+             class="form-control form-control-sm" style="max-width:200px"
+             placeholder="Buscar descrição…">
       <button type="submit" class="btn btn-sm btn-outline-secondary">Filtrar</button>
-      {% if request.GET.categoria or request.GET.mes %}
+      {% if request.GET.categoria or request.GET.mes or situacao_filtro or busca %}
       <a href="?" class="btn btn-sm btn-outline-danger" title="Limpar filtros"><i class="bi bi-x-lg"></i></a>
       {% endif %}
     </form>
@@ -53,7 +93,7 @@
           </thead>
           <tbody>
             {% for despesa in despesas %}
-            <tr>
+            <tr {% if despesa.tem_atraso %}class="table-warning"{% endif %}>
               <td class="text-muted small">{{ despesa.data_competencia|date:"d/m/Y" }}</td>
               <td><span class="badge bg-secondary-subtle text-secondary border small">{{ despesa.get_categoria_display }}</span></td>
               <td class="small">
@@ -62,23 +102,35 @@
                 <span class="badge bg-primary-subtle text-primary border small ms-1">
                   {{ despesa.numero_parcelas }}x
                 </span>
+                {% endif %}
                 {% if despesa.debito_automatico %}
                 <span class="badge bg-success-subtle text-success border small ms-1" title="Débito automático — parcelas confirmadas automaticamente">
                   <i class="bi bi-lightning-charge-fill"></i>auto
                 </span>
                 {% endif %}
+                {% if despesa.forma_pagamento %}
+                <span class="badge bg-light text-secondary border small ms-1">{{ despesa.get_forma_pagamento_display }}</span>
                 {% endif %}
               </td>
               <td class="small text-muted text-mono">{% if despesa.veiculo %}{{ despesa.veiculo.placa }}{% else %}—{% endif %}</td>
               <td class="text-end fw-semibold text-danger">R$ {{ despesa.valor|floatformat:2 }}</td>
               <td class="text-center">
-                {% if despesa.parcelado %}
+                {% if despesa.tem_atraso %}
+                  <span class="badge bg-danger-subtle text-danger border small">Em atraso</span>
+                  {% if despesa.parcelado %}
+                  {% with prog=despesa.progresso_parcelas %}
+                  {% if prog %}<div class="text-muted" style="font-size:11px; margin-top:2px">{{ prog.0 }}/{{ prog.1 }} pagas</div>{% endif %}
+                  {% endwith %}
+                  {% endif %}
+                {% elif despesa.parcelado %}
                   {% with prog=despesa.progresso_parcelas %}
                   {% if prog %}
                     {% if prog.0 == despesa.numero_parcelas %}
                       <span class="badge bg-success-subtle text-success border small">Quitado</span>
-                    {% else %}
+                    {% elif prog.0 > 0 %}
                       <span class="badge bg-info-subtle text-info border small">{{ prog.0 }}/{{ prog.1 }} pagas</span>
+                    {% else %}
+                      <span class="badge bg-warning-subtle text-warning border small">Pendente</span>
                     {% endif %}
                   {% else %}
                     <span class="badge bg-warning-subtle text-warning border small">Pendente</span>
@@ -86,22 +138,16 @@
                   {% endwith %}
                 {% else %}
                   {% if despesa.pago %}
-                  <i class="bi bi-check-circle-fill text-success"></i>
+                  <span class="badge bg-success-subtle text-success border small">Pago</span>
                   {% else %}
-                  <span class="badge bg-warning text-dark">Pendente</span>
+                  <span class="badge bg-warning-subtle text-warning border small">Pendente</span>
                   {% endif %}
                 {% endif %}
               </td>
               <td class="text-center">
-                {% if despesa.parcelado %}
-                <a href="{% url 'financeiro:despesa-detalhe' despesa.pk %}" class="btn btn-sm btn-outline-primary" title="Ver parcelas">
-                  <i class="bi bi-list-ul"></i>
+                <a href="{% url 'financeiro:despesa-detalhe' despesa.pk %}" class="btn btn-sm btn-outline-primary" title="Ver detalhes">
+                  <i class="bi bi-eye"></i>
                 </a>
-                {% else %}
-                <a href="{% url 'financeiro:despesa-detalhe' despesa.pk %}" class="btn btn-sm btn-outline-secondary" title="Detalhes / Editar">
-                  <i class="bi bi-pencil"></i>
-                </a>
-                {% endif %}
               </td>
             </tr>
             {% empty %}

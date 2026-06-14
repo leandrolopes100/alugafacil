@@ -3,7 +3,7 @@ from collections import defaultdict
 from decimal import Decimal
 from django.contrib import messages
 from apps.core.mixins import GrupoRequiredMixin
-from django.db.models import Count, F, Q, Sum
+from django.db.models import Count, Exists, F, OuterRef, Q, Sum
 from django.db.models.functions import ExtractMonth
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -353,24 +353,91 @@ class DespesaListView(GrupoRequiredMixin, ListView):
         return self.request.session.get('despesa_mes_filtro') or timezone.now().strftime('%Y-%m')
 
     def get_queryset(self):
-        qs = DespesaOperacional.objects.select_related('veiculo').prefetch_related('parcelas')
-        categoria = self.request.GET.get('categoria')
+        hoje = timezone.now().date()
+        qs = (
+            DespesaOperacional.objects
+            .select_related('veiculo')
+            .prefetch_related('parcelas')
+            .annotate(
+                tem_atraso=Exists(
+                    ParcelaDespesa.objects.filter(
+                        despesa=OuterRef('pk'),
+                        situacao__in=['pendente', 'em_atraso'],
+                        data_vencimento__lt=hoje,
+                    )
+                ),
+                tem_pendente=Exists(
+                    ParcelaDespesa.objects.filter(
+                        despesa=OuterRef('pk'),
+                        situacao__in=['pendente', 'em_atraso'],
+                    )
+                ),
+            )
+        )
+        categoria = self.request.GET.get('categoria', '')
+        busca = self.request.GET.get('busca', '').strip()
+        situacao = self.request.GET.get('situacao', '')
         mes = self._mes_filtro()
+
         if categoria:
             qs = qs.filter(categoria=categoria)
+        if busca:
+            qs = qs.filter(descricao__icontains=busca)
         try:
             ano, m = mes.split('-')
             qs = qs.filter(data_competencia__year=ano, data_competencia__month=m)
         except (ValueError, AttributeError):
             pass
-        return qs
+
+        if situacao == 'em_atraso':
+            qs = qs.filter(tem_atraso=True)
+        elif situacao == 'quitado':
+            qs = qs.filter(
+                Q(parcelado=False, pago=True) |
+                Q(parcelado=True, tem_pendente=False)
+            )
+        elif situacao == 'pendente':
+            qs = qs.filter(
+                Q(parcelado=False, pago=False) |
+                Q(parcelado=True, tem_pendente=True, tem_atraso=False)
+            )
+
+        return qs.order_by('-data_competencia')
 
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
+        hoje = timezone.now().date()
+
+        # KPIs sobre toda a lista filtrada (sem paginação)
+        base = self.object_list
+        pq = ParcelaDespesa.objects.filter(despesa__in=base)
+        kpi_pago = (
+            (pq.filter(situacao='pago').aggregate(s=Sum('valor'))['s'] or Decimal('0'))
+            + (base.filter(parcelado=False, pago=True).aggregate(s=Sum('valor'))['s'] or Decimal('0'))
+        )
+        kpi_em_atraso = (
+            pq.filter(
+                situacao__in=['pendente', 'em_atraso'],
+                data_vencimento__lt=hoje,
+            ).aggregate(s=Sum('valor'))['s'] or Decimal('0')
+        )
+        kpi_pendente = (
+            (pq.filter(
+                situacao__in=['pendente', 'em_atraso'],
+                data_vencimento__gte=hoje,
+            ).aggregate(s=Sum('valor'))['s'] or Decimal('0'))
+            + (base.filter(parcelado=False, pago=False).aggregate(s=Sum('valor'))['s'] or Decimal('0'))
+        )
+
         contexto['form'] = DespesaOperacionalForm(initial={'data_competencia': timezone.now().date()})
         contexto['categorias'] = DespesaOperacional.CATEGORIA
         contexto['mes_filtro'] = self._mes_filtro()
-        contexto['total_mes'] = self.object_list.aggregate(s=Sum('valor'))['s'] or Decimal('0.00')
+        contexto['total_mes'] = base.aggregate(s=Sum('valor'))['s'] or Decimal('0.00')
+        contexto['kpi_pago'] = kpi_pago
+        contexto['kpi_em_atraso'] = kpi_em_atraso
+        contexto['kpi_pendente'] = kpi_pendente
+        contexto['situacao_filtro'] = self.request.GET.get('situacao', '')
+        contexto['busca'] = self.request.GET.get('busca', '').strip()
         return contexto
 
 
