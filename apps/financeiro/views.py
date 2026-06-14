@@ -3,7 +3,7 @@ from collections import defaultdict
 from decimal import Decimal
 from django.contrib import messages
 from apps.core.mixins import GrupoRequiredMixin
-from django.db.models import Count, Exists, F, OuterRef, Q, Sum
+from django.db.models import Case, Count, Exists, F, IntegerField, OuterRef, Q, Sum, Value, When
 from django.db.models.functions import ExtractMonth
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -218,9 +218,19 @@ class ContaReceberListView(GrupoRequiredMixin, ListView):
     paginate_by = 25
 
     def get_queryset(self):
+        hoje = timezone.now().date()
+        # Ordena por urgência: vencidas abertas (0) → pendentes futuras (1) → pagas/canceladas (2)
+        # Dentro de cada grupo, data_vencimento ASC (vencidas mais antigas primeiro).
         qs = ContaReceber.objects.select_related(
             'cliente', 'contrato__veiculo'
-        ).order_by('data_vencimento')
+        ).annotate(
+            prioridade=Case(
+                When(situacao__in=['pago', 'cancelado'], then=Value(2)),
+                When(data_vencimento__gte=hoje, then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField(),
+            )
+        ).order_by('prioridade', 'data_vencimento')
 
         self.form = ContaReceberFiltroForm(self.request.GET)
         if self.form.is_valid():
@@ -242,12 +252,35 @@ class ContaReceberListView(GrupoRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx['form'] = getattr(self, 'form', ContaReceberFiltroForm())
-        # Usa self.object_list (já filtrado e avaliado por ListView) sem reconstruir queryset
-        agg = self.object_list.exclude(situacao__in=('pago', 'cancelado')).aggregate(
+        hoje = timezone.now().date()
+        base = self.object_list
+
+        # KPI: total faturado
+        kpi_faturado = base.aggregate(s=Sum('valor_total'))['s'] or Decimal('0')
+
+        # KPI: total recebido
+        kpi_recebido = base.aggregate(s=Sum('valor_pago'))['s'] or Decimal('0')
+
+        # KPI: em aberto (saldo das não-pagas/canceladas)
+        agg_aberto = base.exclude(situacao__in=['pago', 'cancelado']).aggregate(
             vt=Sum('valor_total'), vp=Sum('valor_pago')
         )
-        ctx['total_listado'] = (agg['vt'] or Decimal('0.00')) - (agg['vp'] or Decimal('0.00'))
+        kpi_em_aberto = (agg_aberto['vt'] or Decimal('0')) - (agg_aberto['vp'] or Decimal('0'))
+
+        # KPI: vencido (saldo das contas vencidas ainda abertas)
+        agg_vencido = base.filter(
+            data_vencimento__lt=hoje
+        ).exclude(situacao__in=['pago', 'cancelado']).aggregate(
+            vt=Sum('valor_total'), vp=Sum('valor_pago')
+        )
+        kpi_vencido = (agg_vencido['vt'] or Decimal('0')) - (agg_vencido['vp'] or Decimal('0'))
+
+        ctx['form'] = getattr(self, 'form', ContaReceberFiltroForm())
+        ctx['total_listado'] = kpi_em_aberto
+        ctx['kpi_faturado'] = kpi_faturado
+        ctx['kpi_recebido'] = kpi_recebido
+        ctx['kpi_em_aberto'] = kpi_em_aberto
+        ctx['kpi_vencido'] = kpi_vencido
         ctx['situacoes'] = ContaReceber.SITUACAO
         return ctx
 

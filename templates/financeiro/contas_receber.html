@@ -10,10 +10,47 @@
 <div class="page-header">
   <div>
     <h1 class="page-title">Contas a Receber</h1>
-    <p class="page-subtitle">
-      {{ page_obj.paginator.count }} conta{{ page_obj.paginator.count|pluralize:"s" }}
-      {% if total_listado %}&nbsp;·&nbsp; Saldo em aberto: <strong>R$ {{ total_listado|floatformat:2 }}</strong>{% endif %}
-    </p>
+    <p class="page-subtitle">{{ page_obj.paginator.count }} conta{{ page_obj.paginator.count|pluralize:"s" }}</p>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#f0f9ff; color:#0284c7">
+        <i class="bi bi-receipt"></i>
+      </div>
+      <div class="kpi-value" style="font-size:20px">R$ {{ kpi_faturado|floatformat:2 }}</div>
+      <div class="kpi-label">Total faturado</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--success-bg); color:var(--success)">
+        <i class="bi bi-check-circle-fill"></i>
+      </div>
+      <div class="kpi-value" style="font-size:20px; color:var(--success)">R$ {{ kpi_recebido|floatformat:2 }}</div>
+      <div class="kpi-label">Recebido</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--warning-bg); color:var(--warning)">
+        <i class="bi bi-clock-fill"></i>
+      </div>
+      <div class="kpi-value" style="font-size:20px; color:var(--warning)">R$ {{ kpi_em_aberto|floatformat:2 }}</div>
+      <div class="kpi-label">Em aberto</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--danger-bg); color:var(--danger)">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+      </div>
+      <div class="kpi-value" style="font-size:20px; color:var(--danger)">R$ {{ kpi_vencido|floatformat:2 }}</div>
+      <div class="kpi-label">Vencido</div>
+    </div>
   </div>
 </div>
 
@@ -28,23 +65,9 @@
       {{ form.vencimento_ate }}
     </div>
     <button type="submit" class="btn btn-outline-secondary btn-sm">Filtrar</button>
-    {% if request.GET %}<a href="?" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x-lg"></i></a>{% endif %}
+    {% if request.GET %}<a href="?" class="btn btn-outline-secondary btn-sm" title="Limpar filtros"><i class="bi bi-x-lg"></i></a>{% endif %}
   </div>
 </form>
-
-<!-- Filtros rápidos por situação -->
-<div class="d-flex flex-wrap gap-2 mb-3">
-  <a href="?" style="font-size:12.5px; font-weight:600; padding:5px 12px; border-radius:20px; text-decoration:none;
-     {% if not request.GET.situacao %}background:#0f172a; color:#fff{% else %}background:#f8fafc; color:#64748b; border:1px solid #e2e8f0{% endif %}">
-    Todas
-  </a>
-  {% for valor, rotulo in situacoes %}
-  <a href="?situacao={{ valor }}" style="font-size:12.5px; font-weight:600; padding:5px 12px; border-radius:20px; text-decoration:none;
-     {% if request.GET.situacao == valor %}background:#0f172a; color:#fff{% else %}background:#f8fafc; color:#64748b; border:1px solid #e2e8f0{% endif %}">
-    {{ rotulo }}
-  </a>
-  {% endfor %}
-</div>
 
 <div class="card">
   <div class="table-responsive">
@@ -54,8 +77,7 @@
           <th>Contrato</th>
           <th>Cliente</th>
           <th>Veículo</th>
-          <th>Emissão</th>
-          <th>Vencimento <span style="font-size:10px; font-weight:400; color:#94a3b8">(devolução prev.)</span></th>
+          <th>Vencimento</th>
           <th class="text-end">Total</th>
           <th class="text-end">Pago</th>
           <th class="text-end">Saldo</th>
@@ -65,7 +87,7 @@
       </thead>
       <tbody>
         {% for conta in contas %}
-        <tr {% if conta.vencida %}style="background:#fffbeb"{% endif %}>
+        <tr {% if conta.vencida %}class="table-warning"{% endif %}>
           <td>
             <a href="{% url 'financeiro:conta-receber-detalhe' conta.pk %}" class="table-link text-mono">{{ conta.contrato.numero }}</a>
           </td>
@@ -73,45 +95,51 @@
           <td>
             <span class="text-mono" style="font-size:11.5px; font-weight:700; background:#f8fafc; border:1px solid #e2e8f0; padding:2px 6px; border-radius:4px">{{ conta.contrato.veiculo.placa }}</span>
           </td>
-          <td style="font-size:12.5px; color:#64748b">{{ conta.data_emissao|date:"d/m/Y" }}</td>
-          <td style="font-size:12.5px; {% if conta.vencida %}color:#ef4444; font-weight:600{% else %}color:#64748b{% endif %}">
-            {{ conta.data_vencimento|date:"d/m/Y" }}
+          <td>
+            <span style="font-size:12.5px; {% if conta.vencida %}color:var(--danger); font-weight:600{% else %}color:#64748b{% endif %}">
+              {{ conta.data_vencimento|date:"d/m/Y" }}
+            </span>
             {% if conta.vencida %}
-            <span style="font-size:11px; background:#fef2f2; color:#ef4444; padding:1px 5px; border-radius:4px; border:1px solid #fca5a5; display:block; margin-top:2px">+{{ conta.dias_em_atraso }} dias</span>
+            <span class="badge bg-danger-subtle text-danger border small" style="display:block; margin-top:2px">
+              +{{ conta.dias_em_atraso }} dia{{ conta.dias_em_atraso|pluralize }}
+            </span>
+            {% elif conta.dias_para_vencer >= 0 and conta.dias_para_vencer <= 3 %}
+            <span class="badge bg-warning-subtle text-warning border small" style="display:block; margin-top:2px">
+              {% if conta.dias_para_vencer == 0 %}Vence hoje
+              {% elif conta.dias_para_vencer == 1 %}Vence amanhã
+              {% else %}Vence em {{ conta.dias_para_vencer }} dias{% endif %}
+            </span>
             {% endif %}
           </td>
           <td class="text-end" style="font-size:13px; color:#0f172a">R$ {{ conta.valor_total|floatformat:2 }}</td>
-          <td class="text-end" style="font-size:13px; color:#10b981; font-weight:600">
+          <td class="text-end" style="font-size:13px; color:var(--success); font-weight:600">
             {% if conta.valor_pago %}R$ {{ conta.valor_pago|floatformat:2 }}{% else %}<span style="color:#cbd5e1">—</span>{% endif %}
           </td>
-          <td class="text-end" style="font-size:13.5px; font-weight:700; {% if conta.valor_saldo > 0 %}color:#ef4444{% else %}color:#10b981{% endif %}">
+          <td class="text-end" style="font-size:13.5px; font-weight:700; {% if conta.valor_saldo > 0 %}color:var(--danger){% else %}color:var(--success){% endif %}">
             R$ {{ conta.valor_saldo|floatformat:2 }}
           </td>
           <td>
-            <span class="status-badge
-              {% if conta.situacao == 'pendente' %}status-warning
-              {% elif conta.situacao == 'pago_parcial' %}status-primary
-              {% elif conta.situacao == 'pago' %}status-success
-              {% elif conta.situacao == 'vencido' %}status-danger
-              {% else %}status-neutral{% endif %}">
-              {{ conta.get_situacao_display }}
-            </span>
-          </td>
-          <td style="text-align:right">
-            {% if conta.situacao != 'pago' and conta.situacao != 'cancelado' %}
-            <a href="{% url 'financeiro:conta-receber-detalhe' conta.pk %}" class="btn btn-outline-secondary btn-sm">
-              <i class="bi bi-cash-coin"></i>
-            </a>
+            {% if conta.vencida %}
+              <span class="status-badge status-danger">Vencido</span>
+            {% elif conta.situacao == 'pago_parcial' %}
+              <span class="status-badge status-primary">Pago Parcialmente</span>
+            {% elif conta.situacao == 'pago' %}
+              <span class="status-badge status-success">Pago</span>
+            {% elif conta.situacao == 'cancelado' %}
+              <span class="status-badge status-neutral">Cancelado</span>
             {% else %}
-            <a href="{% url 'financeiro:conta-receber-detalhe' conta.pk %}" class="btn btn-outline-secondary btn-sm">
+              <span class="status-badge status-warning">Pendente</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{% url 'financeiro:conta-receber-detalhe' conta.pk %}" class="btn btn-outline-primary btn-sm" title="Ver conta">
               <i class="bi bi-eye"></i>
             </a>
-            {% endif %}
           </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="10">
+          <td colspan="9">
             <div class="empty-state">
               <div class="empty-state-icon"><i class="bi bi-receipt"></i></div>
               <div class="empty-state-title">Nenhuma conta encontrada</div>
@@ -126,13 +154,18 @@
 </div>
 
 {% if is_paginated %}
-<nav class="mt-3">
-  <ul class="pagination justify-content-center mb-0">
-    {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode }}"><i class="bi bi-chevron-left"></i></a></li>{% endif %}
-    <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
-    {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode }}"><i class="bi bi-chevron-right"></i></a></li>{% endif %}
-  </ul>
-</nav>
+<div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <div class="text-muted small">
+    Mostrando {{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ page_obj.paginator.count }} conta{{ page_obj.paginator.count|pluralize:"s" }}
+  </div>
+  <nav>
+    <ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode }}"><i class="bi bi-chevron-left"></i></a></li>{% endif %}
+      <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+      {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode }}"><i class="bi bi-chevron-right"></i></a></li>{% endif %}
+    </ul>
+  </nav>
+</div>
 {% endif %}
 
 {% endblock %}
