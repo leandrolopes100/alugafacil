@@ -710,12 +710,8 @@
       <i class="bi bi-receipt"></i> Contas a Receber
     </a>
     <a href="{% url 'financeiro:contas-pagar' %}"
-       class="sidebar-link {% if request.resolver_match.url_name == 'contas-pagar' %}active{% endif %}">
+       class="sidebar-link {% if request.resolver_match.url_name == 'contas-pagar' or request.resolver_match.url_name == 'agenda-pagamentos' %}active{% endif %}">
       <i class="bi bi-credit-card"></i> Contas a Pagar
-    </a>
-    <a href="{% url 'financeiro:agenda-pagamentos' %}"
-       class="sidebar-link {% if request.resolver_match.url_name == 'agenda-pagamentos' %}active{% endif %}">
-      <i class="bi bi-calendar-check"></i> Agenda de Pagamentos
     </a>
     <a href="{% url 'financeiro:despesas' %}"
        class="sidebar-link {% if request.resolver_match.url_name == 'despesas' %}active{% endif %}">

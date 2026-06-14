@@ -74,32 +74,10 @@ class AgendaCobrancasView(GrupoRequiredMixin, View):
 # ─── Agenda de Pagamentos (despesas parceladas a pagar) ──────────────────────
 
 class AgendaPagamentosView(GrupoRequiredMixin, View):
+    """Mantido para compatibilidade — redireciona para Contas a Pagar."""
     grupos_permitidos = ['admin_locadora', 'financeiro']
-    template_name = 'financeiro/agenda_pagamentos.html'
-
     def get(self, request):
-        hoje = timezone.now().date()
-        fim_semana = hoje + timedelta(days=7)
-
-        pendentes = list(
-            ParcelaDespesa.objects.filter(
-                situacao__in=['pendente', 'em_atraso']
-            ).select_related('despesa__veiculo')
-            .order_by('data_vencimento')
-        )
-
-        em_atraso = [p for p in pendentes if p.situacao == 'em_atraso']
-        esta_semana = [p for p in pendentes if p.situacao == 'pendente' and p.data_vencimento <= fim_semana]
-        proximas = [p for p in pendentes if p.situacao == 'pendente' and p.data_vencimento > fim_semana]
-
-        return render(request, self.template_name, {
-            'em_atraso': em_atraso,
-            'esta_semana': esta_semana,
-            'proximas': proximas,
-            'hoje': hoje,
-            'total_atraso': sum(p.valor for p in em_atraso),
-            'total_semana': sum(p.valor for p in esta_semana),
-        })
+        return redirect('financeiro:contas-pagar')
 
 
 # ─── Dashboard Financeiro ─────────────────────────────────────────────────────
@@ -740,17 +718,39 @@ class ParcelaDespesaPagarLoteView(GrupoRequiredMixin, View):
         else:
             messages.warning(request, 'Nenhuma parcela elegível foi encontrada.')
 
-        return HttpResponseRedirect(next_url) if next_url else redirect('financeiro:agenda-pagamentos')
+        return HttpResponseRedirect(next_url) if next_url else redirect('financeiro:contas-pagar')
 
 
 class ContasPagarListView(GrupoRequiredMixin, View):
-    """Lista todas as parcelas de despesas pendentes com filtros e pagamento em lote."""
+    """Parcelas de despesas: modo urgência (grupos temporais) + lista filtrada."""
     grupos_permitidos = ['admin_locadora', 'financeiro']
     template_name = 'financeiro/contas_pagar.html'
 
     def get(self, request):
         hoje = timezone.now().date()
+        fim_semana = hoje + timedelta(days=7)
 
+        # ── Grupos de urgência — todas as pendentes, sem filtro de mês ──
+        todas_pendentes = list(
+            ParcelaDespesa.objects.filter(
+                situacao__in=['pendente', 'em_atraso']
+            ).select_related('despesa__veiculo')
+            .order_by('data_vencimento', 'despesa__descricao')
+        )
+        em_atraso_grupo = [
+            p for p in todas_pendentes
+            if p.situacao == 'em_atraso' or (p.situacao == 'pendente' and p.data_vencimento < hoje)
+        ]
+        esta_semana_grupo = [
+            p for p in todas_pendentes
+            if p.situacao == 'pendente' and hoje <= p.data_vencimento <= fim_semana
+        ]
+        proximas_grupo = [
+            p for p in todas_pendentes
+            if p.situacao == 'pendente' and p.data_vencimento > fim_semana
+        ]
+
+        # ── Lista filtrada ──
         qs = ParcelaDespesa.objects.select_related(
             'despesa__veiculo'
         ).order_by('data_vencimento', 'despesa__descricao')
@@ -774,29 +774,45 @@ class ContasPagarListView(GrupoRequiredMixin, View):
         if filtro_categoria:
             qs = qs.filter(despesa__categoria=filtro_categoria)
 
-        totais = qs.aggregate(
-            total_listado=Sum('valor'),
-            total_vencido=Sum('valor', filter=Q(situacao='em_atraso')),
-        )
-        total_listado = totais['total_listado'] or Decimal('0.00')
-        total_vencido = totais['total_vencido'] or Decimal('0.00')
         parcelas = list(qs)
-        total_pendente_mes = ParcelaDespesa.objects.filter(
+        total_listado = sum(p.valor for p in parcelas)
+
+        # ── KPIs globais ──
+        kpi_em_atraso = sum(p.valor for p in em_atraso_grupo)
+        kpi_este_mes = ParcelaDespesa.objects.filter(
             situacao__in=['pendente', 'em_atraso'],
             data_vencimento__year=hoje.year,
             data_vencimento__month=hoje.month,
         ).aggregate(s=Sum('valor'))['s'] or Decimal('0.00')
+        kpi_total_pendente = sum(p.valor for p in todas_pendentes)
+
+        # Modo inicial: lista quando filtros ativos; urgência por padrão
+        tem_filtro = bool(
+            filtro_situacao or filtro_categoria
+            or (filtro_mes and filtro_mes != hoje.strftime('%Y-%m'))
+        )
 
         return render(request, self.template_name, {
+            # Urgência
+            'em_atraso_grupo': em_atraso_grupo,
+            'esta_semana_grupo': esta_semana_grupo,
+            'proximas_grupo': proximas_grupo,
+            'total_atraso': kpi_em_atraso,
+            'total_semana': sum(p.valor for p in esta_semana_grupo),
+            # Lista
             'parcelas': parcelas,
             'total_listado': total_listado,
-            'total_vencido': total_vencido,
-            'total_pendente_mes': total_pendente_mes,
+            # KPIs
+            'kpi_em_atraso': kpi_em_atraso,
+            'kpi_este_mes': kpi_este_mes,
+            'kpi_total_pendente': kpi_total_pendente,
+            # Contexto
             'hoje': hoje,
             'categorias': DespesaOperacional.CATEGORIA,
             'filtro_situacao': filtro_situacao,
             'filtro_mes': filtro_mes or hoje.strftime('%Y-%m'),
             'filtro_categoria': filtro_categoria,
+            'modo_inicial': 'lista' if tem_filtro else 'urgencia',
             'situacoes': [
                 ('', 'Pendentes + Em Atraso'),
                 ('pendente', 'Pendente'),
