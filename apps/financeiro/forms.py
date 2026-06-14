@@ -79,6 +79,10 @@ class DespesaOperacionalForm(forms.ModelForm):
                 self.add_error('numero_parcelas', 'Informe o numero de parcelas (minimo 2).')
             if not forma_pagamento:
                 self.add_error('forma_pagamento', 'Selecione a forma de pagamento parcelada.')
+            # Cartão de crédito parcelado = débito automático implícito: as parcelas
+            # são debitadas automaticamente na fatura todo mês.
+            if forma_pagamento == 'cartao_credito':
+                dados['debito_automatico'] = True
         return dados
 
 

@@ -446,6 +446,14 @@ class DespesaDetailView(GrupoRequiredMixin, DetailView):
         hoje = timezone.now().date()
         ctx['hoje'] = hoje
         if self.object.parcelado:
+            # Para cartão de crédito / débito automático: sincroniza parcelas vencidas
+            # antes de montar o contexto, refletindo o débito automático na fatura.
+            if self.object.debito_automatico or self.object.forma_pagamento == 'cartao_credito':
+                ParcelaDespesa.objects.filter(
+                    despesa=self.object,
+                    situacao__in=['pendente', 'em_atraso'],
+                    data_vencimento__lte=hoje,
+                ).update(situacao='pago', data_pagamento=hoje, forma_pagamento='cartao_credito')
             parcelas = list(self.object.parcelas.order_by('numero'))
             pagas = sum(1 for p in parcelas if p.situacao == 'pago')
             ctx['parcelas'] = parcelas
@@ -544,6 +552,12 @@ class DespesaUpdateView(GrupoRequiredMixin, UpdateView):
     def get_success_url(self):
         from django.urls import reverse
         return reverse('financeiro:despesa-detalhe', kwargs={'pk': self.object.pk})
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        if self.object.debito_automatico or self.object.forma_pagamento == 'cartao_credito':
+            DespesaOperacional.sincronizar_auto_pagamento()
+        return response
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

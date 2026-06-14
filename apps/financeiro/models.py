@@ -422,16 +422,29 @@ def gerar_parcelas_despesa(despesa):
     n = despesa.numero_parcelas
     valor_parcela = (despesa.valor / n).quantize(Decimal('0.01'), rounding=ROUND_DOWN)
     resto = despesa.valor - (valor_parcela * n)
+    auto = despesa.debito_automatico
+    hoje = date.today()
 
     parcelas = []
     for i in range(1, n + 1):
         valor = valor_parcela + (resto if i == n else Decimal('0.00'))
         vencimento = _adicionar_meses(despesa.data_competencia, i)
+        # Parcelas já vencidas de cartão de crédito (débito automático) chegam como pagas.
+        if auto and vencimento <= hoje:
+            situacao = 'pago'
+            data_pagamento = vencimento
+            forma_pag = despesa.forma_pagamento or ''
+        else:
+            situacao = 'pendente'
+            data_pagamento = None
+            forma_pag = ''
         parcelas.append(ParcelaDespesa(
             despesa=despesa,
             numero=i,
             valor=valor,
             data_vencimento=vencimento,
-            situacao='pendente',
+            situacao=situacao,
+            data_pagamento=data_pagamento,
+            forma_pagamento=forma_pag,
         ))
     ParcelaDespesa.objects.bulk_create(parcelas)
