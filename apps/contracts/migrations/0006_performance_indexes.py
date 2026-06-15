@@ -1,5 +1,3 @@
-from django.contrib.postgres.indexes import GinIndex
-from django.contrib.postgres.operations import TrigramExtension
 from django.db import migrations, models
 
 
@@ -10,15 +8,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        TrigramExtension(),
-        migrations.AddIndex(
-            model_name='contrato',
-            index=GinIndex(
-                fields=['numero'],
-                name='contrato_numero_trgm_idx',
-                opclasses=['gin_trgm_ops'],
-            ),
-        ),
         migrations.AddIndex(
             model_name='reserva',
             index=models.Index(fields=['situacao'], name='reserva_situacao_idx'),
