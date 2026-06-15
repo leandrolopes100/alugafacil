@@ -273,3 +273,4 @@ python manage.py migrate_schemas --schema=locadora1  # tenant específico
 ## Settings
 
 O projeto usa `DJANGO_SETTINGS_MODULE=config.settings.development` por padrão. Para produção, crie `config/settings/production.py` herdando de `base.py` e ajuste `DEBUG`, `ALLOWED_HOSTS`, `STATICFILES_STORAGE` e as credenciais S3.
+"# alugafacil" 
