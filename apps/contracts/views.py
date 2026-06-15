@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.contrib import messages
 from apps.core.mixins import GrupoRequiredMixin
-from django.db.models import Q, Sum
+from django.db.models import Max, Q, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
@@ -14,6 +14,11 @@ from .forms import (ReservaForm, ContratoForm, CheckoutForm, CheckinForm,
 from .models import (AdicionalContrato, AvariaContrato, Contrato, FotoContrato,
                      PagamentoContrato, ParcelaContrato, Reserva, gerar_parcelas)
 from apps.fleet.models import Veiculo
+
+
+def _brl(v):
+    """Formata Decimal/float como BRL para uso em strings Python (não em templates)."""
+    return 'R$ ' + f'{float(v or 0):,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')
 
 
 # ─── Reservas ────────────────────────────────────────────────────────────────
@@ -307,6 +312,18 @@ class ContratoDetailView(GrupoRequiredMixin, DetailView):
         contexto['formas_pagamento'] = ParcelaContrato.FORMA
         contexto['form_adicional'] = AdicionalContratoForm()
         contexto['form_avaria'] = AvariaContratoForm()
+        # Form de recebimento avulso (caução, avaria, multa, outros — NÃO locação)
+        for attr in ('total_geral', 'total_pago', 'saldo_devedor'):
+            self.object.__dict__.pop(attr, None)
+        initial_pag = {'data_pagamento': timezone.now().strftime('%Y-%m-%dT%H:%M'), 'tipo': 'caucao'}
+        form_pagamento = PagamentoContratoForm(initial=initial_pag)
+        from apps.contracts.models import PagamentoContrato as _PC
+        # 'locacao' → pago via PagarParcelaView (agenda)
+        # 'avaria'  → pago via ContratoAvariaMarcarPagaView (sincroniza AvariaContrato.situacao)
+        form_pagamento.fields['tipo'].choices = [
+            c for c in _PC.TIPO if c[0] not in ('locacao', 'avaria')
+        ]
+        contexto['form_pagamento'] = form_pagamento
         cancelaveis = [p for p in todas_parcelas if p.situacao in ('pendente', 'em_atraso')]
         contexto['parcelas_cancelaveis_qtd'] = len(cancelaveis)
         contexto['parcelas_cancelaveis_valor'] = sum(p.valor for p in cancelaveis)
@@ -359,10 +376,10 @@ class ContratoCheckoutView(GrupoRequiredMixin, View):
         else:
             itens.append((None, 'CRLV não cadastrado — verifique a documentação do veículo'))
 
-        # 4. Seguro do veículo (usa prefetch cache — sem query adicional)
+        # 4. Seguro do veículo (alerta, não bloqueia — documentação opcional)
         seguro = next((d for d in docs if d.tipo == 'seguro'), None)
         if seguro and seguro.vencido:
-            itens.append((False, f'Seguro vencido em {seguro.data_validade.strftime("%d/%m/%Y")}'))
+            itens.append((None, f'Seguro vencido em {seguro.data_validade.strftime("%d/%m/%Y")} — regularize assim que possível'))
         elif seguro:
             itens.append((True, f'Seguro em dia até {seguro.data_validade.strftime("%d/%m/%Y")}'))
         else:
@@ -371,13 +388,13 @@ class ContratoCheckoutView(GrupoRequiredMixin, View):
         # 5. Caução
         if contrato.caucao_valor > 0:
             if contrato.caucao_situacao == 'pendente':
-                itens.append((False, f'Caução de R$ {contrato.caucao_valor} não registrado como pago'))
+                itens.append((False, f'Caução de {_brl(contrato.caucao_valor)} não registrado — informe a situação abaixo'))
             else:
-                itens.append((True, f'Caução de R$ {contrato.caucao_valor} pago'))
+                itens.append((True, f'Caução de {_brl(contrato.caucao_valor)} — {contrato.get_caucao_situacao_display()}'))
         else:
             itens.append((True, 'Sem caução exigido'))
 
-        # 6. Primeira semana paga (upfront conforme modelo de cobrança)
+        # 6. Primeira semana — aviso, não bloqueia; parcela pendente gerada ao confirmar checkout
         dias_contrato = max(contrato._dias_previstos(), 1)
         dias_cobranca = min(7, dias_contrato)
         valor_primeira_semana = contrato.diaria * dias_cobranca
@@ -386,12 +403,13 @@ class ContratoCheckoutView(GrupoRequiredMixin, View):
         ).aggregate(s=Sum('valor'))['s'] or Decimal('0')
         if total_locacao_pago < valor_primeira_semana:
             falta = valor_primeira_semana - total_locacao_pago
-            itens.append((False, (
-                f'Primeira semana (R$ {valor_primeira_semana:.2f}) não registrada — '
-                f'faltam R$ {falta:.2f}. Registre o pagamento antes de liberar o veículo.'
+            itens.append((None, (
+                f'Primeira parcela ({_brl(valor_primeira_semana)}) ainda não paga — '
+                f'faltam {_brl(falta)}. '
+                f'A parcela pendente será criada ao confirmar o check-out.'
             )))
         else:
-            itens.append((True, f'Primeira semana de R$ {valor_primeira_semana:.2f} registrada'))
+            itens.append((True, f'Primeira parcela de {_brl(valor_primeira_semana)} registrada'))
 
         # 7. Multas de trânsito com prazo vencido (1 query, contado em Python)
         from apps.financeiro.models import MultaTransito
@@ -419,7 +437,12 @@ class ContratoCheckoutView(GrupoRequiredMixin, View):
         contrato = self._get_contrato(pk)
         form = CheckoutForm(request.POST, request.FILES, instance=contrato)
         if form.is_valid():
-            # Executar checklist — bloqueia somente em False (None = aviso, não bloqueia)
+            # Aplica o form em memória ANTES do checklist para que caucao_situacao
+            # atualizado pelo manager seja visível na validação da caução.
+            contrato = form.save(commit=False)
+            if contrato.caucao_situacao == 'pago' and not contrato.caucao_pago_em:
+                contrato.caucao_pago_em = timezone.now()
+
             checklist = self._checklist(contrato)
             bloqueios = [msg for ok, msg in checklist if ok is False]
             if bloqueios:
@@ -429,7 +452,6 @@ class ContratoCheckoutView(GrupoRequiredMixin, View):
 
             from django.db import transaction as db_transaction
             with db_transaction.atomic():
-                contrato = form.save(commit=False)
                 contrato.situacao = 'ativo'
                 contrato.data_saida = timezone.now()
                 contrato.save()
@@ -439,7 +461,20 @@ class ContratoCheckoutView(GrupoRequiredMixin, View):
                 contrato.veiculo.save()
                 for arquivo in request.FILES.getlist('fotos_saida'):
                     FotoContrato.objects.create(contrato=contrato, momento='saida', imagem=arquivo)
-                # Caução: cria apenas se ainda não existe (evita duplicata em re-submit)
+                # Caução: cria PagamentoContrato se foi coletado agora no checkout
+                if (contrato.caucao_valor > 0 and contrato.caucao_situacao == 'pago'
+                        and not contrato.pagamentos.filter(tipo='caucao').exists()):
+                    forma_caucao = form.cleaned_data.get('caucao_forma_pagamento') or 'dinheiro'
+                    PagamentoContrato.objects.create(
+                        contrato=contrato,
+                        tipo='caucao',
+                        forma_pagamento=forma_caucao,
+                        valor=contrato.caucao_valor,
+                        data_pagamento=contrato.caucao_pago_em,
+                        registrado_por=request.user,
+                        observacoes='Caução coletado no check-out',
+                    )
+                # Parcela de caução: cria se ainda não existe (evita duplicata em re-submit)
                 if contrato.caucao_valor > 0 and not contrato.parcelas.filter(tipo='caucao').exists():
                     ja_pago = contrato.caucao_situacao == 'pago'
                     ParcelaContrato.objects.create(
@@ -490,6 +525,13 @@ class ContratoCheckinView(GrupoRequiredMixin, View):
     def post(self, request, pk):
         from django.db import transaction as db_transaction
         contrato = get_object_or_404(Contrato, pk=pk, situacao='ativo')
+        parcelas_abertas = contrato.parcelas.filter(
+            situacao__in=['pendente', 'em_atraso']
+        ).order_by('data_vencimento')
+        if parcelas_abertas.exists():
+            form = CheckinForm(instance=contrato)
+            messages.error(request, 'Quite as parcelas em aberto antes de realizar o check-in.')
+            return self._render(request, contrato, form, parcelas_abertas)
         form = CheckinForm(request.POST, request.FILES, instance=contrato)
         if form.is_valid():
             with db_transaction.atomic():
@@ -505,13 +547,59 @@ class ContratoCheckinView(GrupoRequiredMixin, View):
                 # Salva fotos de devolução
                 for arquivo in request.FILES.getlist('fotos_devolucao'):
                     FotoContrato.objects.create(contrato=contrato, momento='devolucao', imagem=arquivo)
-            messages.success(request, 'Check-in realizado. Veículo aguardando vistoria e encerramento.')
+                # Gera parcela de acerto final se houver km excedente, dias extras ou diferença de combustível
+                total_acerto = (
+                    contrato.valor_km_excedente_total
+                    + contrato.valor_dias_extras
+                    + contrato.valor_diferenca_combustivel
+                )
+                if total_acerto > 0:
+                    partes_obs = []
+                    if contrato.valor_km_excedente_total > 0:
+                        partes_obs.append(
+                            f'{contrato.km_excedente} km excedente '
+                            f'× {_brl(contrato.valor_km_excedente)} = {_brl(contrato.valor_km_excedente_total)}'
+                        )
+                    if contrato.valor_dias_extras > 0:
+                        partes_obs.append(
+                            f'{contrato.dias_extras} dia(s) extra(s) '
+                            f'× {_brl(contrato.diaria)} = {_brl(contrato.valor_dias_extras)}'
+                        )
+                    if contrato.valor_diferenca_combustivel > 0:
+                        partes_obs.append(
+                            f'Diferença combustível: {_brl(contrato.valor_diferenca_combustivel)}'
+                        )
+                    proximo_num = (
+                        contrato.parcelas.aggregate(m=Max('numero'))['m'] or 0
+                    ) + 1
+                    ParcelaContrato.objects.create(
+                        contrato=contrato,
+                        numero=proximo_num,
+                        tipo='acerto',
+                        data_vencimento=contrato.data_devolucao_real.date(),
+                        valor=total_acerto,
+                        origem='original',
+                        situacao='pendente',
+                        observacoes=' | '.join(partes_obs),
+                    )
+            msg = 'Check-in realizado. Veículo aguardando vistoria e encerramento.'
+            if total_acerto > 0:
+                msg += f' Parcela de acerto gerada: {_brl(total_acerto)}.'
+            messages.success(request, msg)
             return redirect('contratos:detalhe', pk=pk)
         return self._render(request, contrato, form)
 
-    def _render(self, request, contrato, form):
+    def _render(self, request, contrato, form, parcelas_abertas=None):
         from django.shortcuts import render
-        return render(request, self.template_name, {'contrato': contrato, 'form': form})
+        if parcelas_abertas is None:
+            parcelas_abertas = contrato.parcelas.filter(
+                situacao__in=['pendente', 'em_atraso']
+            ).order_by('data_vencimento')
+        return render(request, self.template_name, {
+            'contrato': contrato,
+            'form': form,
+            'parcelas_abertas': parcelas_abertas,
+        })
 
 
 class ContratoEncerrarView(GrupoRequiredMixin, View):
@@ -524,7 +612,40 @@ class ContratoEncerrarView(GrupoRequiredMixin, View):
                      'total_locacao', 'total_pago', 'total_caucao_coletado', 'saldo_devedor'):
             contrato.__dict__.pop(attr, None)
         saldo = contrato.saldo_devedor
+
+        caucao_msg = None
         with db_transaction.atomic():
+            # ── Avaliação do caução retido no encerramento ───────────────────
+            if contrato.caucao_valor and contrato.caucao_situacao == 'retido':
+                tem_avarias = contrato.avarias.filter(
+                    situacao__in=['identificada', 'cobrada', 'paga']
+                ).exists()
+                if not tem_avarias:
+                    # Sem danos: devolve o caução automaticamente.
+                    # O signal contrato_caucao_post_save cria a DespesaOperacional.
+                    contrato.caucao_situacao = 'devolvido'
+                    caucao_msg = (
+                        f'Caução de R$ {contrato.caucao_valor:.2f} devolvido automaticamente '
+                        f'— nenhuma avaria registrada.'
+                    )
+                else:
+                    # Com avarias: retém e converte o depósito em receita de avaria.
+                    marker = f'[caucao_retido:{contrato.numero}]'
+                    if not PagamentoContrato.objects.filter(observacoes__contains=marker).exists():
+                        PagamentoContrato.objects.create(
+                            contrato=contrato,
+                            tipo='avaria',
+                            forma_pagamento='dinheiro',
+                            valor=contrato.caucao_valor,
+                            data_pagamento=timezone.now(),
+                            registrado_por=request.user,
+                            observacoes=f'{marker} Caucao retido — aplicado na cobertura de avarias',
+                        )
+                    caucao_msg = (
+                        f'Caução de R$ {contrato.caucao_valor:.2f} retido — avarias registradas. '
+                        f'Valor lançado no financeiro como cobertura de danos.'
+                    )
+
             contrato.situacao = 'encerrado'
             contrato.save()
             # Libera o veículo — caminho normal após vistoria em 'aguardando_devolucao'
@@ -536,13 +657,16 @@ class ContratoEncerrarView(GrupoRequiredMixin, View):
             from django.db.models import Sum as _Sum
             valor_cancelado = parcelas_qs.aggregate(s=_Sum('valor'))['s'] or Decimal('0')
             parcelas_qs.update(situacao='cancelada')
+
         partes = [f'Contrato {contrato.numero} encerrado.']
+        if caucao_msg:
+            partes.append(caucao_msg)
         if saldo > 0:
             partes.append(f'Saldo pendente: R$ {saldo:.2f} — acompanhe em Financeiro → Contas a Receber.')
         if qtd_canceladas > 0:
             partes.append(f'{qtd_canceladas} parcela(s) cancelada(s) da agenda — R$ {valor_cancelado:.2f}.')
         msg = ' '.join(partes)
-        if saldo > 0 or qtd_canceladas > 0:
+        if saldo > 0 or qtd_canceladas > 0 or (caucao_msg and 'retido' in caucao_msg):
             messages.warning(request, msg)
         else:
             messages.success(request, msg)
@@ -888,8 +1012,7 @@ class ContratoPagamentosView(GrupoRequiredMixin, View):
 
     def get(self, request, pk):
         contrato = get_object_or_404(Contrato, pk=pk)
-        form = PagamentoContratoForm(initial={'data_pagamento': timezone.now().strftime('%Y-%m-%dT%H:%M')})
-        return self._render(request, contrato, form)
+        return self._render(request, contrato)
 
     def post(self, request, pk):
         from django.db import transaction as db_transaction
@@ -937,13 +1060,16 @@ class ContratoPagamentosView(GrupoRequiredMixin, View):
                 if restantes:
                     msg += ' Valor insuficiente para cobrir a próxima parcela — baixe manualmente na aba de parcelas se necessário.'
             messages.success(request, msg)
-            return redirect('contratos:pagamentos', pk=pk)
-        return self._render(request, contrato, form)
+            return redirect('contratos:detalhe', pk=pk)
+        for field, erros in form.errors.items():
+            label = form.fields[field].label if field in form.fields else field
+            for erro in erros:
+                messages.error(request, f'{label}: {erro}')
+        return redirect('contratos:detalhe', pk=pk)
 
-    def _render(self, request, contrato, form):
+    def _render(self, request, contrato, form=None):
         from django.shortcuts import render
         return render(request, self.template_name, {
             'contrato': contrato,
             'pagamentos': contrato.pagamentos.all(),
-            'form': form,
         })

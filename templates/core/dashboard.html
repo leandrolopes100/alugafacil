@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load core_tags %}
 {% block titulo %}Dashboard{% endblock %}
 {% block breadcrumb %}<li class="breadcrumb-item active">Dashboard</li>{% endblock %}
 
@@ -14,33 +15,52 @@
   </a>
 </div>
 
-<!-- Alertas críticos -->
-{% if alertas_vencidos or multas_pendentes > 0 or parcelas_atraso > 0 %}
-<div class="alert alert-warning d-flex align-items-center gap-3 mb-4" style="border-left: 3px solid var(--warning)">
-  <i class="bi bi-exclamation-triangle-fill flex-shrink-0" style="font-size:16px"></i>
-  <div class="d-flex flex-wrap gap-3" style="font-size:13px; font-weight:500">
+<!-- ── Alertas críticos ───────────────────────────────────────────────────── -->
+{% if parcelas_atraso > 0 or parcelas_despesa_atraso > 0 or alertas_vencidos or multas_pendentes > 0 %}
+<div class="alert alert-warning d-flex align-items-start gap-3 mb-4"
+     style="border-left:3px solid var(--warning)">
+  <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1" style="font-size:15px"></i>
+  <div class="d-flex flex-wrap gap-x-4 gap-2" style="font-size:13px; font-weight:500; row-gap:6px">
     {% if parcelas_atraso > 0 %}
     <a href="{% url 'financeiro:agenda' %}" class="text-decoration-none" style="color:inherit">
-      <i class="bi bi-bell-fill me-1"></i>{{ parcelas_atraso }} parcela{{ parcelas_atraso|pluralize:"s" }} em atraso
+      <i class="bi bi-bell-fill me-1"></i>
+      {{ parcelas_atraso }} cobrança{{ parcelas_atraso|pluralize:"s" }} de locação em atraso
+    </a>
+    {% endif %}
+    {% if parcelas_despesa_atraso > 0 %}
+    {% if parcelas_atraso > 0 %}<span class="opacity-40">·</span>{% endif %}
+    <a href="{% url 'financeiro:contas-pagar' %}" class="text-decoration-none" style="color:inherit">
+      <i class="bi bi-credit-card me-1"></i>
+      {{ parcelas_despesa_atraso }} despesa{{ parcelas_despesa_atraso|pluralize:"s" }} vencida{{ parcelas_despesa_atraso|pluralize:"s" }} sem pagamento
     </a>
     {% endif %}
     {% if alertas_vencidos %}
-    {% if parcelas_atraso > 0 %}<span style="opacity:.4">·</span>{% endif %}
+    {% if parcelas_atraso > 0 or parcelas_despesa_atraso > 0 %}<span class="opacity-40">·</span>{% endif %}
     <a href="{% url 'manutencao:alertas' %}" class="text-decoration-none" style="color:inherit">
-      <i class="bi bi-tools me-1"></i>{{ alertas_vencidos|length }} alerta{{ alertas_vencidos|length|pluralize:"s" }} de manutenção vencido{{ alertas_vencidos|length|pluralize:"s" }}
+      <i class="bi bi-tools me-1"></i>
+      {{ alertas_vencidos|length }} alerta{{ alertas_vencidos|length|pluralize:"s" }} de manutenção vencido{{ alertas_vencidos|length|pluralize:"s" }}
     </a>
     {% endif %}
     {% if multas_pendentes > 0 %}
-    {% if parcelas_atraso > 0 or alertas_vencidos %}<span style="opacity:.4">·</span>{% endif %}
+    {% if parcelas_atraso > 0 or parcelas_despesa_atraso > 0 or alertas_vencidos %}<span class="opacity-40">·</span>{% endif %}
     <a href="{% url 'financeiro:multas' %}" class="text-decoration-none" style="color:inherit">
-      <i class="bi bi-exclamation-triangle me-1"></i>{{ multas_pendentes }} multa{{ multas_pendentes|pluralize:"s" }} aguardando identificação
+      <i class="bi bi-exclamation-triangle me-1"></i>
+      {{ multas_pendentes }} multa{{ multas_pendentes|pluralize:"s" }} aguardando identificação
     </a>
     {% endif %}
   </div>
 </div>
 {% endif %}
 
-<!-- KPI Cards -->
+<!-- ── Seção: Frota ───────────────────────────────────────────────────────── -->
+<div class="d-flex align-items-center gap-3 mb-3">
+  <span class="text-muted"
+        style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap">
+    <i class="bi bi-car-front me-1"></i>Frota
+  </span>
+  <hr class="section-divider" style="flex:1; margin:0">
+</div>
+
 <div class="row g-3 mb-4">
   <div class="col-6 col-lg-3">
     <a href="{% url 'frota:lista' %}?situacao=disponivel" class="kpi-card">
@@ -63,37 +83,100 @@
     </a>
   </div>
   <div class="col-6 col-lg-3">
+    <a href="{% url 'frota:lista' %}?situacao=manutencao" class="kpi-card">
+      <div class="kpi-icon" style="background:#fff7ed; color:#f97316">
+        <i class="bi bi-wrench-adjustable-circle-fill"></i>
+      </div>
+      <div class="kpi-value" style="color:{% if veiculos_manutencao > 0 %}#f97316{% else %}#10b981{% endif %}">
+        {{ veiculos_manutencao }}
+      </div>
+      <div class="kpi-label">Em Manutenção</div>
+      <div class="kpi-sub">indisponível para locação</div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'core:relatorio-frota' %}" class="kpi-card">
+      <div class="kpi-icon" style="background:#f0f9ff; color:#0284c7">
+        <i class="bi bi-speedometer2"></i>
+      </div>
+      <div class="kpi-value" style="color:#0284c7">{{ taxa_ocupacao }}%</div>
+      <div class="kpi-label">Ocupação</div>
+      <div class="kpi-sub">{% now "F Y" %}</div>
+    </a>
+  </div>
+</div>
+
+<!-- ── Seção: Financeiro ──────────────────────────────────────────────────── -->
+<div class="d-flex align-items-center gap-3 mb-3">
+  <span class="text-muted"
+        style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap">
+    <i class="bi bi-graph-up me-1"></i>Financeiro — {% now "F Y" %}
+  </span>
+  <hr class="section-divider" style="flex:1; margin:0">
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
     <a href="{% url 'financeiro:fluxo' %}" class="kpi-card">
       <div class="kpi-icon" style="background:#ecfdf5; color:#10b981">
-        <i class="bi bi-graph-up-arrow"></i>
+        <i class="bi bi-arrow-down-circle-fill"></i>
       </div>
-      <div class="kpi-value" style="font-size:20px; color:#10b981">R$ {{ receita_mes|floatformat:0 }}</div>
+      <div class="kpi-value" style="font-size:20px; color:#10b981">{{ receita_mes|brl }}</div>
       <div class="kpi-label">Receita do Mês</div>
       <div class="kpi-sub">pagamentos recebidos</div>
     </a>
   </div>
   <div class="col-6 col-lg-3">
-    <a href="{% url 'clientes:lista' %}" class="kpi-card">
-      <div class="kpi-icon" style="background:#ecfeff; color:#06b6d4">
-        <i class="bi bi-people-fill"></i>
+    <a href="{% url 'financeiro:despesas' %}?situacao=quitado" class="kpi-card">
+      <div class="kpi-icon" style="background:#fef2f2; color:#ef4444">
+        <i class="bi bi-arrow-up-circle-fill"></i>
       </div>
-      <div class="kpi-value" style="color:#0f172a">{{ total_clientes }}</div>
-      <div class="kpi-label">Clientes</div>
-      <div class="kpi-sub">cadastrado{{ total_clientes|pluralize:"s" }}</div>
+      <div class="kpi-value" style="font-size:20px; color:#ef4444">{{ desp_pago|brl }}</div>
+      <div class="kpi-label">Despesas Pagas</div>
+      <div class="kpi-sub">competência {% now "F Y" %}</div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'core:relatorio-dre' %}" class="kpi-card">
+      <div class="kpi-icon"
+           style="background:{% if resultado_mes >= 0 %}#ecfdf5; color:#10b981{% else %}#fef2f2; color:#ef4444{% endif %}">
+        <i class="bi bi-{% if resultado_mes >= 0 %}graph-up-arrow{% else %}graph-down-arrow{% endif %}"></i>
+      </div>
+      <div class="kpi-value" style="font-size:20px; color:{% if resultado_mes >= 0 %}#10b981{% else %}#ef4444{% endif %}">
+        {{ resultado_mes|brl }}
+      </div>
+      <div class="kpi-label">Resultado</div>
+      <div class="kpi-sub">receita − despesas pagas</div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'financeiro:contas-pagar' %}" class="kpi-card">
+      <div class="kpi-icon"
+           style="background:{% if desp_atraso > 0 %}#fef2f2; color:#ef4444{% else %}#fff7ed; color:#f97316{% endif %}">
+        <i class="bi bi-{% if desp_atraso > 0 %}exclamation-circle-fill{% else %}hourglass-split{% endif %}"></i>
+      </div>
+      <div class="kpi-value" style="font-size:20px; color:{% if desp_atraso > 0 %}#ef4444{% else %}#f97316{% endif %}">
+        {{ desp_a_pagar|brl }}
+      </div>
+      <div class="kpi-label">A Pagar no Mês</div>
+      <div class="kpi-sub">
+        {% if desp_atraso > 0 %}{{ desp_atraso|brl }} em atraso
+        {% else %}pendente de pagamento{% endif %}
+      </div>
     </a>
   </div>
 </div>
 
-<!-- Segunda linha -->
+<!-- ── Devoluções + Contratos em Atraso ──────────────────────────────────── -->
 <div class="row g-3 mb-4">
 
-  <!-- Devoluções de hoje -->
   <div class="col-lg-6">
     <div class="card h-100">
       <div class="card-header">
         <i class="bi bi-calendar-event" style="color:#f59e0b"></i>
         Devoluções de Hoje
-        <span class="ms-auto" style="background:#fffbeb; color:#92400e; font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; border:1px solid #fcd34d">
+        <span class="ms-auto"
+              style="background:#fffbeb; color:#92400e; font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; border:1px solid #fcd34d">
           {{ devolucoes_hoje|length }}
         </span>
       </div>
@@ -101,7 +184,9 @@
       <ul class="list-group list-group-flush">
         {% for contrato in devolucoes_hoje %}
         <li class="list-group-item d-flex align-items-center gap-2" style="padding-right:14px">
-          <a href="{% url 'contratos:detalhe' contrato.pk %}" class="d-flex align-items-center gap-3 text-decoration-none" style="color:inherit; flex:1; min-width:0">
+          <a href="{% url 'contratos:detalhe' contrato.pk %}"
+             class="d-flex align-items-center gap-3 text-decoration-none flex-grow-1"
+             style="color:inherit; min-width:0">
             <div style="width:34px; height:34px; background:#eef2ff; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0">
               <i class="bi bi-car-front" style="color:#6366f1; font-size:14px"></i>
             </div>
@@ -115,7 +200,9 @@
             </div>
             <div style="font-size:12px; color:#94a3b8; flex-shrink:0">{{ contrato.data_devolucao_prevista|date:"H:i" }}</div>
           </a>
-          <a href="{% url 'contratos:checkin' contrato.pk %}" class="btn btn-sm btn-outline-primary flex-shrink-0" style="font-size:11px; padding:3px 9px; white-space:nowrap">
+          <a href="{% url 'contratos:checkin' contrato.pk %}"
+             class="btn btn-sm btn-outline-primary flex-shrink-0"
+             style="font-size:11px; padding:3px 9px; white-space:nowrap">
             <i class="bi bi-arrow-down-circle me-1"></i>Check-in
           </a>
         </li>
@@ -131,13 +218,13 @@
     </div>
   </div>
 
-  <!-- Em atraso -->
   <div class="col-lg-6">
     <div class="card h-100">
       <div class="card-header">
         <i class="bi bi-clock-history" style="color:#ef4444"></i>
-        Em Atraso
-        <span class="ms-auto" style="background:#fef2f2; color:#991b1b; font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; border:1px solid #fca5a5">
+        Contratos em Atraso
+        <span class="ms-auto"
+              style="background:#fef2f2; color:#991b1b; font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; border:1px solid #fca5a5">
           {{ contratos_atraso|length }}
         </span>
       </div>
@@ -145,7 +232,9 @@
       <ul class="list-group list-group-flush">
         {% for contrato in contratos_atraso %}
         <li class="list-group-item" style="border-left:3px solid #ef4444">
-          <a href="{% url 'contratos:detalhe' contrato.pk %}" class="d-flex align-items-center gap-3 text-decoration-none" style="color:inherit">
+          <a href="{% url 'contratos:detalhe' contrato.pk %}"
+             class="d-flex align-items-center gap-3 text-decoration-none"
+             style="color:inherit">
             <div>
               <span class="text-mono" style="font-size:12px; font-weight:700; color:#6366f1">{{ contrato.numero }}</span>
               <div style="font-size:13.5px; font-weight:600; color:#0f172a">{{ contrato.cliente.nome_exibicao }}</div>
@@ -169,12 +258,13 @@
 
 </div>
 
-<!-- Últimos contratos -->
+<!-- ── Contratos Recentes ─────────────────────────────────────────────────── -->
 <div class="card">
   <div class="card-header">
     <i class="bi bi-file-earmark-text"></i>
     Contratos Recentes
-    <a href="{% url 'contratos:lista' %}" class="ms-auto" style="font-size:12.5px; color:#6366f1; text-decoration:none; font-weight:600">
+    <a href="{% url 'contratos:lista' %}" class="ms-auto"
+       style="font-size:12.5px; color:#6366f1; text-decoration:none; font-weight:600">
       Ver todos <i class="bi bi-arrow-right ms-1"></i>
     </a>
   </div>
@@ -198,13 +288,20 @@
           </td>
           <td style="font-weight:500">{{ c.cliente.nome_exibicao }}</td>
           <td>
-            <span class="text-mono" style="font-size:12px; font-weight:700; background:#f8fafc; border:1px solid #e2e8f0; padding:2px 7px; border-radius:5px">{{ c.veiculo.placa }}</span>
+            <span class="text-mono"
+                  style="font-size:12px; font-weight:700; background:#f8fafc; border:1px solid #e2e8f0; padding:2px 7px; border-radius:5px">
+              {{ c.veiculo.placa }}
+            </span>
             <span style="color:#64748b; margin-left:6px">{{ c.veiculo.modelo }}</span>
           </td>
-          <td style="color:#64748b">{% if c.data_saida %}{{ c.data_saida|date:"d/m/Y" }}{% else %}<span style="color:#cbd5e1">—</span>{% endif %}</td>
+          <td style="color:#64748b">
+            {% if c.data_saida %}{{ c.data_saida|date:"d/m/Y" }}{% else %}<span style="color:#cbd5e1">—</span>{% endif %}
+          </td>
           <td style="color:{% if c.em_atraso %}#ef4444{% else %}#64748b{% endif %}; font-weight:{% if c.em_atraso %}600{% else %}400{% endif %}">
             {{ c.data_devolucao_prevista|date:"d/m/Y" }}
-            {% if c.em_atraso %}<span style="font-size:11px; background:#fef2f2; color:#ef4444; border-radius:4px; padding:1px 5px; margin-left:4px">atraso</span>{% endif %}
+            {% if c.em_atraso %}
+            <span style="font-size:11px; background:#fef2f2; color:#ef4444; border-radius:4px; padding:1px 5px; margin-left:4px">atraso</span>
+            {% endif %}
           </td>
           <td>
             <span class="status-badge

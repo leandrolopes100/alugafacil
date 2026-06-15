@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load core_tags %}
 {% block titulo %}Check-out — {{ contrato.numero }}{% endblock %}
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'contratos:lista' %}" class="text-decoration-none text-secondary">Contratos</a></li>
@@ -56,6 +57,47 @@
           </div>
         </div>
       </div>
+
+      {% if contrato.caucao_valor > 0 %}
+        {% if contrato.caucao_situacao == 'pendente' %}
+        <!-- Card de caução: mostrado quando ainda não foi registrado como pago -->
+        <div class="card mb-4" style="border-left:4px solid #f59e0b" x-data="{ pago: '{{ form.caucao_situacao.value|default:contrato.caucao_situacao }}' === 'pago' }">
+          <div class="card-header" style="background:#fffbeb; color:#92400e">
+            <i class="bi bi-shield-lock me-2"></i>
+            Caução — {{ contrato.caucao_valor|brl }}
+            <span class="badge ms-2" style="background:#fde68a; color:#78350f; font-size:11px">Pendente</span>
+          </div>
+          <div class="card-body">
+            <p class="small text-muted mb-3">
+              Registre abaixo se o caução foi coletado agora ou se ficará pendente.
+              <strong class="text-danger">O check-out só será liberado quando o caução estiver marcado como pago.</strong>
+            </p>
+            <div class="row g-3">
+              <div class="col-md-6 {% if form.caucao_situacao.errors %}field-has-error{% endif %}">
+                <label class="form-label fw-semibold small">Situação da Caução *</label>
+                <select name="caucao_situacao" class="form-select" @change="pago = $event.target.value === 'pago'">
+                  <option value="pendente" :selected="!pago">Pendente — cobrar depois</option>
+                  <option value="pago" :selected="pago">Pago — coletado agora</option>
+                </select>
+                {% if form.caucao_situacao.errors %}
+                <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.caucao_situacao.errors.0 }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-6 {% if form.caucao_forma_pagamento.errors %}field-has-error{% endif %}" x-show="pago" x-cloak>
+                <label class="form-label fw-semibold small">Forma de Recebimento *</label>
+                {{ form.caucao_forma_pagamento }}
+                {% if form.caucao_forma_pagamento.errors %}
+                <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.caucao_forma_pagamento.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <!-- Caução já pago: mantém o valor via hidden inputs -->
+        <input type="hidden" name="caucao_situacao" value="{{ contrato.caucao_situacao }}">
+        {% endif %}
+      {% endif %}
 
       <div class="card mb-4">
         <div class="card-header"><i class="bi bi-camera me-2 text-primary"></i>Fotos de Saída</div>
@@ -174,12 +216,12 @@
         </li>
         <li class="list-group-item d-flex justify-content-between small px-3 py-2">
           <span class="text-muted">Diária</span>
-          <span>R$ {{ contrato.diaria }}</span>
+          <span>{{ contrato.diaria|brl }}</span>
         </li>
         <li class="list-group-item d-flex justify-content-between small px-3 py-2">
           <span class="text-muted">Caução</span>
           <span class="{% if contrato.caucao_situacao == 'pendente' and contrato.caucao_valor > 0 %}text-danger fw-semibold{% endif %}">
-            R$ {{ contrato.caucao_valor }} — {{ contrato.get_caucao_situacao_display }}
+            {{ contrato.caucao_valor|brl }} — {{ contrato.get_caucao_situacao_display }}
           </span>
         </li>
       </ul>

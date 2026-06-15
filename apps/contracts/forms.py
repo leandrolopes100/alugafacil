@@ -113,18 +113,49 @@ class ContratoForm(forms.ModelForm):
 
 
 class CheckoutForm(forms.ModelForm):
+    # Campo extra (não-model) para registrar como o caução foi pago no checkout
+    caucao_forma_pagamento = forms.ChoiceField(
+        choices=[('', '— selecione —')] + PagamentoContrato.FORMA,
+        required=False,
+        widget=forms.Select(attrs={'class': FS}),
+        label='Forma de Recebimento',
+    )
+
     class Meta:
         model = Contrato
-        fields = ['km_saida', 'combustivel_saida', 'obs_saida']
+        fields = ['km_saida', 'combustivel_saida', 'obs_saida', 'caucao_situacao']
         widgets = {
             'km_saida': forms.NumberInput(attrs={'class': FC}),
             'combustivel_saida': forms.Select(attrs={'class': FS}),
             'obs_saida': forms.Textarea(attrs={'class': FC, 'rows': 3}),
+            'caucao_situacao': forms.Select(attrs={'class': FS}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['combustivel_saida'].required = True
+        # Dropdown visível quando caucao_situacao='pendente'
+        choices_checkout = [
+            ('pendente', 'Pendente — cobrar depois'),
+            ('pago', 'Pago — coletado agora'),
+        ]
+        # Se o caução já tem um estado além de pendente/pago (ex: 'retido'),
+        # inclui como choice válida — o template envia via hidden input e o
+        # Django valida contra essa lista. Sem isso, form.is_valid() retorna False.
+        if self.instance and self.instance.pk:
+            current = self.instance.caucao_situacao
+            if current not in ('pendente', 'pago'):
+                choices_checkout.append((current, self.instance.get_caucao_situacao_display()))
+        self.fields['caucao_situacao'].choices = choices_checkout
+
+    def clean(self):
+        cleaned = super().clean()
+        situacao = cleaned.get('caucao_situacao')
+        forma = cleaned.get('caucao_forma_pagamento')
+        caucao_valor = getattr(self.instance, 'caucao_valor', 0)
+        if caucao_valor and caucao_valor > 0 and situacao == 'pago' and not forma:
+            self.add_error('caucao_forma_pagamento', 'Informe a forma de recebimento do caução.')
+        return cleaned
 
     def clean_km_saida(self):
         km = self.cleaned_data.get('km_saida')

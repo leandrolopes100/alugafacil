@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>503 — Sistema em manutenção · Aluga Fácil</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%236366f1'/><stop offset='1' stop-color='%234338ca'/></linearGradient></defs><rect width='32' height='32' rx='7' fill='url(%23g)'/><text x='16' y='23' font-family='system-ui,-apple-system,sans-serif' font-size='15' font-weight='800' fill='white' text-anchor='middle'>AF</text></svg>">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      background: #0f172a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(245,158,11,.1) 0%, transparent 65%);
+      top: -160px; left: -160px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(99,102,241,.1) 0%, transparent 65%);
+      bottom: -120px; right: -120px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .card {
+      position: relative;
+      z-index: 1;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 20px;
+      padding: 56px 48px;
+      max-width: 520px;
+      width: 100%;
+      text-align: center;
+      backdrop-filter: blur(12px);
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 40px;
+      text-decoration: none;
+    }
+    .logo-mark {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, #6366f1, #4338ca);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 800; color: #fff;
+      letter-spacing: -.04em;
+      flex-shrink: 0;
+    }
+    .logo-name {
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -.02em;
+    }
+
+    /* Ícone de engrenagem animado */
+    .icon-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      margin-bottom: 28px;
+    }
+    .gear {
+      font-size: 40px;
+      display: inline-block;
+      filter: drop-shadow(0 0 12px rgba(245,158,11,.4));
+    }
+    .gear-spin {
+      animation: spin 4s linear infinite;
+      color: #f59e0b;
+    }
+    .gear-spin-rev {
+      animation: spin-rev 3s linear infinite;
+      color: #fbbf24;
+      font-size: 28px;
+      align-self: flex-end;
+      margin-bottom: 4px;
+    }
+    @keyframes spin     { from { transform: rotate(0deg);   } to { transform: rotate(360deg);  } }
+    @keyframes spin-rev { from { transform: rotate(360deg); } to { transform: rotate(0deg);    } }
+
+    .error-code {
+      font-size: 96px;
+      font-weight: 800;
+      letter-spacing: -.06em;
+      line-height: 1;
+      background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #fde68a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 20px;
+      user-select: none;
+    }
+
+    .error-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #f1f5f9;
+      letter-spacing: -.02em;
+      margin-bottom: 10px;
+    }
+
+    .error-desc {
+      font-size: 14px;
+      color: rgba(255,255,255,.45);
+      line-height: 1.7;
+      margin-bottom: 32px;
+    }
+
+    /* Badge de status */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(245,158,11,.12);
+      border: 1px solid rgba(245,158,11,.25);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #fbbf24;
+      margin-bottom: 36px;
+    }
+    .pulse {
+      width: 7px; height: 7px;
+      background: #f59e0b;
+      border-radius: 50%;
+      animation: pulse 1.4s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: .4; transform: scale(.75); }
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 22px;
+      border-radius: 9px;
+      font-size: 13.5px;
+      font-weight: 600;
+      font-family: inherit;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: all .15s ease;
+      white-space: nowrap;
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.65);
+      border: 1px solid rgba(255,255,255,.1);
+    }
+    .btn:hover {
+      background: rgba(255,255,255,.1);
+      color: #fff;
+    }
+
+    .footer-note {
+      margin-top: 40px;
+      font-size: 12px;
+      color: rgba(255,255,255,.2);
+    }
+
+    @media (max-width: 480px) {
+      .card { padding: 40px 28px; }
+      .error-code { font-size: 72px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo">
+    <div class="logo-mark">AF</div>
+    <span class="logo-name">Aluga Fácil</span>
+  </div>
+
+  <div class="icon-wrap">
+    <span class="gear gear-spin">&#9881;</span>
+    <span class="gear gear-spin-rev">&#9881;</span>
+  </div>
+
+  <div class="error-code">503</div>
+
+  <div class="error-title">Sistema em manutenção</div>
+  <p class="error-desc">
+    Estamos realizando uma atualização no sistema.<br>
+    Em breve voltaremos com tudo funcionando normalmente.
+  </p>
+
+  <div class="status-badge">
+    <span class="pulse"></span>
+    Manutenção em andamento
+  </div>
+
+  <div>
+    <a href="javascript:location.reload()" class="btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.57"/></svg>
+      Verificar novamente
+    </a>
+  </div>
+
+  <div class="footer-note">Aluga Fácil &copy; 2026 — Sistema de Gestão para Locadoras</div>
+</div>
+
+</body>
+</html>

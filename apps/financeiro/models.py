@@ -52,6 +52,7 @@ class DespesaOperacional(models.Model):
         ('aluguel', 'Aluguel do Estabelecimento'),
         ('salario', 'Folha de Pagamento'),
         ('marketing', 'Marketing / Publicidade'),
+        ('caucao', 'Devolucao de Caucao'),
         ('outros', 'Outros'),
     ]
     FORMA = [

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load core_tags %}
 {% block titulo %}Check-in — {{ contrato.numero }}{% endblock %}
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'contratos:lista' %}" class="text-decoration-none text-secondary">Contratos</a></li>
@@ -37,6 +38,55 @@
 
 <div class="row">
   <div class="col-lg-7">
+
+    {% if parcelas_abertas %}
+    <div class="card mb-4" style="border-left:4px solid #ef4444">
+      <div class="card-header" style="background:#fef2f2; color:#991b1b">
+        <i class="bi bi-exclamation-circle-fill me-2"></i>
+        Parcelas em aberto — check-in bloqueado
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead style="font-size:12px; background:#fef2f2">
+            <tr>
+              <th class="ps-3">Parcela</th>
+              <th>Tipo</th>
+              <th>Vencimento</th>
+              <th class="text-end pe-3">Valor</th>
+              <th>Situação</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in parcelas_abertas %}
+            <tr>
+              <td class="ps-3 text-mono fw-bold" style="font-size:13px">{{ p.numero }}</td>
+              <td style="font-size:13px">{{ p.get_tipo_display }}</td>
+              <td style="font-size:13px; {% if p.situacao == 'em_atraso' %}color:#ef4444; font-weight:600{% else %}color:#64748b{% endif %}">
+                {{ p.data_vencimento|date:"d/m/Y" }}
+              </td>
+              <td class="text-end pe-3 fw-bold" style="font-size:13px">{{ p.valor|brl }}</td>
+              <td>
+                {% if p.situacao == 'em_atraso' %}
+                <span class="status-badge status-danger">Em atraso</span>
+                {% else %}
+                <span class="status-badge status-warning">Pendente</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="card-footer" style="background:#fef2f2; font-size:13px; color:#7f1d1d">
+        <i class="bi bi-lock-fill me-1"></i>
+        Quite todas as parcelas acima antes de realizar o check-in.
+        <a href="{% url 'contratos:detalhe' contrato.pk %}" class="ms-2 fw-semibold" style="color:#dc2626">
+          Ir para o contrato <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
     <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
 
@@ -96,9 +146,15 @@
 
       <div class="d-flex gap-2 justify-content-end">
         <a href="{% url 'contratos:detalhe' contrato.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+        {% if parcelas_abertas %}
+        <button type="submit" class="btn btn-success" disabled title="Quite as parcelas em aberto para liberar o check-in">
+          <i class="bi bi-lock-fill me-1"></i>Check-in Bloqueado
+        </button>
+        {% else %}
         <button type="submit" class="btn btn-success">
           <i class="bi bi-box-arrow-in-left me-1"></i>Confirmar Devolução
         </button>
+        {% endif %}
       </div>
     </form>
   </div>

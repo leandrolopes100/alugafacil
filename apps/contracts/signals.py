@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 
@@ -109,6 +109,52 @@ def adicional_avaria_post_save(sender, instance, **kwargs):
             ).atualizar_situacao(novo_valor_total=novo_total)
         except ContaReceber.DoesNotExist:
             pass
+
+
+@receiver(pre_save, sender=Contrato)
+def contrato_caucao_pre_save(sender, instance, **kwargs):
+    """Captura caucao_situacao anterior para detectar transicoes no post_save."""
+    if instance.pk:
+        try:
+            instance._caucao_situacao_anterior = (
+                Contrato.objects.values_list('caucao_situacao', flat=True).get(pk=instance.pk)
+            )
+        except Contrato.DoesNotExist:
+            instance._caucao_situacao_anterior = None
+    else:
+        instance._caucao_situacao_anterior = None
+
+
+@receiver(post_save, sender=Contrato)
+def contrato_caucao_post_save(sender, instance, created, **kwargs):
+    """
+    Reage a mudancas em caucao_situacao:
+    - devolvido / devolvido_parcial: registra saida no financeiro (DespesaOperacional).
+    A retencao com avaria e tratada em ContratoEncerrarView (avaliada no encerramento).
+    """
+    if created or not instance.caucao_valor:
+        return
+
+    anterior = getattr(instance, '_caucao_situacao_anterior', None)
+    atual = instance.caucao_situacao
+
+    if anterior == atual or atual not in ('devolvido', 'devolvido_parcial'):
+        return
+
+    from apps.financeiro.models import DespesaOperacional
+
+    marker = f'[caucao:{instance.numero}]'
+    if DespesaOperacional.objects.filter(observacoes__contains=marker).exists():
+        return
+
+    DespesaOperacional.objects.create(
+        categoria='caucao',
+        descricao=f'Devolucao de caucao — Contrato {instance.numero} ({instance.cliente})',
+        valor=instance.caucao_valor,
+        data_competencia=timezone.now().date(),
+        data_pagamento=timezone.now().date(),
+        observacoes=marker,
+    )
 
 
 @receiver(post_save, sender=Contrato)

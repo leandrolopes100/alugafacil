@@ -233,10 +233,19 @@ class Contrato(models.Model):
         return max(math.ceil(delta.total_seconds() / 86400), 1)
 
     @cached_property
-    def total_locacao(self):
+    def valor_locacao_base(self):
+        """Diária × dias sem acréscimos (km, dias extras, combustível)."""
         dias = self.total_dias or self._dias_previstos()
-        subtotal = self.diaria * dias
-        return subtotal + self.valor_km_excedente_total + self.valor_dias_extras + self.valor_diferenca_combustivel
+        return self.diaria * dias
+
+    @cached_property
+    def total_locacao(self):
+        return (
+            self.valor_locacao_base
+            + self.valor_km_excedente_total
+            + self.valor_dias_extras
+            + self.valor_diferenca_combustivel
+        )
 
     @cached_property
     def total_adicionais(self):
@@ -476,6 +485,7 @@ class ParcelaContrato(models.Model):
         ('caucao', 'Caucao'),
         ('semanal', 'Semanal'),
         ('mensal', 'Mensal'),
+        ('acerto', 'Acerto Final'),
     ]
     SITUACAO = [
         ('pendente', 'Pendente'),

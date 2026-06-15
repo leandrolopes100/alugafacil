@@ -27,7 +27,7 @@
       <div class="kpi-icon" style="background:#eef2ff; color:#6366f1">
         <i class="bi bi-receipt"></i>
       </div>
-      <div class="kpi-value" style="font-size:22px; color:#6366f1">R$ {{ total_receber|floatformat:2 }}</div>
+      <div class="kpi-value" style="font-size:22px; color:#6366f1">{{ total_receber|brl }}</div>
       <div class="kpi-label">Em Aberto</div>
       <div class="kpi-sub">saldo a receber</div>
     </a>
@@ -37,7 +37,7 @@
       <div class="kpi-icon" style="background:#fef2f2; color:#ef4444">
         <i class="bi bi-exclamation-circle-fill"></i>
       </div>
-      <div class="kpi-value" style="font-size:22px; color:#ef4444">R$ {{ total_vencido|floatformat:2 }}</div>
+      <div class="kpi-value" style="font-size:22px; color:#ef4444">{{ total_vencido|brl }}</div>
       <div class="kpi-label">Vencido</div>
       <div class="kpi-sub">inadimplência</div>
     </a>
@@ -47,7 +47,7 @@
       <div class="kpi-icon" style="background:#ecfdf5; color:#10b981">
         <i class="bi bi-arrow-down-circle-fill"></i>
       </div>
-      <div class="kpi-value" style="font-size:22px; color:#10b981">R$ {{ total_recebido_mes|floatformat:2 }}</div>
+      <div class="kpi-value" style="font-size:22px; color:#10b981">{{ total_recebido_mes|brl }}</div>
       <div class="kpi-label">Recebido no Mês</div>
       <div class="kpi-sub">{% now "F Y" %}</div>
     </a>
@@ -57,7 +57,7 @@
       <div class="kpi-icon" style="background:#fff7ed; color:#f97316">
         <i class="bi bi-hourglass-split"></i>
       </div>
-      <div class="kpi-value" style="font-size:22px; color:#f97316">R$ {{ por_situacao.pendente.valor|floatformat:2 }}</div>
+      <div class="kpi-value" style="font-size:22px; color:#f97316">{{ por_situacao.pendente.valor|brl }}</div>
       <div class="kpi-label">Pendentes</div>
       <div class="kpi-sub">{{ por_situacao.pendente.count }} conta{{ por_situacao.pendente.count|pluralize }}</div>
     </a>
@@ -97,7 +97,7 @@
             </div>
           </div>
           <div style="text-align:right">
-            <div style="font-size:15px; font-weight:700; color:#0f172a">R$ {{ dados.total|floatformat:2 }}</div>
+            <div style="font-size:15px; font-weight:700; color:#0f172a">{{ dados.total|brl }}</div>
           </div>
         </div>
         {% endif %}
@@ -128,7 +128,7 @@
           <span style="flex:1; font-size:13px; color:#475569">{{ situacoes_labels|get_item:situacao }}</span>
           <span style="font-size:13px; font-weight:600; color:#0f172a">{{ dados.count }}</span>
           {% if dados.valor %}
-          <span style="font-size:12px; color:#94a3b8">R$ {{ dados.valor|floatformat:0 }}</span>
+          <span style="font-size:12px; color:#94a3b8">{{ dados.valor|brl }}</span>
           {% endif %}
         </li>
         {% endfor %}
@@ -180,7 +180,7 @@
                 {% endif %}
               </td>
               <td class="text-end" style="font-weight:700; font-size:14px; color:#0f172a">
-                R$ {{ conta.valor_saldo|floatformat:2 }}
+                {{ conta.valor_saldo|brl }}
               </td>
               <td>
                 {% if conta.vencida %}
@@ -241,11 +241,11 @@
       </div>
       <div class="d-flex gap-4 flex-wrap">
         <div class="text-center">
-          <div class="fw-bold" style="font-size:18px; color:#ef4444">R$ {{ total_pagar_vencido|floatformat:2 }}</div>
+          <div class="fw-bold" style="font-size:18px; color:#ef4444">{{ total_pagar_vencido|brl }}</div>
           <div class="text-muted" style="font-size:11px; text-transform:uppercase; letter-spacing:.04em">Em atraso</div>
         </div>
         <div class="text-center">
-          <div class="fw-bold" style="font-size:18px; color:#f59e0b">R$ {{ total_pagar_mes|floatformat:2 }}</div>
+          <div class="fw-bold" style="font-size:18px; color:#f59e0b">{{ total_pagar_mes|brl }}</div>
           <div class="text-muted" style="font-size:11px; text-transform:uppercase; letter-spacing:.04em">Este mês ({{ count_pagar_mes }} parcela{{ count_pagar_mes|pluralize:"s" }})</div>
         </div>
       </div>
@@ -263,7 +263,7 @@
            class="text-decoration-none d-inline-flex align-items-center gap-1 rounded px-2 py-1"
            style="font-size:12px; {% if p.em_atraso %}background:#fef2f2; color:#991b1b; border:1px solid #fca5a5{% else %}background:#f1f5f9; color:#475569; border:1px solid #e2e8f0{% endif %}">
           <span>{{ p.despesa.descricao|truncatechars:22 }}</span>
-          <span class="fw-semibold">R$ {{ p.valor|floatformat:2 }}</span>
+          <span class="fw-semibold">{{ p.valor|brl }}</span>
           <span class="opacity-60">{{ p.data_vencimento|date:"d/m" }}</span>
         </a>
         {% endfor %}

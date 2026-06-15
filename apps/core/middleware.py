@@ -1,18 +1,16 @@
 from django.conf import settings
-from django_tenants.middleware.main import TenantMainMiddleware
+from django.template.loader import render_to_string
+from django.http import HttpResponse
 
 
-class TenantMiddleware(TenantMainMiddleware):
-    """Estende TenantMainMiddleware adicionando mapeamento de hostnames.
+class MaintenanceModeMiddleware:
+    """Retorna 503 para todas as requisições quando MAINTENANCE_MODE=True em settings."""
 
-    TENANT_HOSTNAME_MAP em settings permite que IPs ou aliases locais sejam
-    redirecionados para um hostname registrado como Domain do tenant.
-    Exemplo em development.py:
-        TENANT_HOSTNAME_MAP = {'127.0.0.1': 'localhost'}
-    """
+    def __init__(self, get_response):
+        self.get_response = get_response
 
-    @staticmethod
-    def hostname_from_request(request):
-        host = request.get_host().split(':')[0].lower()
-        mapping = getattr(settings, 'TENANT_HOSTNAME_MAP', {})
-        return mapping.get(host, host)
+    def __call__(self, request):
+        if getattr(settings, 'MAINTENANCE_MODE', False):
+            html = render_to_string('503.html', request=request)
+            return HttpResponse(html, status=503)
+        return self.get_response(request)

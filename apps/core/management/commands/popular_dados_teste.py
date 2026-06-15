@@ -36,23 +36,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        from django_tenants.utils import schema_context
-        from apps.tenants.models import TenantCompany
-
-        # Descobre o primeiro tenant ativo (ou o único configurado)
-        tenant = TenantCompany.objects.exclude(schema_name='public').first()
-        if not tenant:
-            self.stdout.write(self.style.ERROR(
-                'Nenhum tenant encontrado. Crie um tenant antes de rodar este comando.'
-            ))
-            return
-
-        self.stdout.write(
-            f'  Tenant: {tenant.name} (schema: {tenant.schema_name})\n'
-        )
-
-        with schema_context(tenant.schema_name):
-            self._handle_within_schema(options)
+        self._handle_within_schema(options)
 
     def _handle_within_schema(self, options):
         if options['limpar']:

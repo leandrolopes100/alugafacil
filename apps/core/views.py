@@ -7,7 +7,7 @@ from decimal import Decimal
 from django.contrib.auth.mixins import LoginRequiredMixin
 from apps.core.mixins import GrupoRequiredMixin
 from django.core.paginator import Paginator
-from django.db.models import Avg, Count, Q, Sum
+from django.db.models import Avg, Count, F, Q, Sum
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.shortcuts import render
@@ -16,7 +16,7 @@ from django.views.generic import TemplateView, View
 
 from apps.contracts.models import Contrato, PagamentoContrato, ParcelaContrato
 from apps.customers.models import Cliente
-from apps.financeiro.models import ContaReceber, DespesaOperacional, MultaTransito
+from apps.financeiro.models import ContaReceber, DespesaOperacional, MultaTransito, ParcelaDespesa
 from apps.fleet.models import Veiculo
 
 
@@ -94,6 +94,71 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
         ctx['parcelas_atraso'] = ParcelaContrato.objects.filter(
             situacao='em_atraso',
+        ).count()
+
+        # ── Ocupação do mês ──
+        dias_mes = calendar.monthrange(hoje.year, hoje.month)[1]
+        total_ativos = ctx['total_veiculos']
+        if total_ativos and dias_mes:
+            dias_por_veiculo = Contrato.objects.filter(
+                situacao__in=['encerrado', 'ativo', 'aguardando_devolucao'],
+                data_saida__year=hoje.year,
+                data_saida__month=hoje.month,
+            ).values('veiculo_id').annotate(dias=Sum('total_dias'))
+            soma_ocupacao = sum(
+                min(r['dias'] or 1, dias_mes) / dias_mes * 100
+                for r in dias_por_veiculo
+            )
+            ctx['taxa_ocupacao'] = round(soma_ocupacao / total_ativos, 1)
+        else:
+            ctx['taxa_ocupacao'] = 0
+
+        # ── Despesas pagas — competência do mês (par de /financeiro/despesas/) ──
+        ano, mes_num = hoje.year, hoje.month
+        base_desp = DespesaOperacional.objects.filter(
+            data_competencia__year=ano, data_competencia__month=mes_num,
+        )
+        parc_desp_comp = ParcelaDespesa.objects.filter(
+            despesa__data_competencia__year=ano, despesa__data_competencia__month=mes_num,
+        )
+        ctx['desp_pago'] = (
+            (parc_desp_comp.filter(situacao='pago').aggregate(s=Sum('valor'))['s'] or Decimal('0.00'))
+            + (base_desp.filter(parcelado=False, data_pagamento__isnull=False).aggregate(s=Sum('valor'))['s'] or Decimal('0.00'))
+        )
+        ctx['resultado_mes'] = ctx['receita_mes'] - ctx['desp_pago']
+
+        # ── A Pagar no Mês — vencimento do mês (par de /financeiro/contas-pagar/ kpi_este_mes) ──
+        ctx['desp_a_pagar'] = (
+            ParcelaDespesa.objects.filter(
+                situacao__in=['pendente', 'em_atraso'],
+                data_vencimento__year=ano,
+                data_vencimento__month=mes_num,
+            ).aggregate(s=Sum('valor'))['s'] or Decimal('0.00')
+        )
+        # Parcelas em atraso globais (par de kpi_em_atraso em contas-pagar)
+        ctx['desp_atraso'] = (
+            ParcelaDespesa.objects.filter(
+                Q(situacao='em_atraso') | Q(situacao='pendente', data_vencimento__lt=hoje)
+            ).aggregate(s=Sum('valor'))['s'] or Decimal('0.00')
+        )
+
+        # ── Contas a Receber: em aberto e vencidas ──
+        abertas_agg = ContaReceber.objects.exclude(
+            situacao__in=['pago', 'cancelado']
+        ).aggregate(
+            em_aberto=Sum(F('valor_total') - F('valor_pago')),
+            vencido=Sum(
+                F('valor_total') - F('valor_pago'),
+                filter=Q(data_vencimento__lt=hoje),
+            ),
+        )
+        ctx['contas_em_aberto'] = abertas_agg['em_aberto'] or Decimal('0.00')
+        ctx['contas_vencidas'] = abertas_agg['vencido'] or Decimal('0.00')
+
+        # ── Parcelas de despesas operacionais vencidas ──
+        ctx['parcelas_despesa_atraso'] = ParcelaDespesa.objects.filter(
+            Q(situacao='em_atraso') |
+            Q(situacao='pendente', data_vencimento__lt=hoje)
         ).count()
 
         return ctx

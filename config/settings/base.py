@@ -9,30 +9,15 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = ['*']
 
-# ─── django-tenants ───────────────────────────────────────────────────────────
-
-SHARED_APPS = [
-    'django_tenants',
-    'apps.tenants',
-
+INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.postgres',
 
     'apps.core',
-]
-
-TENANT_APPS = [
-    'django.contrib.contenttypes',
-    'django.contrib.auth',
-    'django.contrib.admin',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-
     'apps.fleet',
     'apps.customers',
     'apps.contracts',
@@ -41,20 +26,11 @@ TENANT_APPS = [
     'apps.investidores',
 ]
 
-INSTALLED_APPS = list(SHARED_APPS) + [
-    app for app in TENANT_APPS if app not in SHARED_APPS
-]
-
-TENANT_MODEL = 'tenants.TenantCompany'
-TENANT_DOMAIN_MODEL = 'tenants.Domain'
-
-DATABASE_ROUTERS = ['django_tenants.routers.TenantSyncRouter']
-
-# ─── Middleware ───────────────────────────────────────────────────────────────
+MAINTENANCE_MODE = False
 
 MIDDLEWARE = [
-    'apps.core.middleware.TenantMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'apps.core.middleware.MaintenanceModeMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -65,10 +41,7 @@ MIDDLEWARE = [
     'django_htmx.middleware.HtmxMiddleware',
 ]
 
-ROOT_URLCONF = 'config.tenant_urls'
-PUBLIC_SCHEMA_URLCONF = 'config.urls'
-
-# ─── Templates ───────────────────────────────────────────────────────────────
+ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
     {
@@ -89,17 +62,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# ─── Database (PostgreSQL obrigatório para django-tenants) ───────────────────
+# ─── Banco de dados (SQLite) ─────────────────────────────────────────────────
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django_tenants.postgresql_backend',
-        'NAME': config('DB_NAME', default='alugafacil'),
-        'USER': config('DB_USER', default='alugafacil'),
-        'PASSWORD': config('DB_PASSWORD', default='alugafacil123'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
-        'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=60, cast=int),
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
@@ -191,5 +159,3 @@ LOGGING = {
 # ─── Misc ────────────────────────────────────────────────────────────────────
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-TENANT_BASE_DOMAIN = config('TENANT_BASE_DOMAIN', default='localhost')

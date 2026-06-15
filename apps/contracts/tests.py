@@ -1,8 +1,8 @@
 from datetime import timedelta
 from decimal import Decimal
 
+from django.test import TestCase
 from django.utils import timezone
-from django_tenants.test.cases import TenantTestCase
 
 from apps.customers.models import CNHCliente, Cliente
 from apps.fleet.models import CategoriaVeiculo, GrupoVeiculo, Veiculo
@@ -12,7 +12,7 @@ from .models import Contrato, ParcelaContrato, PagamentoContrato, Reserva, gerar
 from .views import ContratoCheckoutView
 
 
-class ContratosTestBase(TenantTestCase):
+class ContratosTestBase(TestCase):
     """Base com a frota/cliente mínimos para montar contratos e reservas."""
 
     def setUp(self):

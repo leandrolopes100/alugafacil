@@ -1,8 +1,8 @@
 from datetime import date, timedelta
 from decimal import Decimal
 
+from django.test import TestCase
 from django.utils import timezone
-from django_tenants.test.cases import TenantTestCase
 
 from apps.contracts.models import Contrato, PagamentoContrato
 from apps.customers.models import Cliente
@@ -14,7 +14,7 @@ from .models import (
 )
 
 
-class FinanceiroTestBase(TenantTestCase):
+class FinanceiroTestBase(TestCase):
     """Base com a frota/cliente mínimos para montar contratos, contas e despesas."""
 
     def setUp(self):
