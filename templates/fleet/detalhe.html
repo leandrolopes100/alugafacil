@@ -1,0 +1,265 @@
+{% extends 'base.html' %}
+{% block titulo %}{{ veiculo.placa }} — Frota{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'frota:lista' %}" class="text-decoration-none text-secondary">Frota</a></li>
+<li class="breadcrumb-item active">{{ veiculo.placa }}</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<!-- Cabeçalho -->
+<div class="page-header d-flex align-items-start justify-content-between gap-3 flex-wrap">
+  <div>
+    <h1 class="page-title">{{ veiculo.marca }} {{ veiculo.modelo }}</h1>
+    <div class="d-flex align-items-center gap-2 mt-1">
+      <span class="badge bg-light text-dark border text-mono fw-bold fs-6">{{ veiculo.placa }}</span>
+      <span class="badge badge-status
+        {% if veiculo.situacao == 'disponivel' %}bg-success
+        {% elif veiculo.situacao == 'em_uso' %}bg-primary
+        {% elif veiculo.situacao == 'reservado' %}bg-warning text-dark
+        {% elif veiculo.situacao == 'manutencao' %}bg-danger
+        {% else %}bg-secondary{% endif %}">
+        {{ veiculo.get_situacao_display }}
+      </span>
+    </div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'frota:fotos' veiculo.pk %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-images me-1"></i>Fotos
+    </a>
+    <a href="{% url 'frota:documentos' veiculo.pk %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-file-earmark me-1"></i>Documentos
+    </a>
+    {% if veiculo.situacao == 'disponivel' %}
+    <a href="{% url 'contratos:novo' %}?veiculo={{ veiculo.pk }}" class="btn btn-success btn-sm">
+      <i class="bi bi-file-earmark-plus me-1"></i>Novo Contrato
+    </a>
+    {% endif %}
+    <a href="{% url 'frota:editar' veiculo.pk %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-pencil me-1"></i>Editar
+    </a>
+    {% if pode_excluir %}
+    <button type="button" class="btn btn-outline-danger btn-sm"
+      data-excluir-url="{% url 'frota:excluir' veiculo.pk %}"
+      data-excluir-nome="{{ veiculo.marca }} {{ veiculo.modelo }} — {{ veiculo.placa }}"
+      onclick="abrirModalExcluir(this)">
+      <i class="bi bi-trash me-1"></i>Excluir
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- Coluna foto + documentos -->
+  <div class="col-lg-4">
+
+    <!-- Foto principal -->
+    <div class="card mb-3 overflow-hidden">
+      {% with veiculo.foto_principal as foto %}
+      {% if foto %}
+      <img src="{{ foto.imagem.url }}" alt="{{ veiculo.placa }}" class="card-img-top" style="height:220px; object-fit:cover">
+      {% else %}
+      <div class="d-flex align-items-center justify-content-center bg-light" style="height:220px">
+        <i class="bi bi-car-front text-secondary opacity-25" style="font-size:5rem"></i>
+      </div>
+      {% endif %}
+      {% endwith %}
+      <!-- Miniaturas -->
+      {% if fotos.count > 1 %}
+      <div class="card-body p-2">
+        <div class="d-flex gap-1 overflow-auto">
+          {% for foto in fotos %}
+          <img src="{{ foto.imagem.url }}" class="rounded flex-shrink-0" style="height:52px; width:70px; object-fit:cover; opacity:.7; cursor:pointer" onclick="document.querySelector('.card-img-top').src='{{ foto.imagem.url }}'">
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Documentos -->
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-file-earmark-check me-1 text-primary"></i>Documentos</span>
+        <a href="{% url 'frota:documentos' veiculo.pk %}" class="btn btn-sm btn-outline-primary">Gerenciar</a>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for doc in documentos %}
+        <li class="list-group-item d-flex justify-content-between align-items-center px-3 py-2 small">
+          <span>{{ doc.get_tipo_display }}</span>
+          {% if doc.data_validade %}
+          <span class="fw-semibold {% if doc.vencido %}text-danger{% elif doc.proximo_vencimento %}text-warning{% else %}text-muted{% endif %}">
+            {% if doc.vencido %}<i class="bi bi-exclamation-triangle-fill me-1"></i>{% endif %}
+            {{ doc.data_validade|date:"d/m/Y" }}
+          </span>
+          {% else %}
+          <span class="text-muted">—</span>
+          {% endif %}
+        </li>
+        {% empty %}
+        <li class="list-group-item text-center text-muted small py-3">Nenhum documento.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- Coluna dados técnicos + histórico -->
+  <div class="col-lg-8">
+
+    <!-- Dados técnicos -->
+    <div class="card mb-4">
+      <div class="card-header"><i class="bi bi-cpu me-2 text-primary"></i>Dados Técnicos</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-6 col-md-4">
+            <div class="text-muted small">Ano</div>
+            <div class="fw-semibold">{{ veiculo.ano_fabricacao }}/{{ veiculo.ano_modelo }}</div>
+          </div>
+          <div class="col-6 col-md-4">
+            <div class="text-muted small">Cor</div>
+            <div class="fw-semibold">{{ veiculo.cor }}</div>
+          </div>
+          <div class="col-6 col-md-4">
+            <div class="text-muted small">Combustível</div>
+            <div class="fw-semibold">{{ veiculo.get_combustivel_display }}</div>
+          </div>
+          <div class="col-6 col-md-4">
+            <div class="text-muted small">Transmissão</div>
+            <div class="fw-semibold">{{ veiculo.get_transmissao_display }}</div>
+          </div>
+          <div class="col-6 col-md-4">
+            <div class="text-muted small">Portas / Lugares</div>
+            <div class="fw-semibold">{{ veiculo.portas }}p / {{ veiculo.lugares }}l</div>
+          </div>
+          <div class="col-6 col-md-4">
+            <div class="text-muted small">KM Atual</div>
+            <div class="fw-semibold">{{ veiculo.km_atual|floatformat:0 }} km</div>
+          </div>
+          <div class="col-6 col-md-4">
+            <div class="text-muted small">Grupo</div>
+            <div class="fw-semibold">{{ veiculo.grupo.nome }}</div>
+          </div>
+          {% if veiculo.chassi %}
+          <div class="col-12 col-md-8">
+            <div class="text-muted small">Chassi</div>
+            <div class="fw-semibold text-mono small">{{ veiculo.chassi }}</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Histórico de KM -->
+    {% if historico_km %}
+    <div class="card mb-4">
+      <div class="card-header"><i class="bi bi-speedometer2 me-2 text-warning"></i>Histórico de Quilometragem</div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr><th>Data</th><th>KM</th><th>Origem</th><th>Contrato</th></tr>
+          </thead>
+          <tbody>
+            {% for h in historico_km %}
+            <tr>
+              <td class="text-muted small">{{ h.data|date:"d/m/Y H:i" }}</td>
+              <td class="fw-semibold text-mono">{{ h.km|floatformat:0 }} km</td>
+              <td>
+                <span class="badge bg-secondary-subtle text-secondary border small">{{ h.get_origem_display }}</span>
+              </td>
+              <td class="small text-muted">
+                {% if h.contrato %}<a href="{% url 'contratos:detalhe' h.contrato.pk %}" class="text-primary text-mono text-decoration-none">{{ h.contrato.numero }}</a>{% else %}—{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Histórico de locações -->
+    {% if contratos_recentes %}
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history me-2 text-primary"></i>Últimas Locações</span>
+        <a href="{% url 'contratos:lista' %}?busca={{ veiculo.placa }}" class="btn btn-sm btn-outline-primary">Ver todas</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Contrato</th><th>Cliente</th><th>Saída</th><th>Devolução</th><th>Situação</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for contrato in contratos_recentes %}
+            <tr>
+              <td><a href="{% url 'contratos:detalhe' contrato.pk %}" class="text-primary text-mono text-decoration-none fw-semibold">{{ contrato.numero }}</a></td>
+              <td>{{ contrato.cliente.nome_exibicao }}</td>
+              <td class="text-muted small">{% if contrato.data_saida %}{{ contrato.data_saida|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+              <td class="text-muted small">{% if contrato.data_devolucao_real %}{{ contrato.data_devolucao_real|date:"d/m/Y" }}{% else %}{{ contrato.data_devolucao_prevista|date:"d/m/Y" }}{% endif %}</td>
+              <td>
+                <span class="badge badge-status
+                  {% if contrato.situacao == 'ativo' %}bg-primary
+                  {% elif contrato.situacao == 'encerrado' %}bg-success
+                  {% elif contrato.situacao == 'aberto' %}bg-warning text-dark
+                  {% else %}bg-secondary{% endif %}">
+                  {{ contrato.get_situacao_display }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- Modal de confirmação de exclusão -->
+<div class="modal fade" id="modalExcluirVeiculo" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px">
+    <div class="modal-content" style="border-radius:12px; border:none; box-shadow:0 20px 40px rgba(0,0,0,.15)">
+      <div class="modal-header border-0 pb-0 pt-4 px-4">
+        <div style="width:48px; height:48px; background:#fceceb; border-radius:12px; display:flex; align-items:center; justify-content:center; margin-right:12px; flex-shrink:0">
+          <i class="bi bi-trash" style="color:#b3261e; font-size:22px"></i>
+        </div>
+        <div>
+          <h5 class="modal-title fw-bold mb-0" style="font-size:16px">Excluir veículo?</h5>
+          <p class="text-muted mb-0" style="font-size:12.5px">Esta ação não pode ser desfeita.</p>
+        </div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body px-4 py-3">
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px">
+          <span style="font-size:13.5px; font-weight:600; color:#0f172a" id="modalVeiculoNome">—</span>
+        </div>
+        <p class="text-muted mt-3 mb-0" style="font-size:12.5px">
+          <i class="bi bi-info-circle me-1"></i>Veículos com contratos vinculados não podem ser excluídos.
+        </p>
+      </div>
+      <div class="modal-footer border-0 pt-0 pb-4 px-4 gap-2">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <form id="formExcluirVeiculo" method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i>Excluir veículo</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function abrirModalExcluir(btn) {
+  document.getElementById('modalVeiculoNome').textContent = btn.dataset.excluirNome;
+  document.getElementById('formExcluirVeiculo').action = btn.dataset.excluirUrl;
+  new bootstrap.Modal(document.getElementById('modalExcluirVeiculo')).show();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,255 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+{% block titulo %}Quebra de Contrato — {{ contrato.numero }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'contratos:lista' %}" class="text-decoration-none text-secondary">Contratos</a></li>
+<li class="breadcrumb-item"><a href="{% url 'contratos:detalhe' contrato.pk %}" class="text-decoration-none text-secondary">{{ contrato.numero }}</a></li>
+<li class="breadcrumb-item active">Quebra de Contrato</li>
+{% endblock %}
+
+{% block conteudo %}
+
+{{ parcelas_resumo|json_script:"parcelas-data" }}
+
+<div class="page-header">
+  <h1 class="page-title"><i class="bi bi-exclamation-octagon text-danger me-2"></i>Quebra de Contrato</h1>
+  <p class="page-subtitle">
+    Encerramento antecipado &mdash; devolução do veículo <strong>antes do prazo previsto</strong>. Contrato <strong>{{ contrato.numero }}</strong> &mdash; {{ contrato.cliente.nome_exibicao }} / <span class="text-mono">{{ contrato.veiculo.placa }}</span>
+  </p>
+</div>
+
+<div class="alert alert-danger d-flex align-items-start gap-3 mb-4">
+  <i class="bi bi-exclamation-octagon-fill flex-shrink-0" style="font-size:15px; margin-top:2px"></i>
+  <div>
+    <span class="status-badge status-danger icon-badge mb-2">
+      <i class="bi bi-exclamation-triangle-fill"></i>Quebra de Contrato
+    </span>
+    <div>
+      Você está encerrando este contrato <strong>antes do prazo previsto</strong>, não pelo fluxo normal de check-in/encerramento.
+      Esta ação é irreversível: parcelas já pagas permanecem no histórico, parcelas vencidas em aberto continuam em cobrança,
+      e <strong>parcelas futuras (com vencimento após a devolução) serão canceladas</strong>.
+      Se o veículo está sendo devolvido normalmente, no prazo, use <strong>Check-in</strong> em vez desta tela.
+    </div>
+  </div>
+</div>
+
+<!-- Resumo de saída -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card border-primary border-opacity-25 text-center py-3">
+      <div class="text-muted small">KM de Saída</div>
+      <div class="fw-bold fs-5 text-mono">{{ contrato.km_saida|floatformat:0 }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-primary border-opacity-25 text-center py-3">
+      <div class="text-muted small">Combustível na Saída</div>
+      <div class="fw-bold fs-5">{{ contrato.get_combustivel_saida_display }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-primary border-opacity-25 text-center py-3">
+      <div class="text-muted small">Devolução Prevista</div>
+      <div class="fw-bold fs-5">{{ contrato.data_devolucao_prevista|date:"d/m/Y H:i" }}</div>
+    </div>
+  </div>
+</div>
+
+<div x-data="encerramentoWizard()" x-init="init()">
+
+    <form method="post" enctype="multipart/form-data" x-ref="form">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+      <div class="form-error-banner mb-4">
+        <i class="bi bi-exclamation-triangle-fill flex-shrink-0" style="font-size:16px; margin-top:1px"></i>
+        <div>
+          <div class="fw-semibold mb-1">Corrija os erros abaixo:</div>
+          <ul>{% for erro in form.non_field_errors %}<li>{{ erro }}</li>{% endfor %}</ul>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- ── Passo 1: dados da devolução e motivo ─────────────────────────── -->
+      <div x-show="passo === 1">
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-speedometer2 me-2 text-danger"></i>Dados da Devolução</div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-4 {% if form.data_devolucao_real.errors %}field-has-error{% endif %}">
+                <label class="form-label fw-semibold small">Data/Hora de Devolução *</label>
+                {{ form.data_devolucao_real }}
+                {% if form.data_devolucao_real.errors %}
+                <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.data_devolucao_real.errors.0 }}</div>
+                {% endif %}
+                <div class="form-text">Usada para recalcular os dias efetivamente cobrados e o corte das parcelas futuras.</div>
+              </div>
+              <div class="col-md-4 {% if form.km_devolucao.errors %}field-has-error{% endif %}">
+                <label class="form-label fw-semibold small">KM de Devolução *</label>
+                {{ form.km_devolucao }}
+                {% if form.km_devolucao.errors %}
+                <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.km_devolucao.errors.0 }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-4 {% if form.combustivel_devolucao.errors %}field-has-error{% endif %}">
+                <label class="form-label fw-semibold small">Combustível *</label>
+                {{ form.combustivel_devolucao }}
+                {% if form.combustivel_devolucao.errors %}
+                <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.combustivel_devolucao.errors.0 }}</div>
+                {% endif %}
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold small">Observações de Devolução</label>
+                {{ form.obs_devolucao }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-camera me-2 text-danger"></i>Fotos de Devolução</div>
+          <div class="card-body">
+            <p class="small text-muted mb-3">
+              <i class="bi bi-camera me-1"></i>Compare com as fotos de saída para identificar avarias.
+            </p>
+            <input type="file" name="fotos_devolucao" multiple accept="image/*" class="form-control">
+          </div>
+        </div>
+
+        <div class="card mb-4" style="border-left:3px solid var(--warning)">
+          <div class="card-header"><i class="bi bi-clipboard-x" style="color:var(--warning)"></i>Motivo da Quebra de Contrato</div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-4 {% if form.motivo_encerramento.errors %}field-has-error{% endif %}">
+                <label class="form-label fw-semibold small">Motivo *</label>
+                {{ form.motivo_encerramento }}
+                {% if form.motivo_encerramento.errors %}
+                <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.motivo_encerramento.errors.0 }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-8 {% if form.motivo_encerramento_detalhe.errors %}field-has-error{% endif %}">
+                <label class="form-label fw-semibold small">Detalhe (obrigatório se "Outro")</label>
+                {{ form.motivo_encerramento_detalhe }}
+                {% if form.motivo_encerramento_detalhe.errors %}
+                <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.motivo_encerramento_detalhe.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end">
+          <a href="{% url 'contratos:detalhe' contrato.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+          <button type="button" class="btn btn-danger" @click="irParaResumo()">
+            Ver Resumo do Impacto <i class="bi bi-arrow-right ms-1"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Passo 2: resumo de impacto e confirmação final ───────────────── -->
+      <div x-show="passo === 2" x-cloak>
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <span class="text-muted"
+                style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap">
+            <i class="bi bi-list-check me-1"></i>Impacto nas Parcelas
+          </span>
+          <hr class="section-divider" style="flex:1; margin:0">
+        </div>
+
+        <div class="row g-3 mb-2">
+          <div class="col-md-4">
+            <div class="kpi-card">
+              <div class="kpi-icon" style="background:var(--success-bg); color:var(--success)">
+                <i class="bi bi-check-circle-fill"></i>
+              </div>
+              <div class="kpi-value" style="font-size:20px; color:var(--success)" x-text="brl(valorPagas)"></div>
+              <div class="kpi-label"><span x-text="pagas.length"></span> parcela(s) já paga(s)</div>
+              <div class="kpi-sub">Permanecem no histórico</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="kpi-card">
+              <div class="kpi-icon" style="background:var(--warning-bg); color:var(--warning)">
+                <i class="bi bi-clock-history"></i>
+              </div>
+              <div class="kpi-value" style="font-size:20px; color:var(--warning)" x-text="brl(valorMantidas)"></div>
+              <div class="kpi-label"><span x-text="mantidas.length"></span> vencida(s) em aberto</div>
+              <div class="kpi-sub">Continuam em cobrança</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="kpi-card">
+              <div class="kpi-icon" style="background:var(--danger-bg); color:var(--danger)">
+                <i class="bi bi-x-circle-fill"></i>
+              </div>
+              <div class="kpi-value" style="font-size:20px; color:var(--danger)" x-text="brl(valorFuturas)"></div>
+              <div class="kpi-label"><span x-text="futuras.length"></span> parcela(s) futura(s)</div>
+              <div class="kpi-sub">Serão canceladas</div>
+            </div>
+          </div>
+        </div>
+        <p class="small text-muted mb-4">
+          <i class="bi bi-info-circle me-1"></i>
+          Não inclui eventual acerto de KM excedente/combustível — calculado após a confirmação, com base nos dados informados no Passo 1.
+        </p>
+
+        <div class="card mb-4" style="border-left:3px solid var(--danger)">
+          <div class="card-body">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="confirmaEncerramento" x-model="confirmado">
+              <label class="form-check-label fw-semibold" for="confirmaEncerramento">
+                Confirmo que revisei os valores acima e desejo encerrar este contrato por quebra de contrato (antes do prazo previsto).
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end">
+          <button type="button" class="btn btn-outline-secondary" @click="passo = 1">
+            <i class="bi bi-arrow-left me-1"></i>Voltar
+          </button>
+          <button type="submit" class="btn btn-danger" :disabled="!confirmado">
+            <i class="bi bi-exclamation-octagon me-1"></i>Confirmar Quebra de Contrato
+          </button>
+        </div>
+      </div>
+    </form>
+</div>
+
+<script>
+  function encerramentoWizard() {
+    return {
+      passo: 1,
+      confirmado: false,
+      parcelas: [],
+      dataCorte: '{{ data_corte_inicial }}',
+      init() {
+        this.parcelas = JSON.parse(document.getElementById('parcelas-data').textContent);
+        const campoData = this.$refs.form.querySelector('#id_data_devolucao_real');
+        if (campoData) {
+          this.atualizarDataCorte(campoData.value);
+          campoData.addEventListener('input', (ev) => this.atualizarDataCorte(ev.target.value));
+        }
+      },
+      atualizarDataCorte(valor) {
+        if (valor) this.dataCorte = valor.split('T')[0];
+      },
+      irParaResumo() {
+        if (!this.$refs.form.reportValidity()) return;
+        this.passo = 2;
+      },
+      get pagas() { return this.parcelas.filter(p => p.situacao === 'pago'); },
+      get abertas() { return this.parcelas.filter(p => p.situacao === 'pendente' || p.situacao === 'em_atraso'); },
+      get mantidas() { return this.abertas.filter(p => p.data_vencimento <= this.dataCorte); },
+      get futuras() { return this.abertas.filter(p => p.data_vencimento > this.dataCorte); },
+      get valorPagas() { return this.pagas.reduce((s, p) => s + p.valor, 0); },
+      get valorMantidas() { return this.mantidas.reduce((s, p) => s + p.valor, 0); },
+      get valorFuturas() { return this.futuras.reduce((s, p) => s + p.valor, 0); },
+      brl(v) {
+        return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      },
+    };
+  }
+</script>
+
+{% endblock %}

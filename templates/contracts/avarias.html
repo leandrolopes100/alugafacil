@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+{% block titulo %}Avarias — {{ contrato.numero }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'contratos:detalhe' contrato.pk %}" class="text-decoration-none text-secondary">{{ contrato.numero }}</a></li>
+<li class="breadcrumb-item active">Avarias</li>
+{% endblock %}
+
+{% block conteudo %}
+<div class="page-header d-flex align-items-center justify-content-between">
+  <h1 class="page-title">Avarias — <span class="text-muted">{{ contrato.numero }}</span></h1>
+  <a href="{% url 'contratos:detalhe' contrato.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Voltar
+  </a>
+</div>
+<div class="row g-4">
+  <div class="col-lg-8">
+    {% if avarias %}
+    <div class="card mb-4">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead><tr><th>Descrição</th><th>Localização</th><th class="text-end">Valor</th><th>Situação</th><th></th></tr></thead>
+          <tbody>
+            {% for avaria in avarias %}
+            <tr>
+              <td class="small fw-semibold">{{ avaria.descricao }}</td>
+              <td class="small text-muted">{{ avaria.localizacao|default:"—" }}</td>
+              <td class="text-end {% if avaria.valor_cobrado %}text-danger fw-semibold{% else %}text-muted{% endif %} small">
+                {% if avaria.valor_cobrado %}R$ {{ avaria.valor_cobrado|floatformat:2 }}{% else %}—{% endif %}
+              </td>
+              <td>
+                <span class="badge badge-status
+                  {% if avaria.situacao == 'cobrada' %}bg-warning text-dark
+                  {% elif avaria.situacao == 'paga' %}bg-success
+                  {% elif avaria.situacao == 'isenta' %}bg-info text-dark
+                  {% else %}bg-secondary{% endif %}">
+                  {{ avaria.get_situacao_display }}
+                </span>
+              </td>
+              <td class="text-end">
+                {% if avaria.situacao == 'cobrada' and avaria.valor_cobrado %}
+                <button class="btn btn-sm btn-outline-success"
+                  onclick="abrirPagamentoAvaria({{ avaria.pk }}, '{{ avaria.valor_cobrado|floatformat:2 }}', '{{ avaria.descricao|truncatechars:40|escapejs }}')">
+                  <i class="bi bi-cash me-1"></i>Marcar Pago
+                </button>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+<!-- Modal Pagamento de Avaria -->
+<div class="modal fade" id="modalPagarAvaria" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:400px">
+    <div class="modal-content" style="border-radius:12px; border:none; box-shadow:0 20px 40px rgba(0,0,0,.15)">
+      <div class="modal-header border-0 pt-4 px-4 pb-0">
+        <div>
+          <h5 class="modal-title fw-bold mb-0" style="font-size:16px">Registrar Pagamento de Avaria</h5>
+          <p class="text-muted mb-0" style="font-size:12.5px" id="avariaLabel">—</p>
+        </div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formPagarAvaria" method="post">
+        {% csrf_token %}
+        <div class="modal-body px-4 py-3">
+          <div style="background:#fceceb; border:1px solid #fecaca; border-radius:8px; padding:10px 14px; margin-bottom:16px">
+            <div class="text-muted" style="font-size:11px; text-transform:uppercase; letter-spacing:.06em; font-weight:600">Valor</div>
+            <div style="font-size:20px; font-weight:700; color:#b3261e" id="avariaValor">R$ —</div>
+          </div>
+          <div>
+            <label class="form-label">Forma de Pagamento *</label>
+            <select name="forma_pagamento" class="form-select" required>
+              <option value="">Selecione…</option>
+              {% for valor, rotulo in formas_pagamento %}
+              <option value="{{ valor }}">{{ rotulo }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 pb-4 px-4 gap-2">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success"><i class="bi bi-check-lg me-1"></i>Confirmar Recebimento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-exclamation-triangle me-2 text-danger"></i>Registrar Avaria</div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data" class="row g-3">
+          {% csrf_token %}
+          {% if form.non_field_errors %}
+          <div class="col-12">
+            <div class="form-error-banner">
+              <i class="bi bi-exclamation-triangle-fill flex-shrink-0" style="font-size:14px; margin-top:1px"></i>
+              <div>{% for erro in form.non_field_errors %}<div>{{ erro }}</div>{% endfor %}</div>
+            </div>
+          </div>
+          {% endif %}
+          <div class="col-12 {% if form.descricao.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Descrição *</label>
+            {{ form.descricao }}
+            {% if form.descricao.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.descricao.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-12 {% if form.localizacao.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Localização</label>
+            {{ form.localizacao }}
+            {% if form.localizacao.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.localizacao.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-7 {% if form.valor_cobrado.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Valor cobrado</label>
+            {{ form.valor_cobrado }}
+            {% if form.valor_cobrado.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.valor_cobrado.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-5 {% if form.situacao.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Situação</label>
+            {{ form.situacao }}
+            {% if form.situacao.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.situacao.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-12"><label class="form-label fw-semibold small">Foto</label>{{ form.foto }}</div>
+          <div class="col-12"><button type="submit" class="btn btn-danger w-100"><i class="bi bi-plus-lg me-1"></i>Registrar</button></div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const _avariaUrl = "{% url 'contratos:avaria-pagar' pk=contrato.pk avaria_pk=0 %}";
+function abrirPagamentoAvaria(avariaPk, valor, desc) {
+  document.getElementById('avariaLabel').textContent = desc;
+  document.getElementById('avariaValor').textContent = 'R$ ' + valor;
+  document.getElementById('formPagarAvaria').action = _avariaUrl.replace('/0/', '/' + avariaPk + '/');
+  document.querySelector('#formPagarAvaria select[name="forma_pagamento"]').value = '';
+  new bootstrap.Modal(document.getElementById('modalPagarAvaria')).show();
+}
+</script>
+{% endblock %}

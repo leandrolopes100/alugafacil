@@ -1,0 +1,205 @@
+{% extends 'core/relatorios/base_relatorio.html' %}
+{% load core_tags %}
+{% block titulo %}DRE Financeiro{% endblock %}
+{% block titulo_breadcrumb %}DRE{% endblock %}
+{% block titulo_relatorio %}DRE — Demonstração do Resultado{% endblock %}
+{% block descricao %}{{ mes_nome }}{% if mes_sel %} de{% endif %} {{ ano_sel }} · Margem operacional: <strong>{{ margem }}%</strong>{% endblock %}
+
+{% block filtro_periodo %}
+<form method="get" class="periodo-form">
+  <select name="mes">
+    <option value="">Ano completo</option>
+    {% for num, nome in meses_disp %}
+    <option value="{{ num }}" {% if mes_sel == num %}selected{% endif %}>{{ nome }}</option>
+    {% endfor %}
+  </select>
+  <select name="ano">
+    {% for a in anos_disp %}<option value="{{ a }}" {% if ano_sel == a %}selected{% endif %}>{{ a }}</option>{% endfor %}
+  </select>
+  <button type="submit" class="btn btn-primary btn-sm">Buscar</button>
+</form>
+{% endblock %}
+
+{% block conteudo_relatorio %}
+
+<!-- DRE Resumo -->
+<div class="row g-3 mb-4">
+  <!-- Receita -->
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="kpi-icon" style="background:var(--success-bg); color:var(--success)">
+          <i class="bi bi-arrow-down-circle-fill"></i>
+        </div>
+        <div class="kpi-value" style="font-size:26px; color:var(--success); margin-bottom:12px">
+          {{ receita_total|brl }}
+        </div>
+        <div class="kpi-label" style="margin-bottom:10px">Receitas</div>
+        {% for item in receita_por_tipo %}
+        <div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:5px">
+          <span style="color:#64748b">{{ tipo_labels|get_item:item.tipo|default:item.tipo }}</span>
+          <span style="font-weight:600">{{ item.total|brl }}</span>
+        </div>
+        {% endfor %}
+        {% if multas_receita %}
+        <div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:5px">
+          <span style="color:#64748b">Multas cobradas</span>
+          <span style="font-weight:600">{{ multas_receita|brl }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Despesas -->
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="kpi-icon" style="background:var(--danger-bg); color:var(--danger)">
+          <i class="bi bi-arrow-up-circle-fill"></i>
+        </div>
+        <div class="kpi-value" style="font-size:26px; color:var(--danger); margin-bottom:12px">
+          {{ despesa_total|brl }}
+        </div>
+        <div class="kpi-label" style="margin-bottom:10px">Despesas</div>
+        {% for item in despesa_por_cat %}
+        <div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:5px">
+          <span style="color:#64748b">{{ cat_labels|get_item:item.categoria|default:item.categoria }}</span>
+          <span style="font-weight:600">{{ item.total|brl }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Resultado -->
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-body text-center" style="display:flex; flex-direction:column; justify-content:center">
+        <div class="kpi-icon" style="background:{% if resultado >= 0 %}var(--success-bg){% else %}var(--danger-bg){% endif %}; color:{% if resultado >= 0 %}var(--success){% else %}var(--danger){% endif %}; margin:0 auto 12px">
+          <i class="bi bi-{% if resultado >= 0 %}graph-up-arrow{% else %}graph-down-arrow{% endif %}"></i>
+        </div>
+        <div style="font-size:32px; font-weight:700; letter-spacing:-.03em; color:{% if resultado >= 0 %}var(--success){% else %}var(--danger){% endif %}">
+          {{ resultado|brl }}
+        </div>
+        <div class="kpi-label" style="margin-top:12px">Resultado Líquido</div>
+        <div style="margin-top:12px; font-size:13px; color:#64748b">Margem operacional</div>
+        <div style="font-size:28px; font-weight:700; color:{% if margem >= 20 %}var(--success){% elif margem >= 0 %}var(--warning){% else %}var(--danger){% endif %}">
+          {{ margem }}%
+        </div>
+        <div style="margin-top:16px; font-size:12px; color:var(--text-muted)">
+          Receita: {{ receita_total|brl }}<br>
+          Despesas: {{ despesa_total|brl }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Gráfico receita vs despesa por mês -->
+<div class="card mb-4">
+  <div class="card-header"><i class="bi bi-graph-up"></i> Receita vs Despesa por Mês — {{ ano_sel }}</div>
+  <div class="card-body" style="padding:16px">
+    <canvas id="chartDRE" style="max-height:280px"></canvas>
+  </div>
+</div>
+
+<!-- Forma de pagamento -->
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-credit-card"></i> Receita por Forma de Pagamento</div>
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead><tr><th>Forma</th><th class="text-end">Total R$</th><th class="text-end">%</th></tr></thead>
+          <tbody>
+            {% for item in receita_por_forma %}
+            <tr>
+              <td style="font-size:13px">{{ forma_labels|get_item:item.forma_pagamento|default:item.forma_pagamento }}</td>
+              <td class="text-end" style="font-weight:600">{{ item.total|brl }}</td>
+              <td class="text-end" style="font-size:12px; color:#64748b">
+                {% if receita_total %}{% widthratio item.total receita_total 100 %}%{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-center text-muted" style="padding:20px">Sem dados</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-tag"></i> Despesas por Categoria</div>
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead><tr><th>Categoria</th><th class="text-end">Total R$</th><th class="text-end">%</th></tr></thead>
+          <tbody>
+            {% for item in despesa_por_cat %}
+            <tr>
+              <td style="font-size:13px">{{ cat_labels|get_item:item.categoria|default:item.categoria }}</td>
+              <td class="text-end" style="font-weight:600; color:var(--danger)">{{ item.total|brl }}</td>
+              <td class="text-end" style="font-size:12px; color:#64748b">
+                {% if despesa_total %}{% widthratio item.total despesa_total 100 %}%{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-center text-muted" style="padding:20px">Sem despesas registradas</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const dre = {{ chart_dre|safe }};
+
+new Chart(document.getElementById('chartDRE'), {
+  type: 'bar',
+  data: {
+    labels: dre.labels,
+    datasets: [
+      {
+        label: 'Receitas R$',
+        data: dre.receitas,
+        backgroundColor: 'rgba(16,185,129,.7)',
+        borderRadius: 4,
+      },
+      {
+        label: 'Despesas R$',
+        data: dre.despesas,
+        backgroundColor: 'rgba(239,68,68,.6)',
+        borderRadius: 4,
+      },
+      {
+        label: 'Resultado R$',
+        data: dre.resultados,
+        type: 'line',
+        borderColor: '#d97706',
+        backgroundColor: 'rgba(217,119,6,.08)',
+        borderWidth: 2.5,
+        pointRadius: 4,
+        pointBackgroundColor: '#d97706',
+        tension: 0.4,
+        fill: true,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { position: 'top', labels: { font: { size: 12 }, boxWidth: 12 } } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: '#f1f5f9' }, ticks: { callback: v => 'R$ ' + v.toLocaleString('pt-BR') } },
+    }
+  }
+});
+</script>
+{% endblock %}

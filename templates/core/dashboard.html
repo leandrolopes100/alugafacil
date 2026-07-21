@@ -1,0 +1,330 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+{% block titulo %}Dashboard{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Dashboard</li>{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">Visão geral da operação — {% now "d \d\e F \d\e Y" %}</p>
+  </div>
+  <a href="{% url 'contratos:novo' %}" class="btn btn-primary d-flex align-items-center gap-2">
+    <i class="bi bi-plus-lg"></i> Novo Contrato
+  </a>
+</div>
+
+<!-- ── Alertas críticos ───────────────────────────────────────────────────── -->
+{% if parcelas_atraso > 0 or parcelas_despesa_atraso > 0 or alertas_vencidos or multas_pendentes > 0 %}
+<div class="alert alert-warning d-flex align-items-center gap-3 mb-4">
+  <i class="bi bi-bell-fill flex-shrink-0" style="font-size:15px"></i>
+  <div class="d-flex flex-wrap gap-2">
+    {% if parcelas_atraso > 0 %}
+    <a href="{% url 'financeiro:agenda' %}" class="status-badge status-danger icon-badge text-decoration-none">
+      <i class="bi bi-cash-coin"></i>
+      {{ parcelas_atraso }} cobrança{{ parcelas_atraso|pluralize:"s" }} em atraso
+    </a>
+    {% endif %}
+    {% if parcelas_despesa_atraso > 0 %}
+    <a href="{% url 'financeiro:contas-pagar' %}" class="status-badge status-danger icon-badge text-decoration-none">
+      <i class="bi bi-credit-card"></i>
+      {{ parcelas_despesa_atraso }} despesa{{ parcelas_despesa_atraso|pluralize:"s" }} vencida{{ parcelas_despesa_atraso|pluralize:"s" }}
+    </a>
+    {% endif %}
+    {% if alertas_vencidos %}
+    <a href="{% url 'manutencao:alertas' %}" class="status-badge status-warning icon-badge text-decoration-none">
+      <i class="bi bi-tools"></i>
+      {{ alertas_vencidos|length }} manuten{{ alertas_vencidos|length|pluralize:"ção,ções" }} vencida{{ alertas_vencidos|length|pluralize:"s" }}
+    </a>
+    {% endif %}
+    {% if multas_pendentes > 0 %}
+    <a href="{% url 'financeiro:multas' %}" class="status-badge status-info icon-badge text-decoration-none">
+      <i class="bi bi-exclamation-triangle"></i>
+      {{ multas_pendentes }} multa{{ multas_pendentes|pluralize:"s" }} pendente{{ multas_pendentes|pluralize:"s" }}
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Seção: Frota ───────────────────────────────────────────────────────── -->
+<div class="d-flex align-items-center gap-3 mb-3">
+  <span class="text-muted"
+        style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap">
+    <i class="bi bi-car-front me-1"></i>Frota
+  </span>
+  <hr class="section-divider" style="flex:1; margin:0">
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'frota:lista' %}?situacao=disponivel" class="kpi-card">
+      <div class="kpi-icon" style="background:var(--success-bg); color:var(--success)">
+        <i class="bi bi-check-circle-fill"></i>
+      </div>
+      <div class="kpi-value" style="color:var(--success)">{{ veiculos_disponiveis }}</div>
+      <div class="kpi-label">Disponíveis</div>
+      <div class="kpi-sub">de {{ total_veiculos }} na frota</div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'frota:lista' %}?situacao=em_uso" class="kpi-card">
+      <div class="kpi-icon" style="background:var(--primary-light); color:var(--primary)">
+        <i class="bi bi-car-front-fill"></i>
+      </div>
+      <div class="kpi-value" style="color:var(--primary)">{{ veiculos_em_uso }}</div>
+      <div class="kpi-label">Em Uso</div>
+      <div class="kpi-sub">contrato{{ veiculos_em_uso|pluralize:"s" }} ativo{{ veiculos_em_uso|pluralize:"s" }}</div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'frota:lista' %}?situacao=manutencao" class="kpi-card">
+      <div class="kpi-icon" style="background:var(--manut-bg); color:var(--manut)">
+        <i class="bi bi-wrench-adjustable-circle-fill"></i>
+      </div>
+      <div class="kpi-value" style="color:{% if veiculos_manutencao > 0 %}var(--manut){% else %}var(--success){% endif %}">
+        {{ veiculos_manutencao }}
+      </div>
+      <div class="kpi-label">Em Manutenção</div>
+      <div class="kpi-sub">indisponível para locação</div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'core:relatorio-frota' %}" class="kpi-card">
+      <div class="kpi-icon" style="background:var(--info-bg); color:var(--info)">
+        <i class="bi bi-speedometer2"></i>
+      </div>
+      <div class="kpi-value" style="color:var(--info)">{{ taxa_ocupacao }}%</div>
+      <div class="kpi-label">Ocupação</div>
+      <div class="kpi-sub">{% now "F Y" %}</div>
+    </a>
+  </div>
+</div>
+
+<!-- ── Seção: Financeiro ──────────────────────────────────────────────────── -->
+<div class="d-flex align-items-center gap-3 mb-3">
+  <span class="text-muted"
+        style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap">
+    <i class="bi bi-graph-up me-1"></i>Financeiro — {% now "F Y" %}
+  </span>
+  <hr class="section-divider" style="flex:1; margin:0">
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'financeiro:fluxo' %}" class="kpi-card">
+      <div class="kpi-icon" style="background:var(--success-bg); color:var(--success)">
+        <i class="bi bi-arrow-down-circle-fill"></i>
+      </div>
+      <div class="kpi-value" style="font-size:20px; color:var(--success)">{{ receita_mes|brl }}</div>
+      <div class="kpi-label">Receita do Mês</div>
+      <div class="kpi-sub">pagamentos recebidos</div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'financeiro:despesas' %}?situacao=quitado" class="kpi-card">
+      <div class="kpi-icon" style="background:var(--danger-bg); color:var(--danger)">
+        <i class="bi bi-arrow-up-circle-fill"></i>
+      </div>
+      <div class="kpi-value" style="font-size:20px; color:var(--danger)">{{ desp_pago|brl }}</div>
+      <div class="kpi-label">Despesas Pagas</div>
+      <div class="kpi-sub">competência {% now "F Y" %}</div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'core:relatorio-dre' %}" class="kpi-card">
+      <div class="kpi-icon"
+           style="background:{% if resultado_mes >= 0 %}var(--success-bg); color:var(--success){% else %}var(--danger-bg); color:var(--danger){% endif %}">
+        <i class="bi bi-{% if resultado_mes >= 0 %}graph-up-arrow{% else %}graph-down-arrow{% endif %}"></i>
+      </div>
+      <div class="kpi-value" style="font-size:20px; color:{% if resultado_mes >= 0 %}var(--success){% else %}var(--danger){% endif %}">
+        {{ resultado_mes|brl }}
+      </div>
+      <div class="kpi-label">Resultado</div>
+      <div class="kpi-sub">receita − despesas pagas</div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'financeiro:contas-pagar' %}" class="kpi-card">
+      <div class="kpi-icon"
+           style="background:{% if desp_atraso > 0 %}var(--danger-bg); color:var(--danger){% else %}var(--manut-bg); color:var(--manut){% endif %}">
+        <i class="bi bi-{% if desp_atraso > 0 %}exclamation-circle-fill{% else %}hourglass-split{% endif %}"></i>
+      </div>
+      <div class="kpi-value" style="font-size:20px; color:{% if desp_atraso > 0 %}var(--danger){% else %}var(--manut){% endif %}">
+        {{ desp_a_pagar|brl }}
+      </div>
+      <div class="kpi-label">A Pagar no Mês</div>
+      <div class="kpi-sub">
+        {% if desp_atraso > 0 %}{{ desp_atraso|brl }} em atraso
+        {% else %}pendente de pagamento{% endif %}
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- ── Devoluções + Contratos em Atraso ──────────────────────────────────── -->
+<div class="row g-3 mb-4">
+
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">
+        <i class="bi bi-calendar-event" style="color:var(--warning)"></i>
+        Devoluções de Hoje
+        <span class="ms-auto"
+              style="background:var(--warning-bg); color:var(--warning-text); font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; border:1px solid #e0c27a">
+          {{ devolucoes_hoje|length }}
+        </span>
+      </div>
+      {% if devolucoes_hoje %}
+      <ul class="list-group list-group-flush">
+        {% for contrato in devolucoes_hoje %}
+        <li class="list-group-item d-flex align-items-center gap-2" style="padding-right:14px">
+          <a href="{% url 'contratos:detalhe' contrato.pk %}"
+             class="d-flex align-items-center gap-3 text-decoration-none flex-grow-1"
+             style="color:inherit; min-width:0">
+            <div style="width:34px; height:34px; background:var(--primary-light); border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0">
+              <i class="bi bi-car-front" style="color:var(--primary); font-size:14px"></i>
+            </div>
+            <div style="flex:1; min-width:0">
+              <div style="font-weight:600; font-size:13.5px; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis">
+                {{ contrato.cliente.nome_exibicao }}
+              </div>
+              <div style="font-size:12px; color:var(--text-muted)">
+                {{ contrato.veiculo.placa }} &middot; {{ contrato.veiculo.marca }} {{ contrato.veiculo.modelo }}
+              </div>
+            </div>
+            <div style="font-size:12px; color:var(--text-muted); flex-shrink:0">{{ contrato.data_devolucao_prevista|date:"H:i" }}</div>
+          </a>
+          <a href="{% url 'contratos:checkin' contrato.pk %}"
+             class="btn btn-sm btn-outline-primary flex-shrink-0"
+             style="font-size:11px; padding:3px 9px; white-space:nowrap">
+            <i class="bi bi-arrow-down-circle me-1"></i>Check-in
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon"><i class="bi bi-check2-circle" style="color:var(--success); opacity:.5"></i></div>
+        <div class="empty-state-title">Nenhuma devolução prevista</div>
+        <div class="empty-state-text">Não há devoluções agendadas para hoje.</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">
+        <i class="bi bi-clock-history" style="color:var(--danger)"></i>
+        Contratos em Atraso
+        <span class="ms-auto"
+              style="background:var(--danger-bg); color:var(--danger-text); font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; border:1px solid #d9a19d">
+          {{ contratos_atraso|length }}
+        </span>
+      </div>
+      {% if contratos_atraso %}
+      <ul class="list-group list-group-flush">
+        {% for contrato in contratos_atraso %}
+        <li class="list-group-item" style="border-left:3px solid var(--danger)">
+          <a href="{% url 'contratos:detalhe' contrato.pk %}"
+             class="d-flex align-items-center gap-3 text-decoration-none"
+             style="color:inherit">
+            <div>
+              <span class="text-mono" style="font-size:12px; font-weight:700; color:var(--primary)">{{ contrato.numero }}</span>
+              <div style="font-size:13.5px; font-weight:600; color:var(--text-primary)">{{ contrato.cliente.nome_exibicao }}</div>
+              <div style="font-size:11.5px; color:var(--danger)">
+                <i class="bi bi-clock me-1"></i>Previsto: {{ contrato.data_devolucao_prevista|date:"d/m H:i" }}
+              </div>
+            </div>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon"><i class="bi bi-emoji-smile" style="color:var(--success); opacity:.4"></i></div>
+        <div class="empty-state-title">Tudo em dia</div>
+        <div class="empty-state-text">Nenhum contrato em atraso.</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Contratos Recentes ─────────────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-header">
+    <i class="bi bi-file-earmark-text"></i>
+    Contratos Recentes
+    <a href="{% url 'contratos:lista' %}" class="ms-auto"
+       style="font-size:12.5px; color:var(--primary); text-decoration:none; font-weight:600">
+      Ver todos <i class="bi bi-arrow-right ms-1"></i>
+    </a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Número</th>
+          <th>Cliente</th>
+          <th>Veículo</th>
+          <th>Saída</th>
+          <th>Devolução</th>
+          <th>Situação</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in ultimos_contratos %}
+        <tr>
+          <td>
+            <a href="{% url 'contratos:detalhe' c.pk %}" class="table-link text-mono">{{ c.numero }}</a>
+          </td>
+          <td style="font-weight:500">{{ c.cliente.nome_exibicao }}</td>
+          <td>
+            <span class="text-mono"
+                  style="font-size:12px; font-weight:700; background:#f8fafc; border:1px solid var(--border); padding:2px 7px; border-radius:5px">
+              {{ c.veiculo.placa }}
+            </span>
+            <span style="color:#64748b; margin-left:6px">{{ c.veiculo.modelo }}</span>
+          </td>
+          <td style="color:#64748b">
+            {% if c.data_saida %}{{ c.data_saida|date:"d/m/Y" }}{% else %}<span style="color:#cbd5e1">—</span>{% endif %}
+          </td>
+          <td style="color:{% if c.em_atraso %}var(--danger){% else %}#64748b{% endif %}; font-weight:{% if c.em_atraso %}600{% else %}400{% endif %}">
+            {{ c.data_devolucao_prevista|date:"d/m/Y" }}
+            {% if c.em_atraso %}
+            <span style="font-size:11px; background:var(--danger-bg); color:var(--danger); border-radius:4px; padding:1px 5px; margin-left:4px">atraso</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="status-badge
+              {% if c.situacao == 'ativo' %}status-primary
+              {% elif c.situacao == 'encerrado' %}status-success
+              {% elif c.situacao == 'aberto' %}status-warning
+              {% elif c.situacao == 'cancelado' %}status-neutral
+              {% else %}status-info{% endif %}">
+              {{ c.get_situacao_display }}
+            </span>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6">
+            <div class="empty-state">
+              <div class="empty-state-icon"><i class="bi bi-file-earmark-x"></i></div>
+              <div class="empty-state-title">Nenhum contrato ainda</div>
+              <div class="empty-state-text">Crie o primeiro contrato para começar.</div>
+              <a href="{% url 'contratos:novo' %}" class="btn btn-primary btn-sm">Novo Contrato</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

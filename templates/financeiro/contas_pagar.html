@@ -1,0 +1,485 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+{% block titulo %}Contas a Pagar{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'financeiro:index' %}" class="text-decoration-none text-secondary">Financeiro</a></li>
+<li class="breadcrumb-item active">Contas a Pagar</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<!-- Formulário oculto compartilhado entre os dois modos -->
+<form id="form-lote-pagar" method="post" action="{% url 'financeiro:parcelas-pagar-lote' %}">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.path }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+</form>
+
+<div x-data="{
+  modo: '{{ modo_inicial }}',
+  selecionadas: 0,
+  total: 0.0,
+  toggle(checked, valor) {
+    if (checked) { this.selecionadas++; this.total += parseFloat(valor); }
+    else         { this.selecionadas--; this.total -= parseFloat(valor); }
+  },
+  fmt(v) {
+    return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  },
+  setModo(m) {
+    this.modo = m;
+    this.selecionadas = 0;
+    this.total = 0;
+    document.querySelectorAll('[name=parcela_ids]').forEach(cb => { cb.checked = false; });
+  },
+  selecionarGrupo(cls, event) {
+    document.querySelectorAll('.' + cls).forEach(cb => {
+      if (cb.checked !== event.target.checked) {
+        cb.checked = event.target.checked;
+        cb.dispatchEvent(new Event('change'));
+      }
+    });
+  }
+}">
+
+<!-- ── Header ──────────────────────────────────────────────────────────────�� -->
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div>
+    <h1 class="page-title">Contas a Pagar</h1>
+    <p class="page-subtitle mb-0">Parcelas de despesas operacionais</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap align-items-center">
+    <button type="submit" form="form-lote-pagar"
+            class="btn btn-success btn-sm" x-show="selecionadas > 0" x-cloak>
+      <i class="bi bi-check-all me-1"></i>
+      Pagar <span x-text="selecionadas"></span>
+      <span class="opacity-75 ms-1">(R$ <span x-text="fmt(total)"></span>)</span>
+    </button>
+    <div class="btn-group btn-group-sm">
+      <button type="button"
+              @click="setModo('urgencia')"
+              :class="modo === 'urgencia' ? 'btn btn-primary' : 'btn btn-outline-secondary'">
+        <i class="bi bi-lightning-fill me-1"></i>Por Urgência
+      </button>
+      <button type="button"
+              @click="setModo('lista')"
+              :class="modo === 'lista' ? 'btn btn-primary' : 'btn btn-outline-secondary'">
+        <i class="bi bi-list-ul me-1"></i>Lista
+      </button>
+    </div>
+    <a href="{% url 'financeiro:despesas' %}" class="btn btn-outline-danger btn-sm">
+      <i class="bi bi-plus-circle me-1"></i>Nova Despesa
+    </a>
+  </div>
+</div>
+
+<!-- ── KPIs ───────────────────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-sm-4">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--danger-bg); color:var(--danger)">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+      </div>
+      <div class="kpi-value" style="font-size:22px; color:var(--danger)">{{ kpi_em_atraso|brl }}</div>
+      <div class="kpi-label">Em atraso</div>
+      <div class="kpi-sub">vencido sem pagamento</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--warning-bg); color:var(--warning)">
+        <i class="bi bi-calendar-fill"></i>
+      </div>
+      <div class="kpi-value" style="font-size:22px; color:var(--warning)">{{ kpi_este_mes|brl }}</div>
+      <div class="kpi-label">A pagar este mês</div>
+      <div class="kpi-sub">vence em {{ hoje|date:"F/Y" }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-sm-4">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#fdf1e0; color:#d97706">
+        <i class="bi bi-stack"></i>
+      </div>
+      <div class="kpi-value" style="font-size:22px; color:#d97706">{{ kpi_total_pendente|brl }}</div>
+      <div class="kpi-label">Total pendente</div>
+      <div class="kpi-sub">todas as parcelas abertas</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Barra flutuante de seleção ─────────────────────────────────────────── -->
+<div x-show="selecionadas > 0" x-cloak
+     style="position:sticky; top:70px; z-index:100; margin-bottom:12px">
+  <div class="alert alert-success d-flex align-items-center gap-3 py-2 px-3 mb-0 shadow-sm">
+    <i class="bi bi-check-circle-fill text-success fs-5"></i>
+    <span class="fw-semibold flex-grow-1">
+      <span x-text="selecionadas"></span> parcela<span x-show="selecionadas > 1">s</span>
+      selecionada<span x-show="selecionadas > 1">s</span>
+      — R$ <span x-text="fmt(total)"></span>
+    </span>
+    <button type="submit" form="form-lote-pagar" class="btn btn-success btn-sm">
+      <i class="bi bi-check-all me-1"></i>Confirmar pagamento
+    </button>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════��════════════════════════════════════════
+     MODO URGÊNCIA
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div x-show="modo === 'urgencia'"
+     {% if modo_inicial != 'urgencia' %}style="display:none"{% endif %}>
+
+  <!-- Em Atraso -->
+  {% if em_atraso_grupo %}
+  <div class="card mb-4" style="border-left:3px solid #b3261e">
+    <div class="card-header d-flex align-items-center" style="color:#6b1712">
+      <i class="bi bi-exclamation-circle-fill me-2" style="color:#b3261e"></i>
+      Em Atraso — {{ em_atraso_grupo|length }} parcela{{ em_atraso_grupo|length|pluralize:"s" }}
+      <span class="ms-auto fw-bold" style="font-size:13px; color:#b3261e">{{ total_atraso|brl }}</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead>
+          <tr>
+            <th style="width:36px">
+              <input type="checkbox" class="form-check-input" title="Selecionar todas"
+                     @change="selecionarGrupo('chk-atraso', $event)">
+            </th>
+            <th>Despesa</th><th>Parcela</th><th>Venceu em</th><th>Atraso</th>
+            <th class="text-end">Valor</th><th class="text-center" style="width:80px">Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in em_atraso_grupo %}
+          <tr style="background:#fceceb">
+            <td>
+              <input type="checkbox" name="parcela_ids" value="{{ p.pk }}"
+                     form="form-lote-pagar" class="form-check-input chk-atraso"
+                     @change="toggle($event.target.checked, '{{ p.valor }}')">
+            </td>
+            <td>
+              <a href="{% url 'financeiro:despesa-detalhe' p.despesa.pk %}"
+                 class="fw-semibold text-decoration-none text-primary">
+                {{ p.despesa.descricao|truncatechars:38 }}
+              </a>
+              <div class="text-muted" style="font-size:11px">{{ p.despesa.get_categoria_display }}</div>
+            </td>
+            <td>
+              <span class="badge" style="background:#fceceb; color:#6b1712; border:1px solid #d9a19d">
+                {{ p.numero }}/{{ p.despesa.numero_parcelas }}
+              </span>
+            </td>
+            <td class="small text-danger fw-semibold">{{ p.data_vencimento|date:"d/m/Y" }}</td>
+            <td><span class="badge bg-danger">{{ p.dias_atraso }}d</span></td>
+            <td class="text-end fw-bold text-danger">{{ p.valor|brl }}</td>
+            <td class="text-center">
+              <form method="post" action="{% url 'financeiro:parcela-despesa-pagar' p.pk %}">
+                {% csrf_token %}
+                <button type="button" class="btn btn-sm btn-danger"
+                        onclick="confirmarAcao(this, 'Pagar parcela {{ p.numero }}/{{ p.despesa.numero_parcelas }}?', '{{ p.valor|brl }}', 'success')">
+                  <i class="bi bi-check-lg me-1"></i>Pagar
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Esta Semana -->
+  {% if esta_semana_grupo %}
+  <div class="card mb-4" style="border-left:3px solid #b8860a">
+    <div class="card-header d-flex align-items-center" style="color:#6b4f08">
+      <i class="bi bi-calendar-week me-2" style="color:#b8860a"></i>
+      Esta semana — {{ esta_semana_grupo|length }} parcela{{ esta_semana_grupo|length|pluralize:"s" }}
+      <span class="ms-auto fw-bold" style="font-size:13px; color:#b8860a">{{ total_semana|brl }}</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead>
+          <tr>
+            <th style="width:36px">
+              <input type="checkbox" class="form-check-input" title="Selecionar todas"
+                     @change="selecionarGrupo('chk-semana', $event)">
+            </th>
+            <th>Despesa</th><th>Parcela</th><th>Vencimento</th>
+            <th class="text-end">Valor</th><th class="text-center" style="width:80px">Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in esta_semana_grupo %}
+          <tr>
+            <td>
+              <input type="checkbox" name="parcela_ids" value="{{ p.pk }}"
+                     form="form-lote-pagar" class="form-check-input chk-semana"
+                     @change="toggle($event.target.checked, '{{ p.valor }}')">
+            </td>
+            <td>
+              <a href="{% url 'financeiro:despesa-detalhe' p.despesa.pk %}"
+                 class="fw-semibold text-decoration-none text-primary">
+                {{ p.despesa.descricao|truncatechars:38 }}
+              </a>
+              <div class="text-muted" style="font-size:11px">{{ p.despesa.get_categoria_display }}</div>
+            </td>
+            <td>
+              <span class="badge" style="background:#fdf6e0; color:#6b4f08; border:1px solid #e0c27a">
+                {{ p.numero }}/{{ p.despesa.numero_parcelas }}
+              </span>
+            </td>
+            <td class="small fw-semibold">
+              {{ p.data_vencimento|date:"d/m/Y" }}
+              {% if p.data_vencimento == hoje %}
+              <span class="badge bg-warning text-dark ms-1" style="font-size:10px">Hoje</span>
+              {% endif %}
+            </td>
+            <td class="text-end fw-bold">{{ p.valor|brl }}</td>
+            <td class="text-center">
+              <form method="post" action="{% url 'financeiro:parcela-despesa-pagar' p.pk %}">
+                {% csrf_token %}
+                <button type="button" class="btn btn-sm btn-warning text-dark"
+                        onclick="confirmarAcao(this, 'Pagar parcela {{ p.numero }}/{{ p.despesa.numero_parcelas }}?', '{{ p.valor|brl }}', 'success')">
+                  <i class="bi bi-check-lg me-1"></i>Pagar
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Próximas -->
+  {% if proximas_grupo %}
+  <div class="card mb-4" style="border-left:3px solid #d97706">
+    <div class="card-header d-flex align-items-center">
+      <i class="bi bi-calendar-plus me-2" style="color:#d97706"></i>
+      Próximas — {{ proximas_grupo|length }} parcela{{ proximas_grupo|length|pluralize:"s" }}
+    </div>
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead>
+          <tr>
+            <th style="width:36px">
+              <input type="checkbox" class="form-check-input" title="Selecionar todas"
+                     @change="selecionarGrupo('chk-proxima', $event)">
+            </th>
+            <th>Despesa</th><th>Parcela</th><th>Vencimento</th>
+            <th class="text-end">Valor</th><th class="text-center" style="width:80px">Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in proximas_grupo %}
+          <tr>
+            <td>
+              <input type="checkbox" name="parcela_ids" value="{{ p.pk }}"
+                     form="form-lote-pagar" class="form-check-input chk-proxima"
+                     @change="toggle($event.target.checked, '{{ p.valor }}')">
+            </td>
+            <td>
+              <a href="{% url 'financeiro:despesa-detalhe' p.despesa.pk %}"
+                 class="fw-semibold text-decoration-none text-primary">
+                {{ p.despesa.descricao|truncatechars:38 }}
+              </a>
+              <div class="text-muted" style="font-size:11px">{{ p.despesa.get_categoria_display }}</div>
+            </td>
+            <td>
+              <span class="badge bg-light text-dark border">
+                {{ p.numero }}/{{ p.despesa.numero_parcelas }}
+              </span>
+            </td>
+            <td class="small text-muted">{{ p.data_vencimento|date:"d/m/Y" }}</td>
+            <td class="text-end text-muted">{{ p.valor|brl }}</td>
+            <td class="text-center">
+              <form method="post" action="{% url 'financeiro:parcela-despesa-pagar' p.pk %}">
+                {% csrf_token %}
+                <button type="button" class="btn btn-sm btn-outline-primary"
+                        onclick="confirmarAcao(this, 'Pagar parcela {{ p.numero }}/{{ p.despesa.numero_parcelas }}?', '{{ p.valor|brl }}', 'success')">
+                  <i class="bi bi-check-lg me-1"></i>Pagar
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if not em_atraso_grupo and not esta_semana_grupo and not proximas_grupo %}
+  <div class="card">
+    <div class="empty-state">
+      <div class="empty-state-icon"><i class="bi bi-check2-circle"></i></div>
+      <div class="empty-state-title">Nenhum pagamento pendente</div>
+      <div class="empty-state-text">Todas as parcelas de despesas estão em dia.</div>
+    </div>
+  </div>
+  {% endif %}
+
+</div><!-- /modo urgencia -->
+
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     MODO LISTA
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div x-show="modo === 'lista'"
+     {% if modo_inicial != 'lista' %}style="display:none"{% endif %}>
+
+  <!-- Filtros -->
+  <form method="get" class="card mb-3">
+    <div class="card-body py-2">
+      <div class="d-flex gap-2 flex-wrap align-items-center">
+        <input type="hidden" name="modo" value="lista">
+        <select name="situacao" class="form-select form-select-sm" style="max-width:200px">
+          {% for val, rotulo in situacoes %}
+          <option value="{{ val }}" {% if filtro_situacao == val %}selected{% endif %}>{{ rotulo }}</option>
+          {% endfor %}
+        </select>
+        <input type="month" name="mes" class="form-control form-control-sm" style="max-width:160px"
+               value="{{ filtro_mes }}">
+        <select name="categoria" class="form-select form-select-sm" style="max-width:200px">
+          <option value="">Todas as categorias</option>
+          {% for val, rotulo in categorias %}
+          <option value="{{ val }}" {% if filtro_categoria == val %}selected{% endif %}>{{ rotulo }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-funnel me-1"></i>Filtrar
+        </button>
+        {% if filtro_situacao or filtro_categoria %}
+        <a href="?mes={{ filtro_mes }}&modo=lista" class="btn btn-sm btn-outline-danger" title="Limpar filtros">
+          <i class="bi bi-x-lg"></i>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </form>
+
+  <!-- Tabela -->
+  <div class="card">
+    {% if parcelas %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th style="width:36px">
+              <input type="checkbox" class="form-check-input" title="Selecionar todas"
+                     @change="document.querySelectorAll('.chk-lista').forEach(cb => { if (cb.checked !== $event.target.checked) { cb.checked = $event.target.checked; cb.dispatchEvent(new Event('change')); } })">
+            </th>
+            <th>Despesa</th>
+            <th>Categoria</th>
+            <th class="text-center">Parcela</th>
+            <th>Vencimento</th>
+            <th class="text-end">Valor</th>
+            <th class="text-center">Situação</th>
+            <th class="text-center" style="width:80px">Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in parcelas %}
+          <tr class="{% if p.situacao == 'pago' %}table-success bg-opacity-25{% elif p.em_atraso %}table-danger bg-opacity-25{% endif %}">
+            <td>
+              {% if p.situacao != 'pago' %}
+              <input type="checkbox" name="parcela_ids" value="{{ p.pk }}"
+                     form="form-lote-pagar" class="form-check-input chk-lista"
+                     @change="toggle($event.target.checked, '{{ p.valor }}')">
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'financeiro:despesa-detalhe' p.despesa.pk %}"
+                 class="fw-semibold text-decoration-none text-primary">
+                {{ p.despesa.descricao|truncatechars:40 }}
+              </a>
+              {% if p.despesa.debito_automatico %}
+              <span class="badge bg-success-subtle text-success border ms-1" style="font-size:10px"
+                    title="Débito automático">
+                <i class="bi bi-lightning-charge-fill"></i>
+              </span>
+              {% endif %}
+              {% if p.despesa.veiculo %}
+              <div class="text-muted text-mono" style="font-size:11px">{{ p.despesa.veiculo.placa }}</div>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge bg-secondary-subtle text-secondary border small">
+                {{ p.despesa.get_categoria_display }}
+              </span>
+            </td>
+            <td class="text-center">
+              <span class="badge bg-light text-dark border">
+                {{ p.numero }}/{{ p.despesa.numero_parcelas }}
+              </span>
+            </td>
+            <td>
+              <span class="{% if p.em_atraso %}text-danger fw-semibold{% else %}text-muted{% endif %} small">
+                {{ p.data_vencimento|date:"d/m/Y" }}
+              </span>
+              {% if p.em_atraso %}
+              <span class="badge bg-danger ms-1" style="font-size:10px">{{ p.dias_atraso }}d</span>
+              {% endif %}
+            </td>
+            <td class="text-end fw-semibold {% if p.em_atraso %}text-danger{% elif p.situacao == 'pago' %}text-success{% endif %}">
+              {{ p.valor|brl }}
+            </td>
+            <td class="text-center">
+              {% if p.situacao == 'pago' %}
+                <span class="status-badge status-success">Pago</span>
+              {% elif p.em_atraso %}
+                <span class="status-badge status-danger">Em Atraso</span>
+              {% else %}
+                <span class="status-badge status-warning">Pendente</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              {% if p.situacao != 'pago' %}
+              <form method="post" action="{% url 'financeiro:parcela-despesa-pagar' p.pk %}">
+                {% csrf_token %}
+                <button type="button" class="btn btn-sm btn-success"
+                        onclick="confirmarAcao(this, 'Pagar parcela {{ p.numero }}/{{ p.despesa.numero_parcelas }}?', '{{ p.valor|brl }}', 'success')">
+                  <i class="bi bi-check-lg"></i>
+                </button>
+              </form>
+              {% else %}
+              <form method="post" action="{% url 'financeiro:parcela-despesa-estornar' p.pk %}">
+                {% csrf_token %}
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                        onclick="confirmarAcao(this, 'Estornar parcela {{ p.numero }}?', 'Voltará para pendente.', 'danger')">
+                  <i class="bi bi-arrow-counterclockwise"></i>
+                </button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="table-light">
+          <tr>
+            <td colspan="5" class="fw-semibold small text-muted">
+              {{ parcelas|length }} parcela{{ parcelas|length|pluralize:"s" }}
+            </td>
+            <td class="text-end fw-bold">{{ total_listado|brl }}</td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon"><i class="bi bi-check2-circle"></i></div>
+      <div class="empty-state-title">Nenhuma parcela encontrada</div>
+      <div class="empty-state-text">Tente ajustar os filtros ou registre novas despesas parceladas.</div>
+      <a href="{% url 'financeiro:despesas' %}" class="btn btn-danger btn-sm mt-2">
+        <i class="bi bi-plus-circle me-1"></i>Registrar Despesa
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+</div><!-- /modo lista -->
+
+</div><!-- /x-data -->
+{% endblock %}

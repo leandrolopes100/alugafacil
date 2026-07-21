@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% block titulo %}OS #{{ ordem.pk }} — {{ ordem.veiculo.placa }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'manutencao:lista' %}" class="text-decoration-none text-secondary">Manutenção</a></li>
+<li class="breadcrumb-item active">OS #{{ ordem.pk }}</li>
+{% endblock %}
+
+{% block conteudo %}
+<div class="page-header d-flex align-items-start justify-content-between gap-3 flex-wrap">
+  <div>
+    <h1 class="page-title">OS #{{ ordem.pk }} — <span class="text-mono">{{ ordem.veiculo.placa }}</span></h1>
+    <div class="mt-1">
+      <span class="badge {% if ordem.tipo == 'preventiva' %}bg-info text-dark{% elif ordem.tipo == 'sinistro' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+        {{ ordem.get_tipo_display }}
+      </span>
+      <span class="badge ms-1 {% if ordem.situacao == 'concluida' %}bg-success{% elif ordem.situacao == 'em_andamento' %}bg-primary{% elif ordem.situacao == 'agendada' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+        {{ ordem.get_situacao_display }}
+      </span>
+    </div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if ordem.situacao == 'agendada' %}
+    <form method="post" action="{% url 'manutencao:alterar-status' ordem.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="situacao" value="em_andamento">
+      <button type="submit" class="btn btn-primary btn-sm">
+        <i class="bi bi-play-fill me-1"></i>Iniciar Atendimento
+      </button>
+    </form>
+    <form method="post" action="{% url 'manutencao:alterar-status' ordem.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="situacao" value="cancelada">
+      <button type="button" class="btn btn-outline-danger btn-sm"
+              onclick="confirmarAcao(this, 'Cancelar esta OS?', '', 'danger')">
+        <i class="bi bi-x-circle me-1"></i>Cancelar OS
+      </button>
+    </form>
+    {% elif ordem.situacao == 'em_andamento' %}
+    <form method="post" action="{% url 'manutencao:alterar-status' ordem.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="situacao" value="concluida">
+      <button type="submit" class="btn btn-success btn-sm">
+        <i class="bi bi-check-circle-fill me-1"></i>Concluir OS
+      </button>
+    </form>
+    <form method="post" action="{% url 'manutencao:alterar-status' ordem.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="situacao" value="cancelada">
+      <button type="button" class="btn btn-outline-danger btn-sm"
+              onclick="confirmarAcao(this, 'Cancelar esta OS?', '', 'danger')">
+        <i class="bi bi-x-circle me-1"></i>Cancelar OS
+      </button>
+    </form>
+    {% endif %}
+    <a href="{% url 'manutencao:editar' ordem.pk %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-pencil me-1"></i>Editar
+    </a>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-tools me-2 text-primary"></i>Detalhes do Serviço</div>
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item px-3 py-2 small"><span class="text-muted">Descrição</span><div class="fw-semibold mt-1">{{ ordem.descricao }}</div></li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2"><span class="text-muted">Fornecedor</span><span>{{ ordem.fornecedor|default:"—" }}</span></li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2"><span class="text-muted">KM na manutenção</span><span class="text-mono">{{ ordem.km_na_manutencao|default:"—" }}</span></li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2"><span class="text-muted">Agendada</span><span>{% if ordem.data_agendada %}{{ ordem.data_agendada|date:"d/m/Y" }}{% else %}—{% endif %}</span></li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2"><span class="text-muted">Entrada</span><span>{% if ordem.data_entrada %}{{ ordem.data_entrada|date:"d/m/Y" }}{% else %}—{% endif %}</span></li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2"><span class="text-muted">Saída</span><span>{% if ordem.data_saida %}{{ ordem.data_saida|date:"d/m/Y" }}{% else %}—{% endif %}</span></li>
+        <li class="list-group-item d-flex justify-content-between px-3 py-2 fw-bold">
+          <span>Custo Total</span>
+          <span class="{% if ordem.custo_total %}text-danger{% else %}text-muted{% endif %}">
+            {% if ordem.custo_total %}R$ {{ ordem.custo_total|floatformat:2 }}{% else %}—{% endif %}
+          </span>
+        </li>
+      </ul>
+    </div>
+
+    {% if ordem.situacao == 'concluida' and not ordem.custo_total %}
+    <div class="alert alert-warning mt-3 small py-2">
+      <i class="bi bi-exclamation-triangle me-1"></i>
+      OS concluída sem custo informado. Edite a OS para registrar o valor e gerar a despesa financeira automaticamente.
+    </div>
+    {% endif %}
+
+    {% if ordem.despesa_gerada %}
+    <div class="card mt-3">
+      <div class="card-header"><i class="bi bi-dash-circle-fill me-2 text-danger"></i>Despesa Financeira Gerada</div>
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Valor lançado</span>
+          <span class="fw-bold text-danger">R$ {{ ordem.despesa_gerada.valor|floatformat:2 }}</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Competência</span>
+          <span>{{ ordem.despesa_gerada.data_competencia|date:"d/m/Y" }}</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Situação</span>
+          <span class="badge {% if ordem.despesa_gerada.pago %}bg-success{% else %}bg-warning text-dark{% endif %}">
+            {% if ordem.despesa_gerada.pago %}Pago{% else %}Pendente{% endif %}
+          </span>
+        </li>
+        <li class="list-group-item px-3 py-2 small text-muted">
+          <i class="bi bi-info-circle me-1"></i>Lançada automaticamente ao concluir a OS. Aparece no relatório de frota e fluxo de caixa.
+        </li>
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-car-front me-2 text-primary"></i>Veículo</div>
+      <div class="card-body">
+        <a href="{% url 'frota:detalhe' ordem.veiculo.pk %}" class="fw-bold text-primary text-decoration-none">{{ ordem.veiculo.marca }} {{ ordem.veiculo.modelo }}</a>
+        <div class="text-mono text-muted small">{{ ordem.veiculo.placa }}</div>
+        <div class="text-muted small mt-1">KM atual: {{ ordem.veiculo.km_atual|floatformat:0 }}</div>
+      </div>
+    </div>
+    {% if ordem.observacoes %}
+    <div class="card">
+      <div class="card-header small text-muted">Observações</div>
+      <div class="card-body small text-muted">{{ ordem.observacoes }}</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,236 @@
+{% extends 'core/relatorios/base_relatorio.html' %}
+{% load core_tags %}
+{% block titulo %}Inadimplência{% endblock %}
+{% block titulo_breadcrumb %}Inadimplência{% endblock %}
+{% block titulo_relatorio %}Relatório de Inadimplência{% endblock %}
+{% block descricao %}{{ hoje|date:"d/m/Y" }} · {{ vencidas|length }} conta{{ vencidas|length|pluralize:"s" }} vencida{{ vencidas|length|pluralize:"s" }}{% endblock %}
+
+{% block acoes_extras %}
+<a href="{% url 'core:relatorio-exportar' 'inadimplencia' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+  <i class="bi bi-download"></i> CSV
+</a>
+{% endblock %}
+
+{% block filtro_periodo %}
+<div style="display:flex; gap:8px; flex-wrap:wrap">
+  <a href="?" class="btn btn-sm {% if not situacao_filtro %}btn-primary{% else %}btn-outline-secondary{% endif %}">Todos</a>
+  <a href="?situacao=vencido" class="btn btn-sm {% if situacao_filtro == 'vencido' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Vencidos</a>
+  <a href="?situacao=pendente" class="btn btn-sm {% if situacao_filtro == 'pendente' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Pendentes</a>
+  <a href="?situacao=pago_parcial" class="btn btn-sm {% if situacao_filtro == 'pago_parcial' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Parciais</a>
+</div>
+{% endblock %}
+
+{% block conteudo_relatorio %}
+
+<!-- KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#f8fafc; color:var(--text-secondary)">
+        <i class="bi bi-wallet2"></i>
+      </div>
+      <div class="kpi-value" style="font-size:20px">{{ total_em_aberto|brl }}</div>
+      <div class="kpi-label">Total em Aberto</div>
+      <div class="kpi-sub">{{ todas|length }} conta{{ todas|length|pluralize:"s" }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--danger-bg); color:var(--danger)">
+        <i class="bi bi-exclamation-circle-fill"></i>
+      </div>
+      <div class="kpi-value" style="color:var(--danger); font-size:20px">{{ total_vencido|brl }}</div>
+      <div class="kpi-label">Vencido</div>
+      <div class="kpi-sub">{{ vencidas|length }} conta{{ vencidas|length|pluralize:"s" }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--warning-bg); color:var(--warning)">
+        <i class="bi bi-hourglass-split"></i>
+      </div>
+      <div class="kpi-value" style="color:var(--warning); font-size:20px">{{ total_a_vencer|brl }}</div>
+      <div class="kpi-label">A Vencer</div>
+      <div class="kpi-sub">{{ a_vencer|length }} conta{{ a_vencer|length|pluralize:"s" }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:{% if inadimplencia_pct > 20 %}var(--danger-bg){% elif inadimplencia_pct > 10 %}var(--warning-bg){% else %}var(--success-bg){% endif %}; color:{% if inadimplencia_pct > 20 %}var(--danger){% elif inadimplencia_pct > 10 %}var(--warning){% else %}var(--success){% endif %}">
+        <i class="bi bi-percent"></i>
+      </div>
+      <div class="kpi-value" style="color:{% if inadimplencia_pct > 20 %}var(--danger){% elif inadimplencia_pct > 10 %}var(--warning){% else %}var(--success){% endif %}">{{ inadimplencia_pct }}%</div>
+      <div class="kpi-label">Taxa Inadimplência</div>
+      <div class="kpi-sub">do total em aberto</div>
+    </div>
+  </div>
+</div>
+
+<!-- Aging + gráfico -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-clock-history"></i> Aging por Faixa de Atraso</div>
+      <div class="card-body" style="padding:16px">
+        <canvas id="chartAging" style="max-height:220px"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-list-check"></i> Detalhe por Faixa</div>
+      <div class="card-body p-0">
+        {% for row in aging_rows %}
+        {% if row.contas %}
+        <div style="padding:14px 20px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:14px">
+          <div style="width:3px; height:44px; border-radius:3px; background:{{ row.cor }}; flex-shrink:0"></div>
+          <div style="flex:1">
+            <div style="font-size:13.5px; font-weight:600; color:#0f172a">{{ row.label }}</div>
+            <div style="font-size:12px; color:#94a3b8; margin-top:1px">{{ row.contas|length }} conta{{ row.contas|length|pluralize:"s" }}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:16px; font-weight:700; color:#0f172a">{{ row.total|brl }}</div>
+          </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+        {% if not vencidas %}
+        <div style="padding:40px; text-align:center">
+          <i class="bi bi-emoji-smile d-block mb-2" style="font-size:32px; color:#1e7a4c; opacity:.4"></i>
+          <div style="font-size:13px; font-weight:600; color:#475569">Nenhuma conta vencida</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabela de inadimplentes -->
+{% if vencidas %}
+<div class="card mb-4">
+  <div class="card-header" style="color:#6b1712">
+    <i class="bi bi-exclamation-triangle-fill" style="color:#b3261e"></i>
+    Contas Vencidas — Para Cobrança
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Contrato</th><th>Cliente</th><th>Contato</th><th>Vencimento</th>
+          <th class="text-center">Atraso</th><th class="text-end">Saldo R$</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for conta in vencidas %}
+        <tr style="{% if conta.dias_em_atraso > 60 %}background:#fceceb{% elif conta.dias_em_atraso > 30 %}background:#fdf6e0{% endif %}">
+          <td>
+            <a href="{% url 'financeiro:conta-receber-detalhe' conta.pk %}" class="table-link text-mono">{{ conta.contrato.numero }}</a>
+          </td>
+          <td style="font-weight:500; font-size:13px">{{ conta.cliente.nome_exibicao }}</td>
+          <td style="font-size:12.5px; color:#64748b">{{ conta.cliente.celular|default:conta.cliente.telefone|default:"—" }}</td>
+          <td style="font-size:12.5px; color:#b3261e; font-weight:600">{{ conta.data_vencimento|date:"d/m/Y" }}</td>
+          <td class="text-center">
+            <span style="font-size:12px; font-weight:700; padding:2px 8px; border-radius:12px;
+              {% if conta.dias_em_atraso > 90 %}background:#fceceb; color:#8a1f18; border:1px solid #d9a19d
+              {% elif conta.dias_em_atraso > 60 %}background:#fceceb; color:#b3261e; border:1px solid #d9a19d
+              {% elif conta.dias_em_atraso > 30 %}background:#fbeee6; color:#a8461f; border:1px solid #f0cfa0
+              {% else %}background:#fdf6e0; color:#b8860a; border:1px solid #f0cfa0{% endif %}">
+              +{{ conta.dias_em_atraso }}d
+            </span>
+          </td>
+          <td class="text-end" style="font-weight:700; color:#b3261e; font-size:14px">
+            {{ conta.valor_saldo|brl }}
+          </td>
+          <td>
+            <a href="{% url 'financeiro:conta-receber-detalhe' conta.pk %}" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-cash-coin"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="background:#fceceb">
+          <td colspan="5" style="text-align:right; font-weight:700; padding:11px 16px">Total vencido:</td>
+          <td style="text-align:right; font-weight:700; color:#b3261e; font-size:15px; padding:11px 16px">
+            {{ total_vencido|brl }}
+          </td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Contas a vencer -->
+{% if a_vencer %}
+<div class="card">
+  <div class="card-header" style="color:#6b4f08">
+    <i class="bi bi-clock" style="color:#b8860a"></i>
+    Contas a Vencer — Atenção Preventiva
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead>
+        <tr><th>Contrato</th><th>Cliente</th><th>Vencimento</th><th class="text-center">Dias</th><th class="text-end">Saldo R$</th><th>Situação</th></tr>
+      </thead>
+      <tbody>
+        {% for conta in a_vencer %}
+        <tr>
+          <td><a href="{% url 'financeiro:conta-receber-detalhe' conta.pk %}" class="table-link text-mono">{{ conta.contrato.numero }}</a></td>
+          <td style="font-weight:500; font-size:13px">{{ conta.cliente.nome_exibicao }}</td>
+          <td style="font-size:13px; {% if conta.dias_para_vencer is not None and conta.dias_para_vencer <= 7 %}color:#b8860a; font-weight:600{% else %}color:#64748b{% endif %}">
+            {{ conta.data_vencimento|date:"d/m/Y" }}
+          </td>
+          <td class="text-center">
+            {% if conta.dias_para_vencer is not None %}
+            <span style="font-size:12px; font-weight:600; {% if conta.dias_para_vencer <= 7 %}color:#b8860a{% else %}color:#64748b{% endif %}">
+              {{ conta.dias_para_vencer }}d
+            </span>
+            {% endif %}
+          </td>
+          <td class="text-end" style="font-weight:600; font-size:14px">{{ conta.valor_saldo|brl }}</td>
+          <td>
+            <span class="status-badge {% if conta.situacao == 'pago_parcial' %}status-primary{% else %}status-warning{% endif %}">
+              {{ conta.get_situacao_display }}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const aging = {{ chart_aging|safe }};
+new Chart(document.getElementById('chartAging'), {
+  type: 'bar',
+  data: {
+    labels: aging.labels,
+    datasets: [
+      {
+        label: 'Valor R$',
+        data: aging.valores,
+        backgroundColor: ['rgba(245,158,11,.7)', 'rgba(249,115,22,.7)', 'rgba(239,68,68,.7)', 'rgba(220,38,38,.7)'],
+        borderRadius: 4,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: '#f1f5f9' }, ticks: { callback: v => 'R$ ' + v.toLocaleString('pt-BR') } }
+    }
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assinatura Digital — Contrato {{ contrato.numero }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    body { background: linear-gradient(135deg, #f0f2f5 0%, #e9ecef 100%); min-height: 100vh; }
+  </style>
+</head>
+<body class="d-flex align-items-center justify-content-center p-3 py-5">
+
+<div class="w-100" style="max-width: 520px">
+
+  <!-- Cabeçalho -->
+  <div class="text-center mb-4">
+    <div class="d-inline-flex align-items-center justify-content-center bg-primary text-white rounded-3 mb-3" style="width:52px; height:52px">
+      <i class="bi bi-pen fs-4"></i>
+    </div>
+    <h1 class="h5 fw-bold mb-0">Aluga Fácil</h1>
+    <p class="text-muted small">Assinatura Digital de Contrato</p>
+  </div>
+
+  <!-- Card do contrato -->
+  <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
+
+    <!-- Número e status -->
+    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
+      <div>
+        <div class="text-muted small">Contrato</div>
+        <div class="fw-bold fs-5 font-monospace text-primary">{{ contrato.numero }}</div>
+      </div>
+      {% if contrato.assinado %}
+      <span class="badge bg-success d-flex align-items-center gap-1 px-3 py-2">
+        <i class="bi bi-check-circle-fill"></i> Assinado
+      </span>
+      {% else %}
+      <span class="badge bg-warning text-dark px-3 py-2">Aguardando assinatura</span>
+      {% endif %}
+    </div>
+
+    <!-- Dados -->
+    <div class="card-body">
+      <div class="row g-3 mb-3">
+        <div class="col-6">
+          <div class="text-muted small">Locatário</div>
+          <div class="fw-semibold">{{ contrato.cliente.nome_exibicao }}</div>
+        </div>
+        <div class="col-6">
+          <div class="text-muted small">Veículo</div>
+          <div class="fw-semibold font-monospace">{{ contrato.veiculo.placa }}</div>
+          <div class="small text-muted">{{ contrato.veiculo.marca }} {{ contrato.veiculo.modelo }}</div>
+        </div>
+        <div class="col-6">
+          <div class="text-muted small">Saída</div>
+          <div class="fw-semibold">{% if contrato.data_saida %}{{ contrato.data_saida|date:"d/m/Y H:i" }}{% else %}—{% endif %}</div>
+        </div>
+        <div class="col-6">
+          <div class="text-muted small">Devolução prevista</div>
+          <div class="fw-semibold">{{ contrato.data_devolucao_prevista|date:"d/m/Y H:i" }}</div>
+        </div>
+        <div class="col-6">
+          <div class="text-muted small">Diária</div>
+          <div class="fw-bold text-success fs-5">R$ {{ contrato.diaria }}</div>
+        </div>
+        <div class="col-6">
+          <div class="text-muted small">Caução</div>
+          <div class="fw-bold fs-5">R$ {{ contrato.caucao_valor }}</div>
+        </div>
+      </div>
+
+      <!-- Termos -->
+      <div class="alert alert-light border small py-2 mb-3">
+        <i class="bi bi-info-circle me-1"></i>
+        Ao assinar, você declara que leu e concorda com os termos deste contrato de locação,
+        responsabilizando-se pelo uso correto do veículo e pelo pagamento de eventuais danos, multas e km excedentes.
+      </div>
+
+      {% if messages %}
+      {% for msg in messages %}
+      <div class="alert alert-{% if 'success' in msg.tags %}success{% else %}info{% endif %} d-flex align-items-center gap-2 py-2">
+        <i class="bi bi-check-circle-fill flex-shrink-0"></i> {{ msg }}
+      </div>
+      {% endfor %}
+      {% endif %}
+
+      {% if contrato.assinado %}
+      <div class="alert alert-success d-flex align-items-center gap-2">
+        <i class="bi bi-patch-check-fill fs-4 flex-shrink-0"></i>
+        <div>
+          <div class="fw-semibold">Contrato assinado com sucesso</div>
+          <div class="small">{{ contrato.assinado_em|date:"d/m/Y H:i" }}</div>
+        </div>
+      </div>
+      {% else %}
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary w-100 py-3 fw-bold fs-6">
+          <i class="bi bi-pen me-2"></i>Assinar Contrato Digitalmente
+        </button>
+      </form>
+      {% endif %}
+    </div>
+
+    <div class="card-footer bg-light border-top text-center text-muted py-2" style="font-size:.72rem">
+      Assinatura com validade jurídica — MP 2.200-2/2001 &mdash; IP e horário registrados
+    </div>
+  </div>
+
+  <p class="text-center text-muted mt-3" style="font-size:.75rem">
+    Aluga Fácil ERP &copy; {% now "Y" %}
+  </p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

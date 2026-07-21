@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+{% block titulo %}Check-out — {{ contrato.numero }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'contratos:lista' %}" class="text-decoration-none text-secondary">Contratos</a></li>
+<li class="breadcrumb-item"><a href="{% url 'contratos:detalhe' contrato.pk %}" class="text-decoration-none text-secondary">{{ contrato.numero }}</a></li>
+<li class="breadcrumb-item active">Check-out</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header">
+  <h1 class="page-title"><i class="bi bi-box-arrow-right text-primary me-2"></i>Check-out</h1>
+  <p class="page-subtitle">Contrato <strong>{{ contrato.numero }}</strong> &mdash; {{ contrato.cliente.nome_exibicao }} / <span class="text-mono">{{ contrato.veiculo.placa }}</span></p>
+</div>
+
+<div class="row g-4">
+
+  <!-- Formulário -->
+  <div class="col-lg-7">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+      <div class="form-error-banner mb-4">
+        <i class="bi bi-exclamation-triangle-fill flex-shrink-0" style="font-size:16px; margin-top:1px"></i>
+        <div>
+          <div class="fw-semibold mb-1">Corrija os erros abaixo:</div>
+          <ul>{% for erro in form.non_field_errors %}<li>{{ erro }}</li>{% endfor %}</ul>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-speedometer2 me-2 text-primary"></i>Dados de Saída</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6 {% if form.km_saida.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">KM de Saída *</label>
+              {{ form.km_saida }}
+              {% if form.km_saida.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.km_saida.errors.0 }}</div>
+              {% endif %}
+              <div class="form-text">Odômetro atual: <strong>{{ contrato.veiculo.km_atual|floatformat:0 }} km</strong></div>
+            </div>
+            <div class="col-md-6 {% if form.combustivel_saida.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Combustível *</label>
+              {{ form.combustivel_saida }}
+              {% if form.combustivel_saida.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.combustivel_saida.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold small">Observações</label>
+              {{ form.obs_saida }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% if contrato.caucao_valor > 0 %}
+        {% if contrato.caucao_situacao == 'pendente' %}
+        <!-- Card de caução: mostrado quando ainda não foi registrado como pago -->
+        <div class="card mb-4" style="border-left:4px solid #b8860a" x-data="{ pago: '{{ form.caucao_situacao.value|default:contrato.caucao_situacao }}' === 'pago' }">
+          <div class="card-header" style="background:#fdf6e0; color:#6b4f08">
+            <i class="bi bi-shield-lock me-2"></i>
+            Caução — {{ contrato.caucao_valor|brl }}
+            <span class="badge ms-2" style="background:#f0cfa0; color:#78350f; font-size:11px">Pendente</span>
+          </div>
+          <div class="card-body">
+            <p class="small text-muted mb-3">
+              Registre abaixo se o caução foi coletado agora ou se ficará pendente.
+              <strong class="text-danger">O check-out só será liberado quando o caução estiver marcado como pago.</strong>
+            </p>
+            <div class="row g-3">
+              <div class="col-md-6 {% if form.caucao_situacao.errors %}field-has-error{% endif %}">
+                <label class="form-label fw-semibold small">Situação da Caução *</label>
+                <select name="caucao_situacao" class="form-select" @change="pago = $event.target.value === 'pago'">
+                  <option value="pendente" :selected="!pago">Pendente — cobrar depois</option>
+                  <option value="pago" :selected="pago">Pago — coletado agora</option>
+                </select>
+                {% if form.caucao_situacao.errors %}
+                <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.caucao_situacao.errors.0 }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-6 {% if form.caucao_forma_pagamento.errors %}field-has-error{% endif %}" x-show="pago" x-cloak>
+                <label class="form-label fw-semibold small">Forma de Recebimento *</label>
+                {{ form.caucao_forma_pagamento }}
+                {% if form.caucao_forma_pagamento.errors %}
+                <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.caucao_forma_pagamento.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <!-- Caução já pago: mantém o valor via hidden inputs -->
+        <input type="hidden" name="caucao_situacao" value="{{ contrato.caucao_situacao }}">
+        {% endif %}
+      {% endif %}
+
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-camera me-2 text-primary"></i>Fotos de Saída</div>
+        <div class="card-body">
+          <p class="small text-muted mb-3">
+            <i class="bi bi-shield-check me-1 text-success"></i>
+            Fotografe frente, traseira, laterais e interior. Essas fotos protegem juridicamente em caso de avaria.
+          </p>
+          <input type="file" name="fotos_saida" multiple accept="image/*" class="form-control">
+          <div class="form-text">Selecione múltiplos arquivos de uma vez</div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 justify-content-end">
+        <a href="{% url 'contratos:detalhe' contrato.pk %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-box-arrow-right me-1"></i>Confirmar Check-out
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Checklist de segurança -->
+  <div class="col-lg-5">
+    <div class="card" x-data="{ mostrarOK: {% if not tem_bloqueios and not tem_avisos %}true{% else %}false{% endif %} }">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-clipboard2-check me-2 text-primary"></i>Checklist de Segurança</span>
+        {% if tem_bloqueios %}
+        <span class="badge" style="background:var(--danger-bg); color:var(--danger-text); border:1px solid #d9a19d; font-size:11px">
+          <i class="bi bi-x-circle-fill me-1"></i>Bloqueios
+        </span>
+        {% elif tem_avisos %}
+        <span class="badge" style="background:#fdf6e0; color:#6b4f08; border:1px solid #e0c27a; font-size:11px">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i>Avisos
+        </span>
+        {% else %}
+        <span class="badge" style="background:var(--success-bg); color:var(--success-text); border:1px solid #a7d9bf; font-size:11px">
+          <i class="bi bi-check-circle-fill me-1"></i>Tudo OK
+        </span>
+        {% endif %}
+      </div>
+
+      <!-- Bloqueios (vermelho) — sempre visíveis -->
+      <ul class="list-group list-group-flush">
+        {% for ok, msg in checklist %}
+        {% if ok == False %}
+        <li class="list-group-item d-flex align-items-center gap-3 px-3 py-2 list-group-item-danger">
+          <i class="bi bi-x-circle-fill text-danger fs-5 flex-shrink-0"></i>
+          <span class="small text-danger fw-semibold">{{ msg }}</span>
+        </li>
+        {% endif %}
+        {% endfor %}
+      </ul>
+
+      <!-- Avisos (amarelo) — sempre visíveis, não bloqueiam -->
+      {% if tem_avisos %}
+      <ul class="list-group list-group-flush" style="border-top:1px solid #f0cfa0">
+        {% for ok, msg in checklist %}
+        {% if ok == None %}
+        <li class="list-group-item d-flex align-items-center gap-3 px-3 py-2" style="background:#fdf6e0">
+          <i class="bi bi-exclamation-triangle-fill fs-5 flex-shrink-0" style="color:#d97706"></i>
+          <span class="small fw-semibold" style="color:#6b4f08">{{ msg }}</span>
+        </li>
+        {% endif %}
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      <!-- Itens aprovados (verde) — colapsados quando há bloqueios ou avisos -->
+      <div x-show="mostrarOK" x-cloak>
+        <ul class="list-group list-group-flush" style="border-top:1px solid var(--border-light)">
+          {% for ok, msg in checklist %}
+          {% if ok == True %}
+          <li class="list-group-item d-flex align-items-center gap-3 px-3 py-2">
+            <i class="bi bi-check-circle-fill text-success fs-5 flex-shrink-0"></i>
+            <span class="small text-muted">{{ msg }}</span>
+          </li>
+          {% endif %}
+          {% endfor %}
+        </ul>
+      </div>
+
+      <!-- Toggle -->
+      <div class="card-footer py-2 text-center" style="background:#fafafa; border-top:1px solid var(--border-light)">
+        <button type="button" class="btn btn-link btn-sm text-muted p-0" style="font-size:12px; text-decoration:none"
+                @click="mostrarOK = !mostrarOK">
+          <span x-show="!mostrarOK"><i class="bi bi-eye me-1"></i>Ver itens aprovados</span>
+          <span x-show="mostrarOK"><i class="bi bi-eye-slash me-1"></i>Ocultar itens aprovados</span>
+        </button>
+      </div>
+
+      {% if tem_bloqueios %}
+      <div class="card-footer bg-danger bg-opacity-10 border-top border-danger border-opacity-25">
+        <p class="small text-danger fw-semibold mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Bloqueios encontrados</p>
+        <p class="small text-danger mb-0">Resolva os itens marcados em vermelho antes de prosseguir com o check-out.</p>
+      </div>
+      {% elif tem_avisos %}
+      <div class="card-footer border-top" style="background:#fdf1e0; border-color:#f0cfa0 !important">
+        <p class="small fw-semibold mb-1" style="color:#6b4f08"><i class="bi bi-exclamation-triangle-fill me-1"></i>Atenção</p>
+        <p class="small mb-0" style="color:#6b4f08">Há documentos não cadastrados. O check-out pode prosseguir, mas regularize assim que possível.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Resumo do contrato -->
+    <div class="card mt-3">
+      <div class="card-header"><i class="bi bi-info-circle me-2 text-primary"></i>Resumo do Contrato</div>
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Cliente</span>
+          <span class="fw-semibold">{{ contrato.cliente.nome_exibicao }}</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Devolução prevista</span>
+          <span class="fw-semibold">{{ contrato.data_devolucao_prevista|date:"d/m/Y H:i" }}</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Diária</span>
+          <span>{{ contrato.diaria|brl }}</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Caução</span>
+          <span class="{% if contrato.caucao_situacao == 'pendente' and contrato.caucao_valor > 0 %}text-danger fw-semibold{% endif %}">
+            {{ contrato.caucao_valor|brl }} — {{ contrato.get_caucao_situacao_display }}
+          </span>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

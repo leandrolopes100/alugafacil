@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block titulo %}Multas de Trânsito{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'financeiro:fluxo' %}" class="text-decoration-none text-secondary">Financeiro</a></li>
+<li class="breadcrumb-item active">Multas</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div>
+    <h1 class="page-title">Multas de Trânsito</h1>
+    {% if pendentes_criticas > 0 %}
+    <p class="page-subtitle mb-0 text-danger fw-semibold">
+      <i class="bi bi-exclamation-triangle-fill me-1"></i>
+      {{ pendentes_criticas }} multa{{ pendentes_criticas|pluralize:"s" }} aguardando identificação de condutor
+    </p>
+    {% endif %}
+  </div>
+  <a href="{% url 'financeiro:multa-nova' %}" class="btn btn-warning d-flex align-items-center gap-2">
+    <i class="bi bi-plus-lg"></i>Registrar Multa
+  </a>
+</div>
+
+<!-- Filtros -->
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <a href="?" class="btn btn-sm {% if not filtro_situacao %}btn-dark{% else %}btn-outline-secondary{% endif %}">Todas</a>
+  {% for valor, rotulo in situacoes %}
+  <a href="?situacao={{ valor }}" class="btn btn-sm {% if filtro_situacao == valor %}btn-dark{% else %}btn-outline-secondary{% endif %}">{{ rotulo }}</a>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr><th>Placa</th><th>Data Infração</th><th>Descrição</th><th>Prazo Indicação</th><th class="text-end">Valor</th><th>Situação</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for multa in multas %}
+        <tr class="{% if multa.prazo_vencido and multa.situacao == 'pendente_identificacao' %}table-danger{% elif multa.prazo_critico %}table-warning{% endif %}">
+          <td><span class="badge bg-light text-dark border text-mono fw-bold">{{ multa.veiculo.placa }}</span></td>
+          <td class="small text-muted">{{ multa.data_infracao|date:"d/m/Y" }}</td>
+          <td class="small">{{ multa.descricao|truncatechars:50 }}</td>
+          <td class="small">
+            {% if multa.prazo_indicacao %}
+            <span class="{% if multa.prazo_vencido %}text-danger fw-bold{% elif multa.prazo_critico %}text-warning fw-semibold{% else %}text-muted{% endif %}">
+              {% if multa.prazo_vencido %}<i class="bi bi-exclamation-triangle-fill me-1"></i>VENCIDO — {% endif %}
+              {{ multa.prazo_indicacao|date:"d/m/Y" }}
+            </span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-end fw-semibold text-danger">R$ {{ multa.valor|floatformat:2 }}</td>
+          <td>
+            <span class="badge badge-status
+              {% if multa.situacao == 'paga' %}bg-success
+              {% elif multa.situacao == 'pendente_identificacao' %}bg-danger
+              {% elif multa.situacao == 'identificada' %}bg-warning text-dark
+              {% elif multa.situacao == 'cobrada_cliente' %}bg-info text-dark
+              {% else %}bg-secondary{% endif %}">
+              {{ multa.get_situacao_display }}
+            </span>
+          </td>
+          <td class="text-end table-action">
+            <a href="{% url 'financeiro:multa-detalhe' multa.pk %}" class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center py-5 text-muted">
+          <i class="bi bi-patch-check d-block fs-1 mb-2 opacity-25 text-success"></i>
+          Nenhuma multa registrada.
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

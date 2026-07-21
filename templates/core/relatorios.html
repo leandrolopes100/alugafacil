@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% block titulo %}Relatórios — {{ mes_nome }} {{ ano }}{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Relatórios</li>{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div>
+    <h1 class="page-title">Relatório Gerencial</h1>
+    <p class="page-subtitle mb-0">{{ mes_nome }} de {{ ano }}</p>
+  </div>
+  <a href="{% url 'financeiro:fluxo' %}?ano={{ ano }}&mes={{ mes }}" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-graph-up me-1"></i>Fluxo de Caixa
+  </a>
+</div>
+
+<!-- Seletor de mês -->
+<form method="get" class="d-flex align-items-center gap-2 mb-4">
+  <select name="mes" class="form-select form-select-sm" style="max-width:140px">
+    {% for num, nome in meses %}
+    <option value="{{ num }}" {% if num == mes %}selected{% endif %}>{{ nome }}</option>
+    {% endfor %}
+  </select>
+  <input type="number" name="ano" class="form-control form-control-sm" value="{{ ano }}" min="2020" max="2030" style="max-width:90px">
+  <button type="submit" class="btn btn-sm btn-primary">Buscar</button>
+</form>
+
+<!-- KPIs do mês -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="card kpi-card text-center py-3 border-success border-opacity-50 bg-success bg-opacity-10">
+      <div class="kpi-label text-success">Receita do Mês</div>
+      <div class="kpi-value text-success fs-3 fw-bold mt-1">R$ {{ receita_total|floatformat:2 }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card kpi-card text-center py-3">
+      <div class="kpi-label text-muted">Contratos Encerrados</div>
+      <div class="kpi-value fs-3 fw-bold mt-1">{{ contratos_encerrados }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card kpi-card text-center py-3">
+      <div class="kpi-label text-muted">Ticket Médio</div>
+      <div class="kpi-value fs-3 fw-bold mt-1">R$ {{ ticket_medio|floatformat:2 }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card kpi-card text-center py-3 {% if ocupacao_media >= 70 %}border-success border-opacity-50 bg-success bg-opacity-10{% elif ocupacao_media >= 40 %}border-warning border-opacity-50{% else %}border-danger border-opacity-50{% endif %}">
+      <div class="kpi-label {% if ocupacao_media >= 70 %}text-success{% elif ocupacao_media >= 40 %}text-warning{% else %}text-danger{% endif %}">Ocupação Média</div>
+      <div class="kpi-value fs-3 fw-bold mt-1 {% if ocupacao_media >= 70 %}text-success{% elif ocupacao_media >= 40 %}text-warning{% else %}text-danger{% endif %}">{{ ocupacao_media }}%</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- Receita e ocupação por veículo -->
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-car-front me-2 text-primary"></i>Desempenho por Veículo</div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Placa</th>
+              <th>Modelo</th>
+              <th>Grupo</th>
+              <th class="text-center">Dias Locados</th>
+              <th class="text-center">Ocupação</th>
+              <th class="text-end">Receita</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in dados_veiculos %}
+            <tr>
+              <td><a href="{% url 'frota:detalhe' d.veiculo.pk %}" class="text-primary text-mono fw-semibold text-decoration-none">{{ d.veiculo.placa }}</a></td>
+              <td class="small">{{ d.veiculo.marca }} {{ d.veiculo.modelo }}</td>
+              <td class="small text-muted">{{ d.veiculo.grupo.nome }}</td>
+              <td class="text-center small">{{ d.dias_locados }}</td>
+              <td class="text-center">
+                <div class="d-flex align-items-center justify-content-center gap-2">
+                  <div class="progress flex-grow-1" style="height:6px; max-width:80px">
+                    <div class="progress-bar {% if d.ocupacao >= 70 %}bg-success{% elif d.ocupacao >= 40 %}bg-warning{% else %}bg-danger{% endif %}"
+                         style="width:{{ d.ocupacao }}%"></div>
+                  </div>
+                  <span class="small fw-semibold {% if d.ocupacao >= 70 %}text-success{% elif d.ocupacao >= 40 %}text-warning{% else %}text-danger{% endif %}">{{ d.ocupacao }}%</span>
+                </div>
+              </td>
+              <td class="text-end fw-semibold {% if d.receita > 0 %}text-success{% else %}text-muted{% endif %}">
+                R$ {{ d.receita|floatformat:2 }}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center text-muted py-4">Nenhum dado no período.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top clientes -->
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-trophy me-2 text-warning"></i>Clientes Mais Frequentes</div>
+      <ul class="list-group list-group-flush">
+        {% for c in top_clientes %}
+        <li class="list-group-item d-flex justify-content-between align-items-center px-3 py-2 small">
+          <div>
+            <div class="fw-semibold">{{ c.cliente__razao_social|default:c.cliente__nome }}</div>
+          </div>
+          <span class="badge bg-primary rounded-pill">{{ c.locacoes }} locaç{{ c.locacoes|pluralize:"ão,ões" }}</span>
+        </li>
+        {% empty %}
+        <li class="list-group-item text-center text-muted small py-3">Nenhum dado no período.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

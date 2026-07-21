@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+{% block titulo %}Fluxo de Caixa — {{ mes_nome }} {{ ano }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Fluxo de Caixa</li>
+{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div>
+    <h1 class="page-title">Fluxo de Caixa</h1>
+    <p class="page-subtitle mb-0">{{ mes_nome }} de {{ ano }}</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'financeiro:despesas' %}" class="btn btn-outline-danger btn-sm">
+      <i class="bi bi-dash-circle me-1"></i>Despesas
+    </a>
+    <a href="{% url 'financeiro:multas' %}" class="btn btn-outline-warning btn-sm">
+      <i class="bi bi-exclamation-triangle me-1"></i>Multas
+    </a>
+  </div>
+</div>
+
+<!-- Seletor de mês -->
+<form method="get" class="d-flex align-items-center gap-2 mb-4">
+  <select name="mes" class="form-select form-select-sm" style="max-width:140px">
+    {% for num, nome in meses %}
+    <option value="{{ num }}" {% if num == mes %}selected{% endif %}>{{ nome }}</option>
+    {% endfor %}
+  </select>
+  <input type="number" name="ano" class="form-control form-control-sm" value="{{ ano }}" min="2020" max="2030" style="max-width:90px">
+  <button type="submit" class="btn btn-sm btn-primary">Buscar</button>
+</form>
+
+<!-- Cards KPI -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card text-center py-3 border-success border-opacity-50 bg-success bg-opacity-10">
+      <div class="text-success small fw-semibold">Entradas</div>
+      <div class="fw-bold fs-3 text-success">{{ total_entradas|brl }}</div>
+      <div class="text-muted small">{{ pagamentos|length }} pagamento{{ pagamentos|length|pluralize:"s" }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-center py-3 border-danger border-opacity-50 bg-danger bg-opacity-10">
+      <div class="text-danger small fw-semibold">Saídas</div>
+      <div class="fw-bold fs-3 text-danger">{{ total_saidas|brl }}</div>
+      <div class="text-muted small">{{ saidas_detalhadas|length }} lançamento{{ saidas_detalhadas|length|pluralize:"s" }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-center py-3 {% if saldo >= 0 %}border-success border-opacity-50 bg-success bg-opacity-10{% else %}border-danger border-opacity-50 bg-danger bg-opacity-10{% endif %}">
+      <div class="{% if saldo >= 0 %}text-success{% else %}text-danger{% endif %} small fw-semibold">Saldo do Mês</div>
+      <div class="fw-bold fs-3 {% if saldo >= 0 %}text-success{% else %}text-danger{% endif %}">{{ saldo|brl }}</div>
+      <div class="text-muted small">{% if saldo >= 0 %}Positivo ✓{% else %}Negativo ⚠{% endif %}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Gráfico Anual -->
+<div class="card mb-4">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <span><i class="bi bi-bar-chart-fill me-2 text-primary"></i>Evolução Anual — {{ ano }}</span>
+    <span class="text-muted" style="font-size:12px">Entradas <span style="color:#1e7a4c">▬</span> &nbsp;Saídas <span style="color:#b3261e">▬</span> &nbsp;Saldo <span style="color:#d97706">▬</span></span>
+  </div>
+  <div class="card-body" style="padding:16px 20px">
+    <canvas id="fluxoChart" height="80"></canvas>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- Entradas por forma de pagamento -->
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-arrow-up-circle-fill text-success me-2"></i>Entradas por Forma de Pagamento</div>
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead><tr><th>Forma</th><th class="text-end">Total</th></tr></thead>
+          <tbody>
+            {% for item in entradas_por_forma %}
+            <tr>
+              <td class="small">{{ item.forma_pagamento }}</td>
+              <td class="text-end fw-semibold text-success">{{ item.total|brl }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="2" class="text-center text-muted small py-3">Nenhum pagamento no período.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Lista de pagamentos -->
+    {% if pagamentos %}
+    <div class="card mt-3">
+      <div class="card-header small text-muted">Pagamentos Detalhados</div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Data</th><th>Contrato</th><th>Forma</th><th class="text-end">Valor</th></tr></thead>
+          <tbody>
+            {% for pag in pagamentos %}
+            <tr>
+              <td class="small text-muted">{{ pag.data_pagamento|date:"d/m" }}</td>
+              <td class="small"><a href="{% url 'contratos:detalhe' pag.contrato.pk %}" class="text-primary text-mono text-decoration-none">{{ pag.contrato.numero }}</a></td>
+              <td class="small text-muted">{{ pag.get_forma_pagamento_display }}</td>
+              <td class="text-end text-success fw-semibold small">{{ pag.valor|brl }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Saídas por categoria -->
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-arrow-down-circle-fill text-danger me-2"></i>Saídas por Categoria</div>
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead><tr><th>Categoria</th><th class="text-end">Total</th></tr></thead>
+          <tbody>
+            {% for item in saidas_por_categoria %}
+            <tr>
+              <td class="small">{{ item.categoria }}</td>
+              <td class="text-end fw-semibold text-danger">{{ item.total|brl }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="2" class="text-center text-muted small py-3">Nenhuma despesa no período.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Lista de saídas (despesas simples + parcelas do mês) -->
+    {% if saidas_detalhadas %}
+    <div class="card mt-3">
+      <div class="card-header small text-muted">Saídas Detalhadas</div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Data</th><th>Descrição</th><th class="text-center">Status</th><th class="text-end">Valor</th></tr></thead>
+          <tbody>
+            {% for item in saidas_detalhadas %}
+            <tr>
+              <td class="small text-muted">{{ item.data|date:"d/m" }}</td>
+              <td class="small">
+                <a href="{% url 'financeiro:despesa-detalhe' item.despesa_pk %}" class="text-decoration-none text-dark">
+                  {{ item.descricao|truncatechars:24 }}
+                </a>
+                {% if item.parcela_info %}
+                <span class="badge bg-primary-subtle text-primary border" style="font-size:10px">{{ item.parcela_info }}</span>
+                {% endif %}
+                {% if item.debito_automatico %}
+                <i class="bi bi-lightning-charge-fill text-success" style="font-size:10px" title="Débito automático"></i>
+                {% endif %}
+              </td>
+              <td class="text-center">
+                {% if item.situacao == 'pago' %}
+                <span class="badge bg-success-subtle text-success border" style="font-size:10px">Pago</span>
+                {% elif item.situacao == 'em_atraso' %}
+                <span class="badge bg-danger-subtle text-danger border" style="font-size:10px">Atraso</span>
+                {% else %}
+                <span class="badge bg-warning-subtle text-warning border" style="font-size:10px">Pendente</span>
+                {% endif %}
+              </td>
+              <td class="text-end text-danger fw-semibold small">{{ item.valor|brl }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const labels = {{ grafico_labels|safe }};
+  const ent    = {{ grafico_entradas|safe }};
+  const sai    = {{ grafico_saidas|safe }};
+  const sal    = {{ grafico_saldo|safe }};
+  const mesSel = {{ mes }} - 1;
+
+  const entColors = ent.map((_, i) => i === mesSel ? 'rgba(16,185,129,.95)' : 'rgba(16,185,129,.55)');
+  const saiColors = sai.map((_, i) => i === mesSel ? 'rgba(239,68,68,.95)'  : 'rgba(239,68,68,.55)');
+
+  new Chart(document.getElementById('fluxoChart').getContext('2d'), {
+    data: {
+      labels,
+      datasets: [
+        {
+          type: 'bar', label: 'Entradas',
+          data: ent, backgroundColor: entColors,
+          borderRadius: 4, order: 2,
+        },
+        {
+          type: 'bar', label: 'Saídas',
+          data: sai, backgroundColor: saiColors,
+          borderRadius: 4, order: 2,
+        },
+        {
+          type: 'line', label: 'Saldo',
+          data: sal,
+          borderColor: '#d97706',
+          backgroundColor: 'rgba(217,119,6,.07)',
+          borderWidth: 2.5,
+          pointBackgroundColor: sal.map((v, i) => i === mesSel ? '#d97706' : (v >= 0 ? '#1e7a4c' : '#b3261e')),
+          pointRadius: sal.map((_, i) => i === mesSel ? 6 : 4),
+          tension: 0.35, fill: true, order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 12 }, usePointStyle: true, padding: 16 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ' ' + ctx.dataset.label + ': R$ ' + Math.abs(ctx.raw).toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+          },
+        },
+      },
+      scales: {
+        y: {
+          ticks: { callback: v => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 0 }), font: { size: 11 } },
+          grid: { color: 'rgba(0,0,0,.04)' },
+        },
+        x: { ticks: { font: { size: 12 } }, grid: { display: false } },
+      },
+    },
+  });
+})();
+</script>
+{% endblock %}

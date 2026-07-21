@@ -1,0 +1,330 @@
+{% extends 'base.html' %}
+{% block titulo %}Despesa — {{ despesa.descricao|truncatechars:40 }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'financeiro:index' %}" class="text-decoration-none text-secondary">Financeiro</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financeiro:despesas' %}" class="text-decoration-none text-secondary">Despesas</a></li>
+<li class="breadcrumb-item active">Detalhe</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<!-- Cabeçalho -->
+<div class="page-header d-flex align-items-start justify-content-between flex-wrap gap-2 mb-4">
+  <div>
+    <h1 class="page-title mb-1">{{ despesa.descricao }}</h1>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <span class="badge bg-secondary-subtle text-secondary border">{{ despesa.get_categoria_display }}</span>
+      {% if despesa.parcelado %}
+      <span class="badge bg-primary-subtle text-primary border">
+        <i class="bi bi-credit-card me-1"></i>{{ despesa.numero_parcelas }}x — {{ despesa.get_forma_pagamento_display }}
+      </span>
+      {% if despesa.debito_automatico %}
+      <span class="badge bg-success-subtle text-success border">
+        <i class="bi bi-lightning-charge-fill me-1"></i>Débito automático
+      </span>
+      {% endif %}
+      {% endif %}
+      {% if despesa.veiculo %}
+      <span class="badge bg-light text-dark border text-mono">{{ despesa.veiculo.placa }}</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'financeiro:despesa-editar' despesa.pk %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-pencil me-1"></i>Editar
+    </a>
+    <form method="post" action="{% url 'financeiro:despesa-excluir' despesa.pk %}">
+      {% csrf_token %}
+      <button type="button" class="btn btn-outline-danger btn-sm"
+              onclick="confirmarAcao(this, 'Excluir esta despesa?', 'Parcelas vinculadas também serão removidas. Esta ação não pode ser desfeita.', 'danger')">
+        <i class="bi bi-trash me-1"></i>Excluir
+      </button>
+    </form>
+    <a href="{% url 'financeiro:despesas' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Voltar
+    </a>
+  </div>
+</div>
+
+{% if despesa.parcelado %}
+
+<!-- KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-4">
+    <div class="card text-center py-3">
+      <div class="text-muted small fw-semibold">Valor Total</div>
+      <div class="fw-bold fs-4 text-danger">R$ {{ despesa.valor|floatformat:2 }}</div>
+      <div class="text-muted small">{{ despesa.data_competencia|date:"d/m/Y" }}</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card text-center py-3 border-success border-opacity-50 bg-success bg-opacity-10">
+      <div class="text-success small fw-semibold">Total Pago</div>
+      <div class="fw-bold fs-4 text-success">R$ {{ total_pago|floatformat:2 }}</div>
+      <div class="text-muted small">{{ pagas }}/{{ despesa.numero_parcelas }} parcelas</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card text-center py-3 {% if total_pendente > 0 %}border-warning border-opacity-50 bg-warning bg-opacity-10{% else %}border-success border-opacity-50 bg-success bg-opacity-10{% endif %}">
+      <div class="{% if total_pendente > 0 %}text-warning{% else %}text-success{% endif %} small fw-semibold">Saldo Pendente</div>
+      <div class="fw-bold fs-4 {% if total_pendente > 0 %}text-warning{% else %}text-success{% endif %}">R$ {{ total_pendente|floatformat:2 }}</div>
+      <div class="text-muted small">{% if total_pendente == 0 %}Quitado ✓{% else %}{{ restantes }} parcelas restantes{% endif %}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Barra de progresso -->
+{% if despesa.numero_parcelas %}
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <div class="d-flex justify-content-between small text-muted mb-1">
+      <span>Progresso de pagamento</span>
+      <span>{{ pagas }} de {{ despesa.numero_parcelas }} parcelas pagas</span>
+    </div>
+    <div class="progress" style="height:10px">
+      <div class="progress-bar bg-success" role="progressbar"
+           style="width: {% widthratio pagas despesa.numero_parcelas 100 %}%">
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Formulário oculto para pagamento em lote (HTML5 form association via atributo form="") -->
+<form id="form-lote"
+      method="post"
+      action="{% url 'financeiro:parcelas-pagar-lote' %}">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.path }}">
+</form>
+
+<!-- Tabela de parcelas -->
+<div class="card"
+     x-data="{
+       selecionadas: 0,
+       total: 0.0,
+       toggle(checked, valor) {
+         if (checked) { this.selecionadas++; this.total += valor; }
+         else { this.selecionadas--; this.total -= valor; }
+       },
+       selecionarTodas(event) {
+         document.querySelectorAll('.chk-parcela').forEach(cb => {
+           if (!cb.disabled && cb.checked !== event.target.checked) {
+             cb.checked = event.target.checked;
+             cb.dispatchEvent(new Event('change'));
+           }
+         });
+       }
+     }">
+
+  <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <span><i class="bi bi-list-columns me-2 text-primary"></i>Parcelas</span>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      {% if restantes > 0 %}
+      <span class="badge bg-primary-subtle text-primary border">{{ despesa.numero_parcelas }}x {{ despesa.get_forma_pagamento_display }}</span>
+      <button type="submit"
+              form="form-lote"
+              class="btn btn-sm btn-success"
+              x-show="selecionadas > 0"
+              x-cloak
+              :title="'Pagar ' + selecionadas + ' parcela(s) selecionada(s)'">
+        <i class="bi bi-check-all me-1"></i>
+        Pagar <span x-text="selecionadas"></span> selecionada<span x-show="selecionadas > 1">s</span>
+        <span class="ms-1 opacity-75">(R$ <span x-text="total.toFixed(2)"></span>)</span>
+      </button>
+      {% else %}
+      <span class="badge bg-success-subtle text-success border"><i class="bi bi-check-circle-fill me-1"></i>Quitado</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          {% if restantes > 0 %}
+          <th style="width:36px">
+            <input type="checkbox" class="form-check-input" title="Selecionar todas pendentes"
+                   @change="selecionarTodas($event)">
+          </th>
+          {% endif %}
+          <th style="width:60px">Nº</th>
+          <th>Vencimento</th>
+          <th class="text-end">Valor</th>
+          <th class="text-center">Situação</th>
+          <th>Pago em</th>
+          <th class="text-center" style="width:110px">Ação</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for parcela in parcelas %}
+        <tr class="{% if parcela.situacao == 'pago' %}table-success bg-opacity-25{% elif parcela.em_atraso %}table-danger bg-opacity-25{% endif %}">
+
+          {% if restantes > 0 %}
+          <td>
+            {% if parcela.situacao != 'pago' %}
+            <input type="checkbox"
+                   name="parcela_ids"
+                   value="{{ parcela.pk }}"
+                   form="form-lote"
+                   class="form-check-input chk-parcela"
+                   @change="toggle($event.target.checked, {{ parcela.valor }})">
+            {% endif %}
+          </td>
+          {% endif %}
+
+          <td class="fw-semibold text-center">{{ parcela.numero }}/{{ despesa.numero_parcelas }}</td>
+          <td>
+            {{ parcela.data_vencimento|date:"d/m/Y" }}
+            {% if parcela.em_atraso and parcela.situacao != 'pago' %}
+            <span class="badge bg-danger-subtle text-danger border small ms-1">{{ parcela.dias_atraso }}d atraso</span>
+            {% endif %}
+          </td>
+          <td class="text-end fw-semibold">R$ {{ parcela.valor|floatformat:2 }}</td>
+          <td class="text-center">
+            {% if parcela.situacao == 'pago' %}
+            <span class="badge bg-success-subtle text-success border">
+              <i class="bi bi-check-circle-fill me-1"></i>Pago
+              {% if despesa.debito_automatico %}<i class="bi bi-lightning-charge-fill ms-1" title="Confirmado automaticamente"></i>{% endif %}
+            </span>
+            {% elif parcela.situacao == 'em_atraso' %}
+            <span class="badge bg-danger-subtle text-danger border">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i>Em Atraso
+            </span>
+            {% else %}
+            <span class="badge bg-warning-subtle text-warning border">Pendente</span>
+            {% endif %}
+          </td>
+          <td class="text-muted small">
+            {% if parcela.data_pagamento %}{{ parcela.data_pagamento|date:"d/m/Y" }}{% else %}—{% endif %}
+          </td>
+          <td class="text-center">
+            {% if parcela.situacao != 'pago' %}
+            <form method="post" action="{% url 'financeiro:parcela-despesa-pagar' parcela.pk %}">
+              {% csrf_token %}
+              <button type="button" class="btn btn-sm btn-success" title="Marcar como pago"
+                      onclick="confirmarAcao(this, 'Pagar parcela {{ parcela.numero }}/{{ despesa.numero_parcelas }}?', 'R$ {{ parcela.valor|floatformat:2 }}', 'success')">
+                <i class="bi bi-check-lg"></i>
+              </button>
+            </form>
+            {% else %}
+            <form method="post" action="{% url 'financeiro:parcela-despesa-estornar' parcela.pk %}">
+              {% csrf_token %}
+              <button type="button" class="btn btn-sm btn-outline-secondary" title="Estornar pagamento"
+                      onclick="confirmarAcao(this, 'Estornar parcela {{ parcela.numero }}/{{ despesa.numero_parcelas }}?', 'A parcela voltará para pendente.', 'danger')">
+                <i class="bi bi-arrow-counterclockwise"></i>
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center py-4 text-muted">
+            <i class="bi bi-exclamation-circle d-block fs-3 mb-1 opacity-25"></i>
+            Nenhuma parcela encontrada.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="table-light">
+        <tr>
+          {% if restantes > 0 %}<td></td>{% endif %}
+          <td colspan="2" class="fw-semibold small text-muted">Total</td>
+          <td class="text-end fw-bold">R$ {{ despesa.valor|floatformat:2 }}</td>
+          <td colspan="3"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+{% else %}
+
+<!-- Despesa simples (não parcelada) -->
+<div class="row g-4">
+
+  <!-- Coluna esquerda: dados -->
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-info-circle text-secondary"></i>Dados da Despesa</div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-4 text-muted small">Categoria</dt>
+          <dd class="col-sm-8">{{ despesa.get_categoria_display }}</dd>
+
+          <dt class="col-sm-4 text-muted small">Valor</dt>
+          <dd class="col-sm-8 fw-bold text-danger fs-5">R$ {{ despesa.valor|floatformat:2 }}</dd>
+
+          <dt class="col-sm-4 text-muted small">Competência</dt>
+          <dd class="col-sm-8">{{ despesa.data_competencia|date:"d/m/Y" }}</dd>
+
+          <dt class="col-sm-4 text-muted small">Situação</dt>
+          <dd class="col-sm-8">
+            {% if despesa.data_pagamento %}
+            <span class="badge bg-success-subtle text-success border">
+              <i class="bi bi-check-circle-fill me-1"></i>Pago em {{ despesa.data_pagamento|date:"d/m/Y" }}
+            </span>
+            {% else %}
+            <span class="badge bg-warning-subtle text-warning border">Pendente</span>
+            {% endif %}
+          </dd>
+
+          {% if despesa.veiculo %}
+          <dt class="col-sm-4 text-muted small">Veículo</dt>
+          <dd class="col-sm-8 text-mono fw-semibold">{{ despesa.veiculo.placa }}</dd>
+          {% endif %}
+
+          {% if despesa.observacoes %}
+          <dt class="col-sm-4 text-muted small">Observações</dt>
+          <dd class="col-sm-8 text-muted">{{ despesa.observacoes }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <!-- Coluna direita: ações de pagamento -->
+  <div class="col-lg-5">
+    {% if not despesa.data_pagamento %}
+    <div class="card" style="border-color:#1e7a4c">
+      <div class="card-header" style="color:#14532d">
+        <i class="bi bi-cash-coin" style="color:#1e7a4c"></i>Registrar Pagamento
+      </div>
+      <div class="card-body">
+        <form method="post" action="{% url 'financeiro:despesa-pagar' despesa.pk %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Data de Pagamento *</label>
+            <input type="date" name="data_pagamento" class="form-control"
+                   value="{{ hoje|date:'Y-m-d' }}" required>
+          </div>
+          <button type="submit" class="btn btn-success w-100">
+            <i class="bi bi-check-lg me-1"></i>Confirmar Pagamento
+          </button>
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <div class="card border-success border-opacity-25 bg-success bg-opacity-10">
+      <div class="card-body text-center py-4">
+        <i class="bi bi-check-circle-fill text-success" style="font-size:32px"></i>
+        <div class="fw-bold mt-2">Despesa Quitada</div>
+        <div class="text-muted small">Pago em {{ despesa.data_pagamento|date:"d/m/Y" }}</div>
+        <form method="post" action="{% url 'financeiro:despesa-despagar' despesa.pk %}" class="mt-3">
+          {% csrf_token %}
+          <button type="button" class="btn btn-outline-secondary btn-sm"
+                  onclick="confirmarAcao(this, 'Estornar pagamento desta despesa?', 'A despesa voltará para pendente.', 'danger')">
+            <i class="bi bi-arrow-counterclockwise me-1"></i>Estornar Pagamento
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+{% endif %}
+
+{% endblock %}

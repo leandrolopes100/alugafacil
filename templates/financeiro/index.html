@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+{% block titulo %}Financeiro{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Financeiro</li>{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Financeiro</h1>
+    <p class="page-subtitle">Visão geral financeira — receitas e despesas</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'financeiro:contas-receber' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-list-ul me-1"></i>Todas as Contas
+    </a>
+    <a href="{% url 'financeiro:fluxo' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-graph-up-arrow me-1"></i>Fluxo de Caixa
+    </a>
+  </div>
+</div>
+
+<!-- KPI Cards — Recebíveis -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'financeiro:contas-receber' %}" class="kpi-card">
+      <div class="kpi-icon" style="background:#fdf1e0; color:#d97706">
+        <i class="bi bi-receipt"></i>
+      </div>
+      <div class="kpi-value" style="font-size:22px; color:#d97706">{{ total_receber|brl }}</div>
+      <div class="kpi-label">Em Aberto</div>
+      <div class="kpi-sub">saldo a receber</div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'financeiro:contas-receber' %}?situacao=vencido" class="kpi-card">
+      <div class="kpi-icon" style="background:#fceceb; color:#b3261e">
+        <i class="bi bi-exclamation-circle-fill"></i>
+      </div>
+      <div class="kpi-value" style="font-size:22px; color:#b3261e">{{ total_vencido|brl }}</div>
+      <div class="kpi-label">Vencido</div>
+      <div class="kpi-sub">inadimplência</div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'financeiro:contas-receber' %}" class="kpi-card">
+      <div class="kpi-icon" style="background:#eafaf0; color:#1e7a4c">
+        <i class="bi bi-arrow-down-circle-fill"></i>
+      </div>
+      <div class="kpi-value" style="font-size:22px; color:#1e7a4c">{{ total_recebido_mes|brl }}</div>
+      <div class="kpi-label">Recebido no Mês</div>
+      <div class="kpi-sub">{% now "F Y" %}</div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'financeiro:contas-receber' %}?situacao=pendente" class="kpi-card">
+      <div class="kpi-icon" style="background:#fbeee6; color:#a8461f">
+        <i class="bi bi-hourglass-split"></i>
+      </div>
+      <div class="kpi-value" style="font-size:22px; color:#a8461f">{{ por_situacao.pendente.valor|brl }}</div>
+      <div class="kpi-label">Pendentes</div>
+      <div class="kpi-sub">{{ por_situacao.pendente.count }} conta{{ por_situacao.pendente.count|pluralize }}</div>
+    </a>
+  </div>
+</div>
+
+<!-- ── Recebíveis — Detalhe ───────────────────────────────────────────────── -->
+<div class="d-flex align-items-center gap-3 mb-3">
+  <span class="text-muted" style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap">
+    <i class="bi bi-arrow-down-circle me-1"></i>Recebíveis — Detalhe
+  </span>
+  <hr class="section-divider" style="flex:1; margin:0">
+</div>
+
+<div class="row g-4 mb-4">
+
+  <!-- Inadimplência por faixa de atraso + Por Situação -->
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header">
+        <i class="bi bi-clock-history" style="color:#b3261e"></i>
+        Inadimplência por Faixa de Atraso
+      </div>
+      <div class="card-body p-0">
+        {% for bucket_key, dados in aging.items %}
+        {% if dados.contas %}
+        <div style="padding:14px 20px; border-bottom:1px solid var(--border-light); display:flex; align-items:center; gap:12px">
+          <div style="width:3px; height:40px; border-radius:3px; flex-shrink:0; background:
+            {% if bucket_key == 'd30' %}#b8860a
+            {% elif bucket_key == 'd60' %}#a8461f
+            {% elif bucket_key == 'd90' %}#b3261e
+            {% else %}#8a1f18{% endif %}"></div>
+          <div style="flex:1">
+            <div style="font-size:13px; font-weight:600; color:#0f172a">{{ dados.label }}</div>
+            <div style="font-size:11.5px; color:#94a3b8; margin-top:1px">
+              {{ dados.contas|length }} conta{{ dados.contas|length|pluralize:"s" }}
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:15px; font-weight:700; color:#0f172a">{{ dados.total|brl }}</div>
+          </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+        {% if not aging.d30.contas and not aging.d60.contas and not aging.d90.contas and not aging.mais90.contas %}
+        <div style="padding:40px 20px; text-align:center">
+          <i class="bi bi-emoji-smile d-block mb-2" style="font-size:32px; color:#1e7a4c; opacity:.4"></i>
+          <div style="font-size:13px; font-weight:600; color:#475569">Nenhuma conta vencida</div>
+          <div style="font-size:12px; color:#94a3b8; margin-top:4px">Todas as contas estão em dia</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Status das contas -->
+    <div class="card">
+      <div class="card-header"><i class="bi bi-pie-chart"></i> Por Situação</div>
+      <ul class="list-group list-group-flush">
+        {% for situacao, dados in por_situacao.items %}
+        <li class="list-group-item d-flex align-items-center gap-3" style="padding:10px 20px">
+          <span style="width:8px; height:8px; border-radius:50%; flex-shrink:0; background:
+            {% if situacao == 'pendente' %}#b8860a
+            {% elif situacao == 'pago_parcial' %}#d97706
+            {% elif situacao == 'pago' %}#1e7a4c
+            {% elif situacao == 'vencido' %}#b3261e
+            {% else %}#94a3b8{% endif %}"></span>
+          <span style="flex:1; font-size:13px; color:#475569">{{ situacoes_labels|get_item:situacao }}</span>
+          <span style="font-size:13px; font-weight:600; color:#0f172a">{{ dados.count }}</span>
+          {% if dados.valor %}
+          <span style="font-size:12px; color:#94a3b8">{{ dados.valor|brl }}</span>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <!-- Contas abertas -->
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-list-check"></i> Contas em Aberto</span>
+        <a href="{% url 'financeiro:contas-receber' %}"
+           style="font-size:12.5px; color:#d97706; text-decoration:none; font-weight:600">
+          Ver todas <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Contrato</th>
+              <th>Cliente</th>
+              <th>Vencimento</th>
+              <th class="text-end">Saldo</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for conta in ultimas_abertas %}
+            <tr {% if conta.vencida %}class="table-warning"{% endif %}>
+              <td>
+                <a href="{% url 'financeiro:conta-receber-detalhe' conta.pk %}"
+                   class="table-link text-mono">{{ conta.contrato.numero }}</a>
+              </td>
+              <td style="font-weight:500; font-size:13px">{{ conta.cliente.nome_exibicao }}</td>
+              <td>
+                <span style="font-size:13px; {% if conta.vencida %}color:var(--danger); font-weight:600{% else %}color:#64748b{% endif %}">
+                  {{ conta.data_vencimento|date:"d/m/Y" }}
+                </span>
+                {% if conta.vencida %}
+                <span class="badge bg-danger-subtle text-danger border small" style="display:block; margin-top:2px">
+                  +{{ conta.dias_em_atraso }}d
+                </span>
+                {% elif conta.dias_para_vencer is not None and conta.dias_para_vencer <= 7 %}
+                <span class="badge bg-warning-subtle text-warning border small" style="display:block; margin-top:2px">
+                  {{ conta.dias_para_vencer }}d
+                </span>
+                {% endif %}
+              </td>
+              <td class="text-end" style="font-weight:700; font-size:14px; color:#0f172a">
+                {{ conta.valor_saldo|brl }}
+              </td>
+              <td>
+                {% if conta.vencida %}
+                  <span class="status-badge status-danger">Vencido</span>
+                {% elif conta.situacao == 'pago_parcial' %}
+                  <span class="status-badge status-primary">Pago Parcialmente</span>
+                {% elif conta.situacao == 'pago' %}
+                  <span class="status-badge status-success">Pago</span>
+                {% elif conta.situacao == 'cancelado' %}
+                  <span class="status-badge status-neutral">Cancelado</span>
+                {% else %}
+                  <span class="status-badge status-warning">Pendente</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5">
+                <div class="empty-state">
+                  <div class="empty-state-icon"><i class="bi bi-check2-all"></i></div>
+                  <div class="empty-state-title">Nenhuma conta em aberto</div>
+                  <div class="empty-state-text">
+                    Todas as contas estão pagas ou ainda não há contratos ativos.
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Despesas Operacionais ──────────────────────────────────────────────── -->
+<div class="d-flex align-items-center gap-3 mb-3">
+  <span class="text-muted" style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap">
+    <i class="bi bi-arrow-up-circle me-1"></i>Despesas Operacionais
+  </span>
+  <hr class="section-divider" style="flex:1; margin:0">
+</div>
+
+<!-- Painel Contas a Pagar -->
+<div class="card" style="border-left:3px solid #b3261e">
+  <div class="card-body py-3">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+             style="width:40px; height:40px; background:#fceceb">
+          <i class="bi bi-arrow-up-circle-fill" style="color:#b3261e; font-size:20px"></i>
+        </div>
+        <div>
+          <div class="fw-bold" style="font-size:13px; color:#0f172a">Contas a Pagar</div>
+          <div class="text-muted" style="font-size:12px">Parcelas de despesas pendentes</div>
+        </div>
+      </div>
+      <div class="d-flex gap-4 flex-wrap">
+        <div class="text-center">
+          <div class="fw-bold" style="font-size:18px; color:#b3261e">{{ total_pagar_vencido|brl }}</div>
+          <div class="text-muted" style="font-size:11px; text-transform:uppercase; letter-spacing:.04em">Em atraso</div>
+        </div>
+        <div class="text-center">
+          <div class="fw-bold" style="font-size:18px; color:#b8860a">{{ total_pagar_mes|brl }}</div>
+          <div class="text-muted" style="font-size:11px; text-transform:uppercase; letter-spacing:.04em">Este mês ({{ count_pagar_mes }} parcela{{ count_pagar_mes|pluralize:"s" }})</div>
+        </div>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{% url 'financeiro:contas-pagar' %}" class="btn btn-danger btn-sm">
+          <i class="bi bi-list-check me-1"></i>Contas a Pagar
+        </a>
+      </div>
+    </div>
+    {% if proximas_parcelas %}
+    <div class="mt-3 pt-3" style="border-top:1px solid #fecaca">
+      <div class="d-flex flex-wrap gap-2">
+        {% for p in proximas_parcelas %}
+        <a href="{% url 'financeiro:despesa-detalhe' p.despesa.pk %}"
+           class="text-decoration-none d-inline-flex align-items-center gap-1 rounded px-2 py-1"
+           style="font-size:12px; {% if p.em_atraso %}background:#fceceb; color:#6b1712; border:1px solid #d9a19d{% else %}background:#f1f5f9; color:#475569; border:1px solid #e2e8f0{% endif %}">
+          <span>{{ p.despesa.descricao|truncatechars:22 }}</span>
+          <span class="fw-semibold">{{ p.valor|brl }}</span>
+          <span class="opacity-60">{{ p.data_vencimento|date:"d/m" }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

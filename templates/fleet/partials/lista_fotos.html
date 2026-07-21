@@ -1,0 +1,35 @@
+{% if fotos %}
+<div class="row g-3">
+  {% for foto in fotos %}
+  <div class="col-6 col-md-4">
+    <div class="card overflow-hidden position-relative h-100">
+      <img src="{{ foto.imagem.url }}" alt="{{ foto.get_posicao_display }}"
+           class="card-img-top" style="height:160px; object-fit:cover">
+      {% if foto.principal %}
+      <span class="position-absolute top-0 start-0 m-2 badge bg-primary">
+        <i class="bi bi-star-fill me-1"></i>Principal
+      </span>
+      {% endif %}
+      <div class="card-body p-2 d-flex justify-content-between align-items-center">
+        <small class="text-muted">{{ foto.get_posicao_display }}</small>
+        <form method="post" action="{% url 'frota:foto-excluir' veiculo.pk foto.pk %}"
+              hx-post="{% url 'frota:foto-excluir' veiculo.pk foto.pk %}"
+              hx-target="closest .col-6" hx-swap="outerHTML">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-outline-danger">
+            <i class="bi bi-trash3"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card text-center py-5">
+  <div class="card-body text-muted">
+    <i class="bi bi-images d-block fs-1 mb-2 opacity-25"></i>
+    <p class="small mb-0">Nenhuma foto cadastrada ainda.</p>
+  </div>
+</div>
+{% endif %}

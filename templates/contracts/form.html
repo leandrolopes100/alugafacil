@@ -1,0 +1,299 @@
+{% extends 'base.html' %}
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'contratos:lista' %}" class="text-decoration-none text-secondary">Contratos</a></li>
+<li class="breadcrumb-item active">{{ titulo }}</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header">
+  <h1 class="page-title">{{ titulo }}</h1>
+</div>
+
+<div class="row">
+  <div class="col-lg-8">
+    <form method="post" x-data="autoFillTarifas()" @submit="submetendo = true"
+          x-init="retroativo = {{ form.data_saida.value|yesno:'true,false' }}">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+      <div class="form-error-banner mb-4">
+        <i class="bi bi-exclamation-triangle-fill flex-shrink-0" style="font-size:16px; margin-top:1px"></i>
+        <div>
+          <div class="fw-semibold mb-1">Corrija os erros abaixo:</div>
+          <ul>{% for erro in form.non_field_errors %}<li>{{ erro }}</li>{% endfor %}</ul>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-people me-2 text-primary"></i>Partes</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6 {% if form.cliente.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Cliente *</label>
+              {{ form.cliente }}
+              {% if form.cliente.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.cliente.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6 {% if form.veiculo.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Veículo *</label>
+              <select name="veiculo" id="id_veiculo" class="form-select"
+                      @change="buscarTarifas($event.target.value)" required>
+                <option value="">— Selecione um veículo —</option>
+                {% if veiculos_disponiveis %}
+                <optgroup label="Disponíveis para locação">
+                  {% for v in veiculos_disponiveis %}
+                  <option value="{{ v.pk }}" {% if form.veiculo.value == v.pk|stringformat:"s" %}selected{% endif %}>
+                    {{ v.placa }} — {{ v.marca }} {{ v.modelo }} {{ v.ano_modelo }}{% if v.situacao == 'reservado' %} [Reservado]{% endif %}
+                  </option>
+                  {% endfor %}
+                </optgroup>
+                {% endif %}
+                {% if veiculos_indisponiveis %}
+                <optgroup label="Indisponíveis">
+                  {% for v in veiculos_indisponiveis %}
+                  <option value="{{ v.pk }}" disabled>
+                    {{ v.placa }} — {{ v.marca }} {{ v.modelo }} {{ v.ano_modelo }} ({{ v.get_situacao_display }})
+                  </option>
+                  {% endfor %}
+                </optgroup>
+                {% endif %}
+              </select>
+              {% if form.veiculo.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.veiculo.errors.0 }}</div>
+              {% endif %}
+              <div x-show="grupoNome" x-cloak class="form-text text-primary">
+                <i class="bi bi-collection me-1"></i>Grupo: <span x-text="grupoNome"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-calendar-range me-2 text-primary"></i>Período</div>
+        <div class="card-body">
+          <div class="{% if form.data_devolucao_prevista.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Devolução Prevista *</label>
+            {{ form.data_devolucao_prevista }}
+            {% if form.data_devolucao_prevista.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.data_devolucao_prevista.errors.0 }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {% if pode_criar_retroativo %}
+      <div class="card mb-4 border-warning-subtle">
+        <div class="card-header">
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" role="switch" id="id_retroativo_toggle"
+                   x-model="retroativo">
+            <label class="form-check-label fw-semibold" for="id_retroativo_toggle">
+              <i class="bi bi-clock-history me-1 text-warning"></i>Contrato retroativo / migração de contrato antigo
+            </label>
+          </div>
+        </div>
+        <div class="card-body" x-show="retroativo" x-cloak>
+          <div class="form-text mb-3">
+            Use apenas quando o veículo <strong>já estava com o cliente antes deste cadastro</strong>
+            (ex: migração de um contrato antigo, controlado fora do sistema). Ao salvar, o contrato já
+            nasce <strong>ativo</strong>, o KM/histórico refletem a data real de saída, e a cobrança
+            de parcelas passa a valer <strong>a partir de hoje</strong> — o período anterior é
+            regularizado pelo valor informado abaixo.
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6 {% if form.data_saida.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Data/hora de saída real *</label>
+              <input type="datetime-local" name="data_saida" id="id_data_saida" class="form-control"
+                     x-model="dataSaida" @change="valorJaRecebido = valorSugerido"
+                     value="{{ form.data_saida.value|default:'' }}">
+              {% if form.data_saida.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.data_saida.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-3 {% if form.km_saida.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">KM na saída (época) *</label>
+              {{ form.km_saida }}
+              {% if form.km_saida.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.km_saida.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-3 {% if form.combustivel_saida.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Combustível na saída *</label>
+              {{ form.combustivel_saida }}
+              {% if form.combustivel_saida.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.combustivel_saida.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6 {% if form.km_atual_veiculo.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">KM atual do veículo (hoje)</label>
+              {{ form.km_atual_veiculo }}
+              <div class="form-text">{{ form.km_atual_veiculo.help_text }}</div>
+              {% if form.km_atual_veiculo.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.km_atual_veiculo.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6 {% if form.valor_ja_recebido.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Valor já recebido até hoje (R$)</label>
+              <input type="number" name="valor_ja_recebido" id="id_valor_ja_recebido" class="form-control" step="0.01"
+                     x-model="valorJaRecebido">
+              <div class="form-text" x-show="dataSaida" x-cloak>
+                Sugestão: <span x-text="diasDecorridos"></span> dia(s) × diária = R$ <span x-text="valorSugerido"></span>
+                <button type="button" class="btn btn-link btn-sm p-0 align-baseline" @click="valorJaRecebido = valorSugerido">usar sugestão</button>
+              </div>
+              {% if form.valor_ja_recebido.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.valor_ja_recebido.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-12 {% if form.justificativa_retroativa.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Justificativa da migração *</label>
+              {{ form.justificativa_retroativa }}
+              {% if form.justificativa_retroativa.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.justificativa_retroativa.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="card mb-4">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <span><i class="bi bi-cash-coin me-2 text-primary"></i>Tarifas</span>
+          <span x-show="carregando" x-cloak class="spinner-border spinner-border-sm text-primary"></span>
+          <span x-show="tarifasCarregadas && !carregando" x-cloak class="badge bg-success-subtle text-success border border-success-subtle small">
+            <i class="bi bi-check2 me-1"></i>Preenchido automaticamente
+          </span>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4 {% if form.diaria.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Diária (R$) *</label>
+              <input type="number" name="diaria" id="id_diaria" class="form-control" step="0.01"
+                     x-model="diaria" value="{{ form.diaria.value|default:'' }}" required>
+              {% if form.diaria.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.diaria.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">Franquia km/dia</label>
+              <input type="number" name="km_franquia_diaria" id="id_km_franquia_diaria" class="form-control"
+                     x-model="kmFranquia" value="{{ form.km_franquia_diaria.value|default:'' }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">Km excedente (R$)</label>
+              <input type="number" name="valor_km_excedente" id="id_valor_km_excedente" class="form-control" step="0.01"
+                     x-model="kmExcedente" value="{{ form.valor_km_excedente.value|default:'' }}">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-shield-lock me-2 text-primary"></i>Caução</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6 {% if form.caucao_valor.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Valor Caução (R$)</label>
+              <input type="number" name="caucao_valor" id="id_caucao_valor" class="form-control" step="0.01"
+                     x-model="caucao" value="{{ form.caucao_valor.value|default:'' }}">
+              {% if form.caucao_valor.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.caucao_valor.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Situação Caução</label>
+              {{ form.caucao_situacao }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 justify-content-end">
+        <a href="{% url 'contratos:lista' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary" :disabled="submetendo"
+                @click="confirmarEnvio($event)">
+          <span x-show="submetendo" class="spinner-border spinner-border-sm me-1"></span>
+          <i x-show="!submetendo" class="bi bi-file-earmark-check me-1"></i>
+          Criar Contrato
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function autoFillTarifas() {
+  return {
+    diaria: '{{ form.diaria.value|default:"" }}',
+    kmFranquia: '{{ form.km_franquia_diaria.value|default:"" }}',
+    kmExcedente: '{{ form.valor_km_excedente.value|default:"" }}',
+    caucao: '{{ form.caucao_valor.value|default:"" }}',
+    grupoNome: '',
+    carregando: false,
+    tarifasCarregadas: false,
+    submetendo: false,
+    retroativo: false,
+    dataSaida: '{{ form.data_saida.value|default:"" }}',
+    valorJaRecebido: '{{ form.valor_ja_recebido.value|default:"" }}',
+
+    get diasDecorridos() {
+      if (!this.dataSaida) return 0;
+      const d = new Date(this.dataSaida);
+      if (isNaN(d)) return 0;
+      return Math.max(Math.ceil((new Date() - d) / 86400000), 0);
+    },
+
+    get valorSugerido() {
+      const diaria = parseFloat(this.diaria || 0);
+      return (diaria * this.diasDecorridos).toFixed(2);
+    },
+
+    confirmarEnvio(event) {
+      if (!this.retroativo) return;
+      event.preventDefault();
+      const aviso = this.diasDecorridos > 365
+        ? ' Atenção: essa data é superior a 12 meses — confirme que está correta.'
+        : '';
+      const resumo = `O contrato será ativado imediatamente com saída retroativa, ` +
+        `parcelas geradas a partir de hoje, e um pagamento de regularização de ` +
+        `R$ ${this.valorJaRecebido || '0,00'} referente ao período anterior.${aviso} ` +
+        `Revise os campos antes de confirmar.`;
+      confirmarAcao(event.target, 'Confirmar contrato retroativo?', resumo, 'warning');
+    },
+
+    async buscarTarifas(veiculoId) {
+      if (!veiculoId) {
+        this.grupoNome = '';
+        this.tarifasCarregadas = false;
+        return;
+      }
+      this.carregando = true;
+      try {
+        const resp = await fetch(`/frota/tarifas/?veiculo_id=${veiculoId}`);
+        const dados = await resp.json();
+        if (dados.diaria) {
+          this.diaria = dados.diaria;
+          this.kmFranquia = dados.km_franquia_diaria;
+          this.kmExcedente = dados.valor_km_excedente;
+          this.caucao = dados.caucao;
+          this.grupoNome = dados.grupo_nome;
+          this.tarifasCarregadas = true;
+        }
+      } catch (e) {
+        console.error('Erro ao buscar tarifas:', e);
+      } finally {
+        this.carregando = false;
+      }
+    }
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block titulo %}Fotos — {{ veiculo.placa }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'frota:lista' %}" class="text-decoration-none text-secondary">Frota</a></li>
+<li class="breadcrumb-item"><a href="{% url 'frota:detalhe' veiculo.pk %}" class="text-decoration-none text-secondary">{{ veiculo.placa }}</a></li>
+<li class="breadcrumb-item active">Fotos</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header d-flex align-items-center justify-content-between">
+  <div>
+    <h1 class="page-title">Fotos do Veículo</h1>
+    <p class="page-subtitle mb-0">{{ veiculo.marca }} {{ veiculo.modelo }} — <span class="text-mono">{{ veiculo.placa }}</span></p>
+  </div>
+  <a href="{% url 'frota:detalhe' veiculo.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Voltar
+  </a>
+</div>
+
+<div class="row g-4">
+
+  <!-- Upload -->
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-cloud-upload me-2 text-primary"></i>Adicionar Foto</div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data"
+              hx-post="" hx-target="#galeria" hx-swap="innerHTML">
+          {% csrf_token %}
+          {% if form.non_field_errors %}
+          <div class="form-error-banner mb-3">
+            <i class="bi bi-exclamation-triangle-fill flex-shrink-0" style="font-size:14px; margin-top:1px"></i>
+            <div>{% for erro in form.non_field_errors %}<div>{{ erro }}</div>{% endfor %}</div>
+          </div>
+          {% endif %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Posição</label>
+            {{ form.posicao }}
+          </div>
+          <div class="mb-3 {% if form.imagem.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Imagem *</label>
+            {{ form.imagem }}
+            {% if form.imagem.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.imagem.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Legenda</label>
+            {{ form.legenda }}
+          </div>
+          <div class="form-check mb-3">
+            {{ form.principal }}
+            <label class="form-check-label small">Definir como foto principal</label>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-upload me-2"></i>Adicionar Foto
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Galeria -->
+  <div class="col-lg-8">
+    <div id="galeria">
+      {% include 'fleet/partials/lista_fotos.html' %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

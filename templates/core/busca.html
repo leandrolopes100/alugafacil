@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% block titulo %}Busca — {{ q }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Busca</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header d-flex align-items-center justify-content-between">
+  <div>
+    <h1 class="page-title">Resultados da Busca</h1>
+    {% if q %}
+    <p class="page-subtitle mb-0">
+      Termo: <strong>"{{ q }}"</strong>
+      {% if total is not None %} — {{ total }} resultado{{ total|pluralize:",s" }} encontrado{{ total|pluralize:",s" }}{% endif %}
+    </p>
+    {% endif %}
+  </div>
+</div>
+
+{% if not q %}
+<div class="alert alert-info">
+  <i class="bi bi-search me-2"></i>Digite ao menos 2 caracteres na barra de busca para pesquisar.
+</div>
+{% elif total == 0 %}
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state">
+      <div class="empty-state-icon"><i class="bi bi-search"></i></div>
+      <div class="empty-state-title">Nenhum resultado encontrado</div>
+      <div class="empty-state-text">Tente buscar por placa, nome do cliente ou número do contrato.</div>
+    </div>
+  </div>
+</div>
+{% else %}
+
+<div class="row g-4">
+
+  {% if veiculos %}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-car-front me-2 text-primary"></i>Veículos ({{ veiculos|length }})</div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr><th>Placa</th><th>Modelo</th><th>Grupo</th><th>Situação</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for v in veiculos %}
+            <tr>
+              <td><span class="fw-bold text-mono">{{ v.placa }}</span></td>
+              <td class="small">{{ v.marca }} {{ v.modelo }} {{ v.ano_modelo }}</td>
+              <td class="small text-muted">{{ v.grupo.nome }}</td>
+              <td>
+                <span class="badge badge-status
+                  {% if v.situacao == 'disponivel' %}bg-success
+                  {% elif v.situacao == 'em_uso' %}bg-primary
+                  {% elif v.situacao == 'manutencao' %}bg-danger
+                  {% else %}bg-secondary{% endif %}">
+                  {{ v.get_situacao_display }}
+                </span>
+              </td>
+              <td class="text-end">
+                <a href="{% url 'frota:detalhe' v.pk %}" class="btn btn-sm btn-outline-primary">Ver</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if clientes %}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-people me-2 text-primary"></i>Clientes ({{ clientes|length }})</div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr><th>Nome / Razão Social</th><th>Documento</th><th>Contato</th><th>Situação</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for c in clientes %}
+            <tr>
+              <td class="fw-semibold small">{{ c.nome_exibicao }}</td>
+              <td class="small text-mono text-muted">{{ c.documento|default:"—" }}</td>
+              <td class="small text-muted">{{ c.celular|default:c.telefone|default:"—" }}</td>
+              <td>
+                <span class="badge badge-status {% if c.situacao == 'ativo' %}bg-success{% else %}bg-secondary{% endif %}">
+                  {{ c.get_situacao_display }}
+                </span>
+              </td>
+              <td class="text-end">
+                <a href="{% url 'clientes:detalhe' c.pk %}" class="btn btn-sm btn-outline-primary">Ver</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if contratos %}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-file-earmark-text me-2 text-primary"></i>Contratos ({{ contratos|length }})</div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr><th>Número</th><th>Cliente</th><th>Veículo</th><th>Situação</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for ct in contratos %}
+            <tr>
+              <td><span class="fw-bold text-mono text-primary">{{ ct.numero }}</span></td>
+              <td class="small">{{ ct.cliente.nome_exibicao }}</td>
+              <td class="small text-mono text-muted">{{ ct.veiculo.placa }}</td>
+              <td>
+                <span class="badge badge-status
+                  {% if ct.situacao == 'ativo' %}bg-primary
+                  {% elif ct.situacao == 'encerrado' %}bg-success
+                  {% elif ct.situacao == 'aberto' %}bg-warning text-dark
+                  {% else %}bg-secondary{% endif %}">
+                  {{ ct.get_situacao_display }}
+                </span>
+              </td>
+              <td class="text-end">
+                <a href="{% url 'contratos:detalhe' ct.pk %}" class="btn btn-sm btn-outline-primary">Ver</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endif %}
+
+{% endblock %}

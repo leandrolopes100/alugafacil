@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+{% block titulo %}Agenda de Cobranças{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'financeiro:index' %}" class="text-decoration-none text-secondary">Financeiro</a></li>
+<li class="breadcrumb-item active">Agenda de Cobranças</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Agenda de Cobranças</h1>
+    <p class="page-subtitle mb-0">Cobranças semanais dos contratos ativos</p>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--danger-bg); color:var(--danger)">
+        <i class="bi bi-exclamation-circle-fill"></i>
+      </div>
+      <div class="kpi-value" style="color:var(--danger)">{{ em_atraso|length }}</div>
+      <div class="kpi-label">Em atraso</div>
+      <div class="kpi-sub" style="color:var(--danger); font-weight:600">R$ {{ total_atraso|floatformat:2 }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--warning-bg); color:var(--warning)">
+        <i class="bi bi-calendar-week"></i>
+      </div>
+      <div class="kpi-value" style="color:var(--warning)">{{ esta_semana|length }}</div>
+      <div class="kpi-label">Esta semana</div>
+      <div class="kpi-sub" style="color:var(--warning); font-weight:600">R$ {{ total_semana|floatformat:2 }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--primary-light); color:var(--primary)">
+        <i class="bi bi-calendar-plus"></i>
+      </div>
+      <div class="kpi-value" style="color:var(--primary)">{{ proximas|length }}</div>
+      <div class="kpi-label">Próximas</div>
+      <div class="kpi-sub">cobranças futuras</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--success-bg); color:var(--success)">
+        <i class="bi bi-calendar-check"></i>
+      </div>
+      <div class="kpi-value" style="font-size:20px; color:var(--success)">{{ hoje|date:"d/m/Y" }}</div>
+      <div class="kpi-label">Hoje</div>
+      <div class="kpi-sub">data de referência</div>
+    </div>
+  </div>
+</div>
+
+<!-- Em Atraso -->
+{% if em_atraso %}
+<div class="card mb-4">
+  <div class="card-header">
+    <i class="bi bi-exclamation-circle-fill" style="color:var(--danger)"></i>
+    Em Atraso — {{ em_atraso|length }} cobrança{{ em_atraso|length|pluralize:"s" }}
+  </div>
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead><tr><th>Cliente</th><th>Veículo</th><th>Contrato</th><th>Parcela</th><th>Vencimento</th><th>Atraso</th><th class="text-end">Valor</th><th></th></tr></thead>
+      <tbody>
+        {% for p in em_atraso %}
+        <tr style="background:var(--danger-bg)">
+          <td class="fw-semibold small">{{ p.contrato.cliente.nome_exibicao }}</td>
+          <td class="small text-muted text-mono">{{ p.contrato.veiculo.placa }}</td>
+          <td><a href="{% url 'contratos:detalhe' p.contrato.pk %}" class="text-primary text-mono text-decoration-none fw-semibold">{{ p.contrato.numero }}</a></td>
+          <td class="small">
+            <span class="status-badge status-danger">
+              {% if p.tipo == 'caucao' %}Caução{% else %}Parcela {{ p.numero }}{% endif %}
+            </span>
+          </td>
+          <td class="small text-danger fw-semibold">{{ p.data_vencimento|date:"d/m/Y" }}</td>
+          <td><span class="badge bg-danger">{{ p.dias_atraso }}d</span></td>
+          <td class="text-end fw-bold text-danger">R$ {{ p.valor|floatformat:2 }}</td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-danger" onclick="abrirPagamento({{ p.pk }}, {{ p.contrato.pk }}, '{{ p.contrato.cliente.nome_exibicao }}', '{{ p.valor|floatformat:2 }}', '{% if p.tipo == "caucao" %}Caução{% else %}Parcela {{ p.numero }}{% endif %}')">
+              <i class="bi bi-cash me-1"></i>Receber
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Esta Semana -->
+{% if esta_semana %}
+<div class="card mb-4">
+  <div class="card-header">
+    <i class="bi bi-calendar-week" style="color:var(--warning)"></i>
+    Esta Semana — {{ esta_semana|length }} cobrança{{ esta_semana|length|pluralize:"s" }}
+  </div>
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead><tr><th>Cliente</th><th>Veículo</th><th>Contrato</th><th>Parcela</th><th>Vencimento</th><th class="text-end">Valor</th><th></th></tr></thead>
+      <tbody>
+        {% for p in esta_semana %}
+        <tr>
+          <td class="fw-semibold small">{{ p.contrato.cliente.nome_exibicao }}</td>
+          <td class="small text-muted text-mono">{{ p.contrato.veiculo.placa }}</td>
+          <td><a href="{% url 'contratos:detalhe' p.contrato.pk %}" class="text-primary text-mono text-decoration-none fw-semibold">{{ p.contrato.numero }}</a></td>
+          <td class="small">
+            <span class="status-badge status-warning">
+              {% if p.tipo == 'caucao' %}Caução{% else %}Parcela {{ p.numero }}{% endif %}
+            </span>
+          </td>
+          <td class="small fw-semibold">{{ p.data_vencimento|date:"d/m/Y" }}{% if p.data_vencimento == hoje %} <span class="badge bg-warning text-dark ms-1">Hoje</span>{% endif %}</td>
+          <td class="text-end fw-bold">R$ {{ p.valor|floatformat:2 }}</td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-warning text-dark" onclick="abrirPagamento({{ p.pk }}, {{ p.contrato.pk }}, '{{ p.contrato.cliente.nome_exibicao }}', '{{ p.valor|floatformat:2 }}', '{% if p.tipo == "caucao" %}Caução{% else %}Parcela {{ p.numero }}{% endif %}')">
+              <i class="bi bi-cash me-1"></i>Receber
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Próximas -->
+{% if proximas %}
+<div class="card mb-4">
+  <div class="card-header">
+    <i class="bi bi-calendar-plus" style="color:var(--primary)"></i>
+    Próximas — {{ proximas|length }} cobrança{{ proximas|length|pluralize:"s" }}
+  </div>
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead><tr><th>Cliente</th><th>Veículo</th><th>Contrato</th><th>Parcela</th><th>Vencimento</th><th class="text-end">Valor</th><th></th></tr></thead>
+      <tbody>
+        {% for p in proximas %}
+        <tr>
+          <td class="fw-semibold small">{{ p.contrato.cliente.nome_exibicao }}</td>
+          <td class="small text-muted text-mono">{{ p.contrato.veiculo.placa }}</td>
+          <td><a href="{% url 'contratos:detalhe' p.contrato.pk %}" class="text-primary text-mono text-decoration-none fw-semibold">{{ p.contrato.numero }}</a></td>
+          <td class="small">
+            <span class="badge bg-light text-dark border">
+              {% if p.tipo == 'caucao' %}Caução{% else %}Parcela {{ p.numero }}{% endif %}
+            </span>
+          </td>
+          <td class="small text-muted">{{ p.data_vencimento|date:"d/m/Y" }}</td>
+          <td class="text-end text-muted">R$ {{ p.valor|floatformat:2 }}</td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-outline-primary" onclick="abrirPagamento({{ p.pk }}, {{ p.contrato.pk }}, '{{ p.contrato.cliente.nome_exibicao }}', '{{ p.valor|floatformat:2 }}', '{% if p.tipo == "caucao" %}Caução{% else %}Parcela {{ p.numero }}{% endif %}')">
+              <i class="bi bi-cash me-1"></i>Receber
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if not em_atraso and not esta_semana and not proximas %}
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-state-icon"><i class="bi bi-check2-circle"></i></div>
+    <div class="empty-state-title">Tudo em dia!</div>
+    <div class="empty-state-text">Nenhuma cobrança pendente no momento.</div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Modal Registrar Pagamento -->
+<div class="modal fade" id="modalPagamento" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:440px">
+    <div class="modal-content" style="border-radius:12px; border:none; box-shadow:0 20px 40px rgba(0,0,0,.15)">
+      <div class="modal-header border-0 pt-4 px-4 pb-0">
+        <div>
+          <h5 class="modal-title fw-bold mb-0" style="font-size:16px">Registrar Recebimento</h5>
+          <p class="text-muted mb-0" style="font-size:12.5px" id="modalSubtitulo">—</p>
+        </div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formPagamento" method="post">
+        {% csrf_token %}
+        <div class="modal-body px-4 py-3">
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px; margin-bottom:16px">
+            <div class="text-muted" style="font-size:11px; text-transform:uppercase; letter-spacing:.06em; font-weight:600">Valor</div>
+            <div style="font-size:22px; font-weight:700; color:var(--success)" id="modalValor">R$ —</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Forma de Pagamento *</label>
+            <select name="forma_pagamento" class="form-select" required>
+              <option value="">Selecione…</option>
+              {% for valor, rotulo in formas_pagamento %}
+              <option value="{{ valor }}">{{ rotulo }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Observações</label>
+            <textarea name="observacoes" class="form-control" rows="2" placeholder="Opcional…"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 pb-4 px-4 gap-2">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success"><i class="bi bi-check-lg me-1"></i>Confirmar Recebimento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function abrirPagamento(parcelaPk, contratoPk, cliente, valor, label) {
+  document.getElementById('modalSubtitulo').textContent = cliente + ' — ' + label;
+  document.getElementById('modalValor').textContent = 'R$ ' + valor;
+  document.getElementById('formPagamento').action = '/contratos/' + contratoPk + '/parcelas/' + parcelaPk + '/pagar/';
+  new bootstrap.Modal(document.getElementById('modalPagamento')).show();
+}
+</script>
+{% endblock %}

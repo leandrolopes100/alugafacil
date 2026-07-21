@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% block titulo %}Disponibilidade da Frota{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'frota:lista' %}" class="text-decoration-none text-secondary">Frota</a></li>
+<li class="breadcrumb-item active">Disponibilidade</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-3">
+  <div>
+    <h1 class="page-title">Disponibilidade da Frota</h1>
+    <p class="page-subtitle mb-0">Status em tempo real por grupo de veículos</p>
+  </div>
+  <!-- Legenda -->
+  <div class="d-flex flex-wrap gap-3 align-items-center">
+    <span class="d-flex align-items-center gap-1 small"><span class="badge bg-success">●</span> Disponível</span>
+    <span class="d-flex align-items-center gap-1 small"><span class="badge bg-primary">●</span> Em uso</span>
+    <span class="d-flex align-items-center gap-1 small"><span class="badge bg-warning text-dark">●</span> Reservado</span>
+    <span class="d-flex align-items-center gap-1 small"><span class="badge bg-danger">●</span> Manutenção</span>
+    <span class="d-flex align-items-center gap-1 small"><span class="badge bg-secondary">●</span> Inativo</span>
+  </div>
+</div>
+
+<!-- Totalizador geral da frota -->
+{% if totais %}
+<div class="d-flex flex-wrap gap-2 mb-4">
+  {% if totais.disponivel %}
+  <span class="badge bg-success px-3 py-2 fs-6 fw-normal">
+    <i class="bi bi-check-circle me-1"></i>{{ totais.disponivel }} disponíve{{ totais.disponivel|pluralize:"l,is" }}
+  </span>
+  {% endif %}
+  {% if totais.em_uso %}
+  <span class="badge bg-primary px-3 py-2 fs-6 fw-normal">
+    <i class="bi bi-key me-1"></i>{{ totais.em_uso }} em uso
+  </span>
+  {% endif %}
+  {% if totais.reservado %}
+  <span class="badge bg-warning text-dark px-3 py-2 fs-6 fw-normal">
+    <i class="bi bi-calendar-check me-1"></i>{{ totais.reservado }} reservado{{ totais.reservado|pluralize:"s" }}
+  </span>
+  {% endif %}
+  {% if totais.manutencao %}
+  <span class="badge bg-danger px-3 py-2 fs-6 fw-normal">
+    <i class="bi bi-wrench me-1"></i>{{ totais.manutencao }} em manutenção
+  </span>
+  {% endif %}
+  {% if totais.inativo %}
+  <span class="badge bg-secondary px-3 py-2 fs-6 fw-normal">
+    <i class="bi bi-slash-circle me-1"></i>{{ totais.inativo }} inativo{{ totais.inativo|pluralize:"s" }}
+  </span>
+  {% endif %}
+</div>
+{% endif %}
+
+{% for item in grupos_data %}
+<div class="card mb-3">
+  <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+      <span class="fw-semibold">{{ item.grupo.nome }}</span>
+      <span class="text-muted small ms-2">&mdash; {{ item.grupo.categoria }}</span>
+    </div>
+    <!-- Contagens por situação neste grupo -->
+    <div class="d-flex align-items-center flex-wrap gap-1">
+      {% if item.contagens.disponivel %}
+      <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 fw-normal">
+        {{ item.contagens.disponivel }} disp.
+      </span>
+      {% endif %}
+      {% if item.contagens.em_uso %}
+      <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fw-normal">
+        {{ item.contagens.em_uso }} em uso
+      </span>
+      {% endif %}
+      {% if item.contagens.reservado %}
+      <span class="badge bg-warning bg-opacity-10 text-warning-emphasis border border-warning border-opacity-25 fw-normal">
+        {{ item.contagens.reservado }} res.
+      </span>
+      {% endif %}
+      {% if item.contagens.manutencao %}
+      <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 fw-normal">
+        {{ item.contagens.manutencao }} manut.
+      </span>
+      {% endif %}
+      {% if item.contagens.inativo %}
+      <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 fw-normal">
+        {{ item.contagens.inativo }} inativo{{ item.contagens.inativo|pluralize:"s" }}
+      </span>
+      {% endif %}
+      <span class="text-muted small ms-1">
+        ({{ item.total }} veículo{{ item.total|pluralize:"s" }})
+      </span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="row g-2">
+      {% for veiculo in item.veiculos %}
+      <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+        <a href="{% url 'frota:detalhe' veiculo.pk %}"
+           class="d-block text-center text-decoration-none rounded p-2 border
+           {% if veiculo.situacao == 'disponivel' %}border-success bg-success bg-opacity-10
+           {% elif veiculo.situacao == 'em_uso' %}border-primary bg-primary bg-opacity-10
+           {% elif veiculo.situacao == 'reservado' %}border-warning bg-warning bg-opacity-10
+           {% elif veiculo.situacao == 'manutencao' %}border-danger bg-danger bg-opacity-10
+           {% else %}border-secondary bg-light{% endif %}"
+           style="transition:.15s">
+          <div class="fw-bold text-mono
+            {% if veiculo.situacao == 'disponivel' %}text-success
+            {% elif veiculo.situacao == 'em_uso' %}text-primary
+            {% elif veiculo.situacao == 'reservado' %}text-warning
+            {% elif veiculo.situacao == 'manutencao' %}text-danger
+            {% else %}text-secondary{% endif %}">
+            {{ veiculo.placa }}
+          </div>
+          <div class="small text-muted text-truncate" style="font-size:.72rem">{{ veiculo.modelo }}</div>
+          <div class="mt-1" style="font-size:.7rem">
+            <span class="badge
+              {% if veiculo.situacao == 'disponivel' %}bg-success
+              {% elif veiculo.situacao == 'em_uso' %}bg-primary
+              {% elif veiculo.situacao == 'reservado' %}bg-warning text-dark
+              {% elif veiculo.situacao == 'manutencao' %}bg-danger
+              {% else %}bg-secondary{% endif %}">
+              {{ veiculo.get_situacao_display }}
+            </span>
+          </div>
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% empty %}
+<div class="card text-center py-5">
+  <div class="card-body text-muted">
+    <i class="bi bi-car-front d-block fs-1 mb-3 opacity-25"></i>
+    <p class="fw-semibold mb-1">Nenhum veículo cadastrado nos grupos ativos.</p>
+    <a href="{% url 'frota:lista' %}" class="btn btn-outline-secondary btn-sm">Ver frota completa</a>
+  </div>
+</div>
+{% endfor %}
+
+{% endblock %}

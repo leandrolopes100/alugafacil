@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% block titulo %}Reserva #{{ reserva.pk }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'contratos:reserva-lista' %}" class="text-decoration-none text-secondary">Reservas</a></li>
+<li class="breadcrumb-item active">Reserva #{{ reserva.pk }}</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header d-flex align-items-start justify-content-between gap-3 flex-wrap">
+  <div>
+    <h1 class="page-title">Reserva <span class="text-muted">#{{ reserva.pk }}</span></h1>
+    <span class="badge
+      {% if reserva.situacao == 'confirmada' %}bg-success
+      {% elif reserva.situacao == 'pendente' %}bg-warning text-dark
+      {% elif reserva.situacao == 'cancelada' %}bg-secondary
+      {% elif reserva.situacao == 'ativa' %}bg-primary
+      {% else %}bg-info text-dark{% endif %}">
+      {{ reserva.get_situacao_display }}
+    </span>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if reserva.situacao == 'pendente' %}
+    <form method="post" action="{% url 'contratos:reserva-confirmar' reserva.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-success btn-sm">
+        <i class="bi bi-check-lg me-1"></i>Confirmar
+      </button>
+    </form>
+    {% elif reserva.situacao == 'confirmada' %}
+    <form method="post" action="{% url 'contratos:reserva-converter' reserva.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary btn-sm">
+        <i class="bi bi-file-earmark-plus me-1"></i>Gerar Contrato
+      </button>
+    </form>
+    {% elif reserva.situacao == 'ativa' %}
+    {% if reserva.contrato %}
+    <a href="{% url 'contratos:detalhe' reserva.contrato.pk %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-file-earmark-text me-1"></i>Ver Contrato {{ reserva.contrato.numero }}
+    </a>
+    {% endif %}
+    {% endif %}
+    {% if reserva.situacao == 'pendente' or reserva.situacao == 'confirmada' %}
+    <a href="{% url 'contratos:reserva-editar' reserva.pk %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-pencil me-1"></i>Editar
+    </a>
+    {% endif %}
+    {% if reserva.situacao == 'pendente' or reserva.situacao == 'confirmada' %}
+    <form method="post" action="{% url 'contratos:reserva-no-show' reserva.pk %}">
+      {% csrf_token %}
+      <button type="button" class="btn btn-outline-warning btn-sm"
+        onclick="confirmarAcao(this, 'Marcar como No Show?', 'O cliente não compareceu. O veículo será liberado.', 'warning')">
+        <i class="bi bi-person-x me-1"></i>No Show
+      </button>
+    </form>
+    {% endif %}
+    {% if reserva.situacao != 'cancelada' and reserva.situacao != 'ativa' and reserva.situacao != 'concluida' and reserva.situacao != 'no_show' %}
+    <form method="post" action="{% url 'contratos:reserva-cancelar' reserva.pk %}">
+      {% csrf_token %}
+      <button type="button" class="btn btn-outline-danger btn-sm"
+              onclick="confirmarAcao(this, 'Cancelar esta reserva?', '', 'danger')">Cancelar</button>
+    </form>
+    {% endif %}
+    {% if reserva.situacao == 'pendente' or reserva.situacao == 'cancelada' or reserva.situacao == 'no_show' %}
+    <form method="post" action="{% url 'contratos:reserva-excluir' reserva.pk %}">
+      {% csrf_token %}
+      <button type="button" class="btn btn-danger btn-sm"
+        onclick="confirmarAcao(this, 'Excluir esta reserva?', 'Não é possível desfazer.', 'danger')">
+        <i class="bi bi-trash me-1"></i>Excluir
+      </button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-calendar-event me-2 text-primary"></i>Detalhes da Reserva</div>
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item d-flex justify-content-between px-3 py-2 small">
+          <span class="text-muted">Cliente</span>
+          <a href="{% url 'clientes:detalhe' reserva.cliente.pk %}" class="fw-semibold text-primary text-decoration-none">{{ reserva.cliente.nome_exibicao }}</a>
+        </li>
+        <li class="list-group-item d-flex justify-content-between px-3 py-2 small">
+          <span class="text-muted">Grupo</span>
+          <span class="fw-semibold">{{ reserva.grupo_veiculo.nome }}</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between px-3 py-2 small">
+          <span class="text-muted">Veículo</span>
+          {% if reserva.veiculo %}
+          <span class="fw-semibold">{{ reserva.veiculo }}</span>
+          {% else %}
+          <span class="text-warning fw-semibold"><i class="bi bi-exclamation-triangle me-1"></i>Não vinculado</span>
+          {% endif %}
+        </li>
+        <li class="list-group-item d-flex justify-content-between px-3 py-2 small">
+          <span class="text-muted">Canal</span>
+          <span>{{ reserva.get_canal_display }}</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between px-3 py-2 small">
+          <span class="text-muted">Retirada</span>
+          <span class="fw-semibold">{{ reserva.data_retirada|date:"d/m/Y H:i" }}</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between px-3 py-2 small">
+          <span class="text-muted">Devolução</span>
+          <span class="fw-semibold">{{ reserva.data_devolucao|date:"d/m/Y H:i" }}</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between px-3 py-2 small">
+          <span class="text-muted">Dias previstos</span>
+          <span><strong>{{ reserva.dias_previstos }}</strong> dias</span>
+        </li>
+        {% if reserva.diaria_cotada %}
+        <li class="list-group-item d-flex justify-content-between px-3 py-2 small">
+          <span class="text-muted">Diária cotada</span>
+          <span class="fw-semibold text-success">R$ {{ reserva.diaria_cotada }}</span>
+        </li>
+        {% endif %}
+        {% if reserva.caucao_cotado %}
+        <li class="list-group-item d-flex justify-content-between px-3 py-2 small">
+          <span class="text-muted">Caução cotado</span>
+          <span>R$ {{ reserva.caucao_cotado }}</span>
+        </li>
+        {% endif %}
+        {% if reserva.observacoes %}
+        <li class="list-group-item px-3 py-2 small">
+          <span class="text-muted d-block mb-1">Observações</span>
+          <span>{{ reserva.observacoes }}</span>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+
+    {% if reserva.contrato %}
+    <div class="alert alert-success d-flex align-items-center gap-2 mt-3">
+      <i class="bi bi-file-earmark-check-fill flex-shrink-0"></i>
+      Contrato gerado: <a href="{% url 'contratos:detalhe' reserva.contrato.pk %}" class="alert-link">{{ reserva.contrato.numero }}</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

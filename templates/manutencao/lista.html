@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+{% block titulo %}Ordens de Manutenção{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Manutenção</li>{% endblock %}
+
+{% block conteudo %}
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div>
+    <h1 class="page-title">Ordens de Manutenção</h1>
+    <p class="page-subtitle mb-0">Controle de serviços da frota</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'manutencao:alertas' %}" class="btn btn-outline-warning btn-sm">
+      <i class="bi bi-bell me-1"></i>Alertas
+    </a>
+    <a href="{% url 'manutencao:nova' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Nova OS
+    </a>
+  </div>
+</div>
+
+<!-- Filtros -->
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <a href="?" class="btn btn-sm {% if not filtro_situacao %}btn-dark{% else %}btn-outline-secondary{% endif %}">Todas</a>
+  {% for valor, rotulo in situacoes %}
+  <a href="?situacao={{ valor }}" class="btn btn-sm {% if filtro_situacao == valor %}btn-dark{% else %}btn-outline-secondary{% endif %}">{{ rotulo }}</a>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr><th>OS</th><th>Veículo</th><th>Tipo</th><th>Descrição</th><th>Agendada</th><th>Fornecedor</th><th class="text-end">Custo</th><th>Situação</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for os in ordens %}
+        <tr>
+          <td class="text-muted small">#{{ os.pk }}</td>
+          <td><a href="{% url 'frota:detalhe' os.veiculo.pk %}" class="text-primary text-mono fw-semibold text-decoration-none">{{ os.veiculo.placa }}</a></td>
+          <td><span class="badge bg-light text-dark border small">{{ os.get_tipo_display }}</span></td>
+          <td class="small">{{ os.descricao|truncatechars:40 }}</td>
+          <td class="small text-muted">{% if os.data_agendada %}{{ os.data_agendada|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+          <td class="small text-muted">{{ os.fornecedor|default:"—"|truncatechars:25 }}</td>
+          <td class="text-end small {% if os.custo_total %}text-danger{% else %}text-muted{% endif %}">
+            {% if os.custo_total %}{{ os.custo_total|brl }}{% else %}—{% endif %}
+          </td>
+          <td>
+            <span class="badge badge-status
+              {% if os.situacao == 'concluida' %}bg-success
+              {% elif os.situacao == 'em_andamento' %}bg-primary
+              {% elif os.situacao == 'agendada' %}bg-warning text-dark
+              {% else %}bg-secondary{% endif %}">
+              {{ os.get_situacao_display }}
+            </span>
+          </td>
+          <td class="text-end table-action">
+            <a href="{% url 'manutencao:detalhe' os.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" class="text-center py-5 text-muted">
+          <i class="bi bi-tools d-block fs-1 mb-2 opacity-25"></i>Nenhuma OS encontrada.
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% block titulo %}{{ cliente.nome_exibicao }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'clientes:lista' %}" class="text-decoration-none text-secondary">Clientes</a></li>
+<li class="breadcrumb-item active">{{ cliente.nome_exibicao }}</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header d-flex align-items-start justify-content-between gap-3 flex-wrap">
+  <div>
+    <h1 class="page-title">{{ cliente.nome_exibicao }}</h1>
+    <div class="d-flex align-items-center gap-2 mt-1">
+      <span class="badge bg-light text-dark border small">{{ cliente.get_tipo_display }}</span>
+      <span class="badge {% if cliente.situacao == 'ativo' %}bg-success{% else %}bg-danger{% endif %}">
+        {{ cliente.get_situacao_display }}
+      </span>
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'clientes:cnh' cliente.pk %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-card-text me-1"></i>CNH
+    </a>
+    <a href="{% url 'contratos:novo' %}?cliente={{ cliente.pk }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-file-earmark-plus me-1"></i>Novo Contrato
+    </a>
+    <a href="{% url 'clientes:editar' cliente.pk %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-pencil me-1"></i>Editar
+    </a>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- Sidebar do cliente -->
+  <div class="col-lg-4">
+
+    <!-- Dados -->
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-person-lines-fill me-2 text-primary"></i>Dados</div>
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Documento</span>
+          <span class="fw-semibold text-mono">{{ cliente.documento|default:"—" }}</span>
+        </li>
+        {% if cliente.data_nascimento %}
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Nascimento</span>
+          <span>{{ cliente.data_nascimento|date:"d/m/Y" }}</span>
+        </li>
+        {% endif %}
+        {% if cliente.email %}
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">E-mail</span>
+          <span class="text-truncate ms-2">{{ cliente.email }}</span>
+        </li>
+        {% endif %}
+        {% if cliente.telefone %}
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Telefone</span>
+          <span>{{ cliente.telefone }}</span>
+        </li>
+        {% endif %}
+        {% if cliente.celular %}
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Celular</span>
+          <span>{{ cliente.celular }}</span>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+
+    <!-- Endereço -->
+    {% if cliente.logradouro %}
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-geo-alt me-2 text-primary"></i>Endereço</div>
+      <div class="card-body small">
+        <address class="mb-0 text-muted not-italic">
+          {{ cliente.logradouro }}, {{ cliente.numero }}{% if cliente.complemento %}, {{ cliente.complemento }}{% endif %}<br>
+          {{ cliente.bairro }} — {{ cliente.cidade }}/{{ cliente.estado }}<br>
+          CEP: {{ cliente.cep }}
+        </address>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- CNHs -->
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-card-text me-2 text-primary"></i>CNHs</span>
+        <a href="{% url 'clientes:cnh' cliente.pk %}" class="btn btn-sm btn-outline-primary">Gerenciar</a>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for cnh in cnhs %}
+        <li class="list-group-item px-3 py-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <span class="fw-semibold text-mono small">{{ cnh.numero }}</span>
+              <span class="badge bg-secondary ms-1">Cat. {{ cnh.categoria|upper }}</span>
+              {% if cnh.principal %}<span class="badge bg-primary ms-1">Principal</span>{% endif %}
+            </div>
+            <span class="small {% if cnh.vencida %}text-danger fw-bold{% else %}text-muted{% endif %}">
+              {% if cnh.vencida %}<i class="bi bi-exclamation-triangle-fill me-1"></i>{% endif %}
+              {{ cnh.validade|date:"d/m/Y" }}
+            </span>
+          </div>
+        </li>
+        {% empty %}
+        <li class="list-group-item text-center text-muted small py-3">Nenhuma CNH cadastrada.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- Histórico -->
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history me-2 text-primary"></i>Histórico de Locações</span>
+        <span class="badge bg-primary bg-opacity-10 text-primary">{{ contratos_recentes|length }}</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Contrato</th><th>Veículo</th><th>Saída</th><th>Devolução</th><th>Situação</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for contrato in contratos_recentes %}
+            <tr>
+              <td><a href="{% url 'contratos:detalhe' contrato.pk %}" class="text-primary text-mono fw-semibold text-decoration-none">{{ contrato.numero }}</a></td>
+              <td>
+                <span class="badge bg-light text-dark border text-mono">{{ contrato.veiculo.placa }}</span>
+                <span class="small text-muted ms-1">{{ contrato.veiculo.modelo }}</span>
+              </td>
+              <td class="small text-muted">{% if contrato.data_saida %}{{ contrato.data_saida|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+              <td class="small text-muted">{% if contrato.data_devolucao_real %}{{ contrato.data_devolucao_real|date:"d/m/Y" }}{% else %}{{ contrato.data_devolucao_prevista|date:"d/m/Y" }}{% endif %}</td>
+              <td>
+                <span class="badge badge-status
+                  {% if contrato.situacao == 'ativo' %}bg-primary
+                  {% elif contrato.situacao == 'encerrado' %}bg-success
+                  {% elif contrato.situacao == 'aberto' %}bg-warning text-dark
+                  {% else %}bg-secondary{% endif %}">
+                  {{ contrato.get_situacao_display }}
+                </span>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center py-4 text-muted small">
+                <i class="bi bi-file-earmark-x d-block fs-3 mb-1 opacity-25"></i>
+                Nenhuma locação registrada.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

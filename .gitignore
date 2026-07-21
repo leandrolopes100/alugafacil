@@ -1,0 +1,37 @@
+# Ambiente virtual
+venv/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.log
+
+# Banco
+db.sqlite3
+
+# Ambiente
+.env
+.env.*
+!.env.example
+
+# Docker
+Dockerfile
+docker-compose.yml
+docker-compose.yaml
+docker/
+.dockerignore
+
+# Claude
+.claude/
+
+# Media
+media/
+
+# IDE
+.vscode/
+.idea/
+
+# Sistema
+.DS_Store
+Thumbs.db

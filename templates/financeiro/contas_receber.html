@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% block titulo %}Contas a Receber{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'financeiro:index' %}" class="text-decoration-none text-secondary">Financeiro</a></li>
+<li class="breadcrumb-item active">Contas a Receber</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Contas a Receber</h1>
+    <p class="page-subtitle">{{ page_obj.paginator.count }} conta{{ page_obj.paginator.count|pluralize:"s" }}</p>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#eef5fa; color:#2f6690">
+        <i class="bi bi-receipt"></i>
+      </div>
+      <div class="kpi-value" style="font-size:20px">R$ {{ kpi_faturado|floatformat:2 }}</div>
+      <div class="kpi-label">Total faturado</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--success-bg); color:var(--success)">
+        <i class="bi bi-check-circle-fill"></i>
+      </div>
+      <div class="kpi-value" style="font-size:20px; color:var(--success)">R$ {{ kpi_recebido|floatformat:2 }}</div>
+      <div class="kpi-label">Recebido</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--warning-bg); color:var(--warning)">
+        <i class="bi bi-clock-fill"></i>
+      </div>
+      <div class="kpi-value" style="font-size:20px; color:var(--warning)">R$ {{ kpi_em_aberto|floatformat:2 }}</div>
+      <div class="kpi-label">Em aberto</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--danger-bg); color:var(--danger)">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+      </div>
+      <div class="kpi-value" style="font-size:20px; color:var(--danger)">R$ {{ kpi_vencido|floatformat:2 }}</div>
+      <div class="kpi-label">Vencido</div>
+    </div>
+  </div>
+</div>
+
+<!-- Filtros -->
+<form method="get" class="mb-4">
+  <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center">
+    {{ form.busca }}
+    {{ form.situacao }}
+    <div style="display:flex; gap:4px; align-items:center">
+      {{ form.vencimento_de }}
+      <span style="font-size:12px; color:#94a3b8; padding:0 4px">até</span>
+      {{ form.vencimento_ate }}
+    </div>
+    <button type="submit" class="btn btn-outline-secondary btn-sm">Filtrar</button>
+    {% if request.GET %}<a href="?" class="btn btn-outline-secondary btn-sm" title="Limpar filtros"><i class="bi bi-x-lg"></i></a>{% endif %}
+  </div>
+</form>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Contrato</th>
+          <th>Cliente</th>
+          <th>Veículo</th>
+          <th>Vencimento</th>
+          <th class="text-end">Total</th>
+          <th class="text-end">Pago</th>
+          <th class="text-end">Saldo</th>
+          <th>Situação</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for conta in contas %}
+        <tr {% if conta.vencida %}class="table-warning"{% endif %}>
+          <td>
+            <a href="{% url 'financeiro:conta-receber-detalhe' conta.pk %}" class="table-link text-mono">{{ conta.contrato.numero }}</a>
+          </td>
+          <td style="font-weight:500; font-size:13px">{{ conta.cliente.nome_exibicao }}</td>
+          <td>
+            <span class="text-mono" style="font-size:11.5px; font-weight:700; background:#f8fafc; border:1px solid #e2e8f0; padding:2px 6px; border-radius:4px">{{ conta.contrato.veiculo.placa }}</span>
+          </td>
+          <td>
+            <span style="font-size:12.5px; {% if conta.vencida %}color:var(--danger); font-weight:600{% else %}color:#64748b{% endif %}">
+              {{ conta.data_vencimento|date:"d/m/Y" }}
+            </span>
+            {% if conta.vencida %}
+            <span class="badge bg-danger-subtle text-danger border small" style="display:block; margin-top:2px">
+              +{{ conta.dias_em_atraso }} dia{{ conta.dias_em_atraso|pluralize }}
+            </span>
+            {% elif conta.dias_para_vencer >= 0 and conta.dias_para_vencer <= 3 %}
+            <span class="badge bg-warning-subtle text-warning border small" style="display:block; margin-top:2px">
+              {% if conta.dias_para_vencer == 0 %}Vence hoje
+              {% elif conta.dias_para_vencer == 1 %}Vence amanhã
+              {% else %}Vence em {{ conta.dias_para_vencer }} dias{% endif %}
+            </span>
+            {% endif %}
+          </td>
+          <td class="text-end" style="font-size:13px; color:#0f172a">R$ {{ conta.valor_total|floatformat:2 }}</td>
+          <td class="text-end" style="font-size:13px; color:var(--success); font-weight:600">
+            {% if conta.valor_pago %}R$ {{ conta.valor_pago|floatformat:2 }}{% else %}<span style="color:#cbd5e1">—</span>{% endif %}
+          </td>
+          <td class="text-end" style="font-size:13.5px; font-weight:700; {% if conta.valor_saldo > 0 %}color:var(--danger){% else %}color:var(--success){% endif %}">
+            R$ {{ conta.valor_saldo|floatformat:2 }}
+          </td>
+          <td>
+            {% if conta.vencida %}
+              <span class="status-badge status-danger">Vencido</span>
+            {% elif conta.situacao == 'pago_parcial' %}
+              <span class="status-badge status-primary">Pago Parcialmente</span>
+            {% elif conta.situacao == 'pago' %}
+              <span class="status-badge status-success">Pago</span>
+            {% elif conta.situacao == 'cancelado' %}
+              <span class="status-badge status-neutral">Cancelado</span>
+            {% else %}
+              <span class="status-badge status-warning">Pendente</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{% url 'financeiro:conta-receber-detalhe' conta.pk %}" class="btn btn-outline-primary btn-sm" title="Ver conta">
+              <i class="bi bi-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9">
+            <div class="empty-state">
+              <div class="empty-state-icon"><i class="bi bi-receipt"></i></div>
+              <div class="empty-state-title">Nenhuma conta encontrada</div>
+              <div class="empty-state-text">As contas são geradas automaticamente quando um contrato é ativado.</div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if is_paginated %}
+<div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <div class="text-muted small">
+    Mostrando {{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ page_obj.paginator.count }} conta{{ page_obj.paginator.count|pluralize:"s" }}
+  </div>
+  <nav>
+    <ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode }}"><i class="bi bi-chevron-left"></i></a></li>{% endif %}
+      <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+      {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode }}"><i class="bi bi-chevron-right"></i></a></li>{% endif %}
+    </ul>
+  </nav>
+</div>
+{% endif %}
+
+{% endblock %}

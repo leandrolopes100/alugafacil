@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% comment %}
+Template base para todos os relatórios.
+Uso: {% extends 'core/relatorios/base_relatorio.html' %}
+Blocos disponíveis: titulo_relatorio, descricao, acoes_extras, conteudo_relatorio
+{% endcomment %}
+{% load core_tags %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+  .periodo-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .periodo-form select, .periodo-form input[type=number] {
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-family: inherit;
+    background: var(--surface);
+    color: var(--text-primary);
+    outline: none;
+  }
+  .periodo-form select:focus, .periodo-form input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-ring);
+  }
+  .nav-relatorios {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .nav-relatorio-item {
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    transition: all .15s;
+  }
+  .nav-relatorio-item:hover { background: var(--bg); color: var(--text-primary); }
+  .nav-relatorio-item.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+  <a href="{% url 'core:relatorios' %}" class="text-decoration-none text-secondary">Relatórios</a>
+</li>
+<li class="breadcrumb-item active">{% block titulo_breadcrumb %}Relatório{% endblock %}</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<!-- Navegação entre relatórios -->
+<div class="nav-relatorios">
+  <a href="{% url 'core:relatorio-contratos' %}"
+     class="nav-relatorio-item {% if request.resolver_match.url_name == 'relatorio-contratos' %}active{% endif %}">
+    <i class="bi bi-file-earmark-text me-1"></i>Contratos
+  </a>
+  <a href="{% url 'core:relatorio-frota' %}"
+     class="nav-relatorio-item {% if request.resolver_match.url_name == 'relatorio-frota' %}active{% endif %}">
+    <i class="bi bi-car-front me-1"></i>Frota / Ocupação
+  </a>
+  <a href="{% url 'core:relatorio-dre' %}"
+     class="nav-relatorio-item {% if request.resolver_match.url_name == 'relatorio-dre' %}active{% endif %}">
+    <i class="bi bi-graph-up-arrow me-1"></i>DRE Financeiro
+  </a>
+  <a href="{% url 'core:relatorio-clientes' %}"
+     class="nav-relatorio-item {% if request.resolver_match.url_name == 'relatorio-clientes' %}active{% endif %}">
+    <i class="bi bi-people me-1"></i>Clientes
+  </a>
+  <a href="{% url 'core:relatorio-inadimplencia' %}"
+     class="nav-relatorio-item {% if request.resolver_match.url_name == 'relatorio-inadimplencia' %}active{% endif %}">
+    <i class="bi bi-exclamation-circle me-1"></i>Inadimplência
+  </a>
+</div>
+
+<!-- Cabeçalho do relatório específico -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{% block titulo_relatorio %}Relatório{% endblock %}</h1>
+    <p class="page-subtitle">{% block descricao %}{% endblock %}</p>
+  </div>
+  <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+    {% block acoes_extras %}{% endblock %}
+    {% block filtro_periodo %}
+    <form method="get" class="periodo-form">
+      {% if meses_disp %}
+      <select name="mes">
+        <option value="">Ano completo</option>
+        {% for num, nome in meses_disp %}
+        <option value="{{ num }}" {% if mes_sel == num %}selected{% endif %}>{{ nome }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
+      <select name="ano">
+        {% for a in anos_disp %}
+        <option value="{{ a }}" {% if ano_sel == a %}selected{% endif %}>{{ a }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-primary btn-sm">Buscar</button>
+    </form>
+    {% endblock %}
+  </div>
+</div>
+
+{% block conteudo_relatorio %}{% endblock %}
+
+{% endblock %}

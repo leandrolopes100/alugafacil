@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'financeiro:index' %}" class="text-decoration-none text-secondary">Financeiro</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financeiro:despesas' %}" class="text-decoration-none text-secondary">Despesas</a></li>
+<li class="breadcrumb-item"><a href="{% url 'financeiro:despesa-detalhe' object.pk %}" class="text-decoration-none text-secondary">Detalhe</a></li>
+<li class="breadcrumb-item active">Editar</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div>
+    <h1 class="page-title">{{ titulo }}</h1>
+    <p class="page-subtitle mb-0">Edite os dados da despesa abaixo.</p>
+  </div>
+  <a href="{% url 'financeiro:despesa-detalhe' object.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Cancelar
+  </a>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header">
+        <i class="bi bi-pencil-square text-primary"></i>Editar Despesa
+      </div>
+      <div class="card-body">
+        <form method="post"
+              x-data="{ parcelado: {% if form.data.parcelado or object.parcelado %}true{% else %}false{% endif %} }">
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+          <div class="form-error-banner mb-3">
+            <i class="bi bi-exclamation-triangle-fill flex-shrink-0" style="font-size:14px; margin-top:1px"></i>
+            <div>
+              <div class="fw-semibold mb-1">Corrija os erros:</div>
+              <ul>{% for erro in form.non_field_errors %}<li>{{ erro }}</li>{% endfor %}</ul>
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="mb-3 {% if form.categoria.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Categoria *</label>{{ form.categoria }}
+            {% if form.categoria.errors %}<div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.categoria.errors.0 }}</div>{% endif %}
+          </div>
+
+          <div class="mb-3 {% if form.descricao.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Descrição *</label>{{ form.descricao }}
+            {% if form.descricao.errors %}<div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.descricao.errors.0 }}</div>{% endif %}
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6 {% if form.valor.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Valor Total (R$) *</label>{{ form.valor }}
+              {% if form.valor.errors %}<div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.valor.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-sm-6 {% if form.data_competencia.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small">Data de Competência *</label>{{ form.data_competencia }}
+              {% if form.data_competencia.errors %}<div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.data_competencia.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Veículo (opcional)</label>{{ form.veiculo }}
+          </div>
+
+          {% if object.parcelado %}
+          {# Despesa parcelada: não permite alterar parcelamento — apenas dados básicos #}
+          <div class="alert alert-info d-flex align-items-center gap-2 py-2 mb-3" style="font-size:13px">
+            <i class="bi bi-info-circle-fill flex-shrink-0"></i>
+            <span>Despesa parcelada em <strong>{{ object.numero_parcelas }}x {{ object.get_forma_pagamento_display }}</strong>. As parcelas já geradas não são alteradas aqui.</span>
+          </div>
+          {% else %}
+          <div x-show="!parcelado" class="mb-3">
+            <label class="form-label fw-semibold small">Data de Pagamento</label>{{ form.data_pagamento }}
+          </div>
+          {% endif %}
+
+          <div class="mb-3 {% if form.observacoes.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Observações</label>{{ form.observacoes }}
+            {% if form.observacoes.errors %}<div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.observacoes.errors.0 }}</div>{% endif %}
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-grow-1">
+              <i class="bi bi-check-lg me-1"></i>Salvar Alterações
+            </button>
+            <a href="{% url 'financeiro:despesa-detalhe' object.pk %}" class="btn btn-outline-secondary">
+              Cancelar
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

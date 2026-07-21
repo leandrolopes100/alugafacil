@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+{% block titulo %}Agenda de Pagamentos{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'financeiro:index' %}" class="text-decoration-none text-secondary">Financeiro</a></li>
+<li class="breadcrumb-item active">Agenda de Pagamentos</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<!-- Formulário oculto para pagamento em lote -->
+<form id="form-lote-agenda"
+      method="post"
+      action="{% url 'financeiro:parcelas-pagar-lote' %}">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.path }}">
+</form>
+
+<div class="page-header"
+     x-data="{
+       selecionadas: 0,
+       total: 0.0,
+       toggle(checked, valor) {
+         if (checked) { this.selecionadas++; this.total += valor; }
+         else { this.selecionadas--; this.total -= valor; }
+       }
+     }">
+  <div>
+    <h1 class="page-title">Agenda de Pagamentos</h1>
+    <p class="page-subtitle mb-0">Parcelas de despesas a pagar</p>
+  </div>
+  <div class="d-flex gap-2 align-items-center flex-wrap">
+    <button type="submit"
+            form="form-lote-agenda"
+            class="btn btn-success btn-sm"
+            x-show="selecionadas > 0"
+            x-cloak>
+      <i class="bi bi-check-all me-1"></i>
+      Pagar <span x-text="selecionadas"></span> selecionada<span x-show="selecionadas > 1">s</span>
+      <span class="opacity-75 ms-1">(R$ <span x-text="total.toFixed(2)"></span>)</span>
+    </button>
+    <a href="{% url 'financeiro:contas-pagar' %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-grid-3x2-gap me-1"></i>Contas a Pagar
+    </a>
+    <a href="{% url 'financeiro:despesas' %}#form-despesa" class="btn btn-outline-danger btn-sm">
+      <i class="bi bi-plus-circle me-1"></i>Nova Despesa
+    </a>
+  </div>
+
+</div><!-- /page-header x-data -->
+
+<!-- KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="card text-center" style="border-left:3px solid #b3261e">
+      <div class="card-body py-3">
+        <div style="font-size:22px; font-weight:700; color:#b3261e">{{ em_atraso|length }}</div>
+        <div style="font-size:12px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:.05em">Em atraso</div>
+        {% if total_atraso %}<div style="font-size:13px; font-weight:600; color:#b3261e; margin-top:2px">R$ {{ total_atraso|floatformat:2 }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card text-center" style="border-left:3px solid #b8860a">
+      <div class="card-body py-3">
+        <div style="font-size:22px; font-weight:700; color:#b8860a">{{ esta_semana|length }}</div>
+        <div style="font-size:12px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:.05em">Esta semana</div>
+        {% if total_semana %}<div style="font-size:13px; font-weight:600; color:#b8860a; margin-top:2px">R$ {{ total_semana|floatformat:2 }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card text-center" style="border-left:3px solid #d97706">
+      <div class="card-body py-3">
+        <div style="font-size:22px; font-weight:700; color:#d97706">{{ proximas|length }}</div>
+        <div style="font-size:12px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:.05em">Próximas</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card text-center" style="border-left:3px solid #1e7a4c">
+      <div class="card-body py-3">
+        <div style="font-size:22px; font-weight:700; color:#1e7a4c">{{ hoje|date:"d/m/Y" }}</div>
+        <div style="font-size:12px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:.05em">Hoje</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Área de tabelas com estado Alpine compartilhado -->
+<div x-data="{
+       selecionadas: 0,
+       total: 0.0,
+       toggle(checked, valor) {
+         if (checked) { this.selecionadas++; this.total += valor; }
+         else { this.selecionadas--; this.total -= valor; }
+       }
+     }">
+
+<!-- Barra flutuante de ação em lote (aparece ao selecionar) -->
+<div x-show="selecionadas > 0" x-cloak
+     style="position:sticky; top:70px; z-index:100; margin-bottom:12px">
+  <div class="alert alert-success d-flex align-items-center gap-3 py-2 px-3 mb-0 shadow-sm">
+    <i class="bi bi-check-circle-fill text-success fs-5"></i>
+    <span class="fw-semibold flex-grow-1">
+      <span x-text="selecionadas"></span> parcela<span x-show="selecionadas > 1">s</span> selecionada<span x-show="selecionadas > 1">s</span>
+      — R$ <span x-text="total.toFixed(2)"></span>
+    </span>
+    <button type="submit" form="form-lote-agenda" class="btn btn-success btn-sm">
+      <i class="bi bi-check-all me-1"></i>Pagar selecionadas
+    </button>
+  </div>
+</div>
+
+<!-- Em Atraso -->
+{% if em_atraso %}
+<div class="card mb-4" style="border-left:3px solid #b3261e">
+  <div class="card-header" style="color:#6b1712">
+    <i class="bi bi-exclamation-circle-fill" style="color:#b3261e"></i>
+    Em Atraso — {{ em_atraso|length }} parcela{{ em_atraso|length|pluralize:"s" }}
+    <span class="ms-auto fw-bold" style="font-size:13px; color:#b3261e">R$ {{ total_atraso|floatformat:2 }}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead><tr>
+        <th style="width:36px"><input type="checkbox" class="form-check-input" title="Selecionar todas em atraso"
+          @change="document.querySelectorAll('.chk-atraso').forEach(cb => { if(cb.checked !== $event.target.checked){ cb.checked=$event.target.checked; cb.dispatchEvent(new Event('change')); } })"></th>
+        <th>Despesa</th><th>Parcela</th><th>Vencimento</th><th>Atraso</th><th class="text-end">Valor</th><th class="text-center">Ação</th>
+      </tr></thead>
+      <tbody>
+        {% for p in em_atraso %}
+        <tr style="background:#fceceb">
+          <td>
+            <input type="checkbox" name="parcela_ids" value="{{ p.pk }}"
+                   form="form-lote-agenda" class="form-check-input chk-atraso"
+                   @change="toggle($event.target.checked, {{ p.valor }})">
+          </td>
+          <td>
+            <a href="{% url 'financeiro:despesa-detalhe' p.despesa.pk %}" class="fw-semibold text-decoration-none text-primary">
+              {{ p.despesa.descricao|truncatechars:35 }}
+            </a>
+            <div class="text-muted" style="font-size:11px">{{ p.despesa.get_categoria_display }}</div>
+          </td>
+          <td>
+            <span class="badge" style="background:#fceceb; color:#6b1712; border:1px solid #d9a19d">
+              {{ p.numero }}/{{ p.despesa.numero_parcelas }}
+            </span>
+          </td>
+          <td class="small text-danger fw-semibold">{{ p.data_vencimento|date:"d/m/Y" }}</td>
+          <td><span class="badge bg-danger">{{ p.dias_atraso }}d</span></td>
+          <td class="text-end fw-bold text-danger">R$ {{ p.valor|floatformat:2 }}</td>
+          <td class="text-center">
+            <form method="post" action="{% url 'financeiro:parcela-despesa-pagar' p.pk %}">
+              {% csrf_token %}
+              <button type="button" class="btn btn-sm btn-danger"
+                      onclick="confirmarAcao(this, 'Pagar parcela {{ p.numero }}/{{ p.despesa.numero_parcelas }}?', 'R$ {{ p.valor|floatformat:2 }}', 'success')">
+                <i class="bi bi-check-lg me-1"></i>Pagar
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Esta Semana -->
+{% if esta_semana %}
+<div class="card mb-4" style="border-left:3px solid #b8860a">
+  <div class="card-header" style="color:#6b4f08">
+    <i class="bi bi-calendar-week" style="color:#b8860a"></i>
+    Esta Semana — {{ esta_semana|length }} parcela{{ esta_semana|length|pluralize:"s" }}
+    <span class="ms-auto fw-bold" style="font-size:13px; color:#b8860a">R$ {{ total_semana|floatformat:2 }}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead><tr>
+        <th style="width:36px"><input type="checkbox" class="form-check-input" title="Selecionar todas desta semana"
+          @change="document.querySelectorAll('.chk-semana').forEach(cb => { if(cb.checked !== $event.target.checked){ cb.checked=$event.target.checked; cb.dispatchEvent(new Event('change')); } })"></th>
+        <th>Despesa</th><th>Parcela</th><th>Vencimento</th><th class="text-end">Valor</th><th class="text-center">Ação</th>
+      </tr></thead>
+      <tbody>
+        {% for p in esta_semana %}
+        <tr>
+          <td>
+            <input type="checkbox" name="parcela_ids" value="{{ p.pk }}"
+                   form="form-lote-agenda" class="form-check-input chk-semana"
+                   @change="toggle($event.target.checked, {{ p.valor }})">
+          </td>
+          <td>
+            <a href="{% url 'financeiro:despesa-detalhe' p.despesa.pk %}" class="fw-semibold text-decoration-none text-primary">
+              {{ p.despesa.descricao|truncatechars:35 }}
+            </a>
+            <div class="text-muted" style="font-size:11px">{{ p.despesa.get_categoria_display }}</div>
+          </td>
+          <td>
+            <span class="badge" style="background:#fdf6e0; color:#6b4f08; border:1px solid #e0c27a">
+              {{ p.numero }}/{{ p.despesa.numero_parcelas }}
+            </span>
+          </td>
+          <td class="small fw-semibold">
+            {{ p.data_vencimento|date:"d/m/Y" }}
+            {% if p.data_vencimento == hoje %}<span class="badge bg-warning text-dark ms-1">Hoje</span>{% endif %}
+          </td>
+          <td class="text-end fw-bold">R$ {{ p.valor|floatformat:2 }}</td>
+          <td class="text-center">
+            <form method="post" action="{% url 'financeiro:parcela-despesa-pagar' p.pk %}">
+              {% csrf_token %}
+              <button type="button" class="btn btn-sm btn-warning text-dark"
+                      onclick="confirmarAcao(this, 'Pagar parcela {{ p.numero }}/{{ p.despesa.numero_parcelas }}?', 'R$ {{ p.valor|floatformat:2 }}', 'success')">
+                <i class="bi bi-check-lg me-1"></i>Pagar
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Próximas -->
+{% if proximas %}
+<div class="card mb-4" style="border-left:3px solid #d97706">
+  <div class="card-header">
+    <i class="bi bi-calendar-plus" style="color:#d97706"></i>
+    Próximas — {{ proximas|length }} parcela{{ proximas|length|pluralize:"s" }}
+  </div>
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead><tr>
+        <th style="width:36px"><input type="checkbox" class="form-check-input" title="Selecionar todas próximas"
+          @change="document.querySelectorAll('.chk-proxima').forEach(cb => { if(cb.checked !== $event.target.checked){ cb.checked=$event.target.checked; cb.dispatchEvent(new Event('change')); } })"></th>
+        <th>Despesa</th><th>Parcela</th><th>Vencimento</th><th class="text-end">Valor</th><th class="text-center">Ação</th>
+      </tr></thead>
+      <tbody>
+        {% for p in proximas %}
+        <tr>
+          <td>
+            <input type="checkbox" name="parcela_ids" value="{{ p.pk }}"
+                   form="form-lote-agenda" class="form-check-input chk-proxima"
+                   @change="toggle($event.target.checked, {{ p.valor }})">
+          </td>
+          <td>
+            <a href="{% url 'financeiro:despesa-detalhe' p.despesa.pk %}" class="fw-semibold text-decoration-none text-primary">
+              {{ p.despesa.descricao|truncatechars:35 }}
+            </a>
+            <div class="text-muted" style="font-size:11px">{{ p.despesa.get_categoria_display }}</div>
+          </td>
+          <td>
+            <span class="badge bg-light text-dark border">{{ p.numero }}/{{ p.despesa.numero_parcelas }}</span>
+          </td>
+          <td class="small text-muted">{{ p.data_vencimento|date:"d/m/Y" }}</td>
+          <td class="text-end text-muted">R$ {{ p.valor|floatformat:2 }}</td>
+          <td class="text-center">
+            <form method="post" action="{% url 'financeiro:parcela-despesa-pagar' p.pk %}">
+              {% csrf_token %}
+              <button type="button" class="btn btn-sm btn-outline-primary"
+                      onclick="confirmarAcao(this, 'Pagar parcela {{ p.numero }}/{{ p.despesa.numero_parcelas }}?', 'R$ {{ p.valor|floatformat:2 }}', 'success')">
+                <i class="bi bi-check-lg me-1"></i>Pagar
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+</div><!-- /x-data área de tabelas -->
+
+{% if not em_atraso and not esta_semana and not proximas %}
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-state-icon"><i class="bi bi-check2-circle"></i></div>
+    <div class="empty-state-title">Nenhum pagamento pendente</div>
+    <div class="empty-state-text">Todas as parcelas de despesas estão em dia.</div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

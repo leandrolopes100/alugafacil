@@ -1,0 +1,946 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+{% block titulo %}Contrato {{ contrato.numero }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'contratos:lista' %}" class="text-decoration-none text-secondary">Contratos</a></li>
+<li class="breadcrumb-item active">{{ contrato.numero }}</li>
+{% endblock %}
+
+{% block conteudo %}
+
+<!-- ── Cabeçalho ──────────────────────────────────────────────────────────── -->
+<div class="page-header d-flex align-items-start justify-content-between gap-3 flex-wrap">
+  <div>
+    <h1 class="page-title text-mono">{{ contrato.numero }}</h1>
+    <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
+      <span class="badge badge-status
+        {% if contrato.situacao == 'ativo' %}bg-primary
+        {% elif contrato.situacao == 'encerrado' %}bg-success
+        {% elif contrato.situacao == 'aberto' %}bg-warning text-dark
+        {% elif contrato.situacao == 'cancelado' %}bg-secondary
+        {% else %}bg-info text-dark{% endif %}">
+        {{ contrato.get_situacao_display }}
+      </span>
+      {% if contrato.em_atraso %}
+      <span class="badge bg-danger"><i class="bi bi-clock me-1"></i>Em Atraso</span>
+      {% endif %}
+      {% if contrato.assinado %}
+      <span class="badge bg-success-subtle text-success border border-success-subtle">
+        <i class="bi bi-pen me-1"></i>Assinado
+      </span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'contratos:pdf' contrato.pk %}" target="_blank" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+    </a>
+    {% if not contrato.assinado %}
+    <a href="{% url 'contratos:assinar' contrato.token_assinatura %}" target="_blank" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-link-45deg me-1"></i>Link Assinatura
+    </a>
+    {% endif %}
+    {% if contrato.situacao == 'aberto' %}
+    <a href="{% url 'contratos:checkout' contrato.pk %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-box-arrow-right me-1"></i>Check-out
+    </a>
+    <form method="post" action="{% url 'contratos:cancelar' contrato.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button type="button" class="btn btn-outline-danger btn-sm"
+              onclick="confirmarAcao(this, 'Cancelar contrato?', 'Esta ação não pode ser desfeita.', 'danger')">Cancelar</button>
+    </form>
+    {% elif contrato.situacao == 'ativo' %}
+    <a href="{% url 'contratos:checkin' contrato.pk %}" class="btn btn-success btn-sm">
+      <i class="bi bi-box-arrow-in-left me-1"></i>Check-in
+    </a>
+    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#modalProrrogar">
+      <i class="bi bi-calendar-plus me-1"></i>Prorrogar
+    </button>
+    {% if is_admin_locadora %}
+    <div class="d-flex align-items-center gap-2 ps-3 ms-1" style="border-left:2px solid var(--danger)">
+      <a href="{% url 'contratos:encerramento-antecipado' contrato.pk %}" class="btn btn-danger btn-sm"
+         title="Use somente se o veículo for devolvido antes do prazo previsto (quebra de contrato) — parcelas futuras serão canceladas">
+        <i class="bi bi-exclamation-octagon-fill me-1"></i>Quebra de Contrato
+      </a>
+    </div>
+    {% endif %}
+    {% elif contrato.situacao == 'aguardando_devolucao' %}
+    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalEncerrar">
+      <i class="bi bi-check2-circle me-1"></i>Encerrar Contrato
+    </button>
+    {% if is_admin_locadora %}
+    <form method="post" action="{% url 'contratos:reverter-checkin' contrato.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button type="button" class="btn btn-outline-warning btn-sm"
+              onclick="confirmarAcao(this, 'Reverter Check-in?', 'O contrato voltará para Ativo e as fotos de devolução serão excluídas.', 'warning')">
+        <i class="bi bi-arrow-counterclockwise me-1"></i>Reverter Check-in
+      </button>
+    </form>
+    {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── Alerta de atraso ───────────────────────────────────────────────────── -->
+{% if contrato.situacao == 'ativo' and contrato.em_atraso %}
+<div class="alert alert-danger d-flex align-items-start gap-2 mb-4" style="border-left:4px solid #b3261e">
+  <i class="bi bi-clock-history flex-shrink-0 mt-1"></i>
+  <div>
+    <strong>Veículo em atraso!</strong> Devolução prevista era
+    <strong>{{ contrato.data_devolucao_prevista|date:"d/m/Y H:i" }}</strong>.
+    Cada dia adicional é cobrado à diária de {{ contrato.diaria|brl }}.
+    Os dias extras e km excedente serão calculados automaticamente no check-in.
+  </div>
+</div>
+{% endif %}
+
+<!-- ── KPIs financeiros (visível após checkout) ───────────────────────────── -->
+{% if contrato.situacao != 'aberto' and contrato.situacao != 'cancelado' %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card {% if contrato.saldo_devedor > 0 %}border-danger border-opacity-50{% else %}border-success border-opacity-50{% endif %}" style="border-width:2px!important">
+      <div class="kpi-icon" style="background:{% if contrato.saldo_devedor > 0 %}#fceceb; color:#b3261e{% else %}#eafaf0; color:#1e7a4c{% endif %}">
+        <i class="bi bi-{% if contrato.saldo_devedor > 0 %}exclamation-circle-fill{% else %}check-circle-fill{% endif %}"></i>
+      </div>
+      <div class="kpi-value" style="font-size:18px; color:{% if contrato.saldo_devedor > 0 %}#b3261e{% else %}#1e7a4c{% endif %}">
+        {{ contrato.saldo_devedor|brl }}
+      </div>
+      <div class="kpi-label">{% if contrato.saldo_devedor > 0 %}Saldo Devedor{% else %}Quitado{% endif %}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#fdf1e0; color:#d97706">
+        <i class="bi bi-receipt"></i>
+      </div>
+      <div class="kpi-value" style="font-size:18px; color:#d97706">{{ contrato.total_geral|brl }}</div>
+      <div class="kpi-label">Total a Receber</div>
+      {% if not contrato.total_dias %}<div class="kpi-sub">estimado</div>{% endif %}
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#eafaf0; color:#1e7a4c">
+        <i class="bi bi-arrow-down-circle-fill"></i>
+      </div>
+      <div class="kpi-value" style="font-size:18px; color:#1e7a4c">{{ contrato.total_pago|brl }}</div>
+      <div class="kpi-label">Total Recebido</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#eef5fa; color:#2f6690">
+        <i class="bi bi-shield-check"></i>
+      </div>
+      <div class="kpi-value" style="font-size:18px; color:#2f6690">{{ contrato.caucao_valor|brl }}</div>
+      <div class="kpi-label">Caução</div>
+      <div class="kpi-sub">{{ contrato.get_caucao_situacao_display }}</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Layout principal ───────────────────────────────────────────────────── -->
+<div class="row g-4">
+
+  <!-- Coluna principal (esquerda) -->
+  <div class="col-lg-8">
+
+    <!-- Partes -->
+    <div class="card mb-4">
+      <div class="card-header"><i class="bi bi-people me-2 text-primary"></i>Partes</div>
+      <div class="card-body">
+        <div class="row g-4">
+          <div class="col-md-6">
+            <div class="text-muted small mb-1">Locatário</div>
+            <a href="{% url 'clientes:detalhe' contrato.cliente.pk %}" class="fw-bold text-primary text-decoration-none h6 mb-0">
+              {{ contrato.cliente.nome_exibicao }}
+            </a>
+            <div class="text-muted small text-mono">{{ contrato.cliente.documento }}</div>
+            {% if contrato.cliente.celular %}
+            <div class="small text-muted mt-1"><i class="bi bi-telephone me-1"></i>{{ contrato.cliente.celular }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted small mb-1">Veículo</div>
+            <a href="{% url 'frota:detalhe' contrato.veiculo.pk %}" class="fw-bold text-primary text-decoration-none h6 mb-0">
+              {{ contrato.veiculo.marca }} {{ contrato.veiculo.modelo }}
+            </a>
+            <div class="text-muted small text-mono">{{ contrato.veiculo.placa }}</div>
+            <div class="small text-muted mt-1">{{ contrato.veiculo.ano_modelo }} &middot; {{ contrato.veiculo.cor }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Período (Saída + Devolução no mesmo card) -->
+    {% if contrato.data_saida or contrato.data_devolucao_real %}
+    <div class="card mb-4">
+      <div class="card-header"><i class="bi bi-calendar-range me-2 text-primary"></i>Período</div>
+      <div class="card-body">
+        <div class="row g-4">
+
+          {% if contrato.data_saida %}
+          <div class="{% if contrato.data_devolucao_real %}col-md-6{% else %}col-12{% endif %}">
+            <div class="mb-2">
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:11px">
+                <i class="bi bi-box-arrow-right me-1"></i>Saída
+              </span>
+            </div>
+            <div class="row g-2 text-center">
+              <div class="col-4">
+                <div class="text-muted" style="font-size:11px">Data/hora</div>
+                <div class="fw-semibold small">{{ contrato.data_saida|date:"d/m/Y H:i" }}</div>
+              </div>
+              <div class="col-4">
+                <div class="text-muted" style="font-size:11px">KM</div>
+                <div class="fw-semibold small text-mono">{{ contrato.km_saida|floatformat:0 }}</div>
+              </div>
+              <div class="col-4">
+                <div class="text-muted" style="font-size:11px">Combustível</div>
+                <div class="fw-semibold small">{{ contrato.get_combustivel_saida_display }}</div>
+              </div>
+            </div>
+            {% if contrato.obs_saida %}
+            <div class="alert alert-light border mt-2 mb-0 small py-1 px-2">{{ contrato.obs_saida }}</div>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          {% if contrato.data_devolucao_real %}
+          <div class="{% if contrato.data_saida %}col-md-6{% else %}col-12{% endif %}">
+            <div class="mb-2">
+              <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:11px">
+                <i class="bi bi-box-arrow-in-left me-1"></i>Devolução
+              </span>
+            </div>
+            <div class="row g-2 text-center">
+              <div class="col-4">
+                <div class="text-muted" style="font-size:11px">Data/hora</div>
+                <div class="fw-semibold small">{{ contrato.data_devolucao_real|date:"d/m/Y H:i" }}</div>
+              </div>
+              <div class="col-4">
+                <div class="text-muted" style="font-size:11px">KM</div>
+                <div class="fw-semibold small text-mono">{{ contrato.km_devolucao|floatformat:0 }}</div>
+              </div>
+              <div class="col-4">
+                <div class="text-muted" style="font-size:11px">Combustível</div>
+                <div class="fw-semibold small">{{ contrato.get_combustivel_devolucao_display }}</div>
+              </div>
+            </div>
+            {% if contrato.obs_devolucao %}
+            <div class="alert alert-light border mt-2 mb-0 small py-1 px-2">{{ contrato.obs_devolucao }}</div>
+            {% endif %}
+          </div>
+          {% endif %}
+
+        </div>
+
+        <!-- Extras calculados no check-in -->
+        {% if contrato.km_excedente > 0 or contrato.dias_extras > 0 %}
+        <div class="alert alert-warning border-warning mt-3 mb-0 py-2">
+          <div class="row g-2 text-center small">
+            <div class="col-3">
+              <div class="text-muted">Total dias</div>
+              <div class="fw-bold">{{ contrato.total_dias }}</div>
+            </div>
+            <div class="col-3">
+              <div class="text-muted">Dias extras</div>
+              <div class="fw-bold text-warning">{{ contrato.dias_extras }}</div>
+            </div>
+            <div class="col-3">
+              <div class="text-muted">KM excedente</div>
+              <div class="fw-bold text-warning">{{ contrato.km_excedente }}</div>
+            </div>
+            <div class="col-3">
+              <div class="text-muted">Total locação</div>
+              <div class="fw-bold text-success">{{ contrato.total_locacao|brl }}</div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Agenda de Cobrança (parcelas) -->
+    {% if parcelas %}
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-calendar-week me-2 text-primary"></i>Agenda de Cobrança</span>
+        <span class="badge bg-light text-dark border">{{ parcelas|length }} parcela{{ parcelas|length|pluralize:"s" }}</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead>
+            <tr>
+              <th>Nº</th><th>Tipo</th><th>Origem</th><th>Vencimento</th>
+              <th class="text-end">Valor</th><th>Situação</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in parcelas %}
+            <tr {% if p.situacao == 'em_atraso' %}style="background:#fceceb"{% elif p.situacao == 'pago' %}style="background:#eafaf0"{% elif p.tipo == 'acerto' and p.situacao == 'pendente' %}style="background:#fdf6e0"{% endif %}>
+              <td class="text-muted small">{{ p.numero }}</td>
+              <td class="small">
+                {% if p.tipo == 'acerto' %}
+                <span class="fw-semibold" style="color:#6b4f08">{{ p.get_tipo_display }}</span>
+                {% if p.observacoes %}
+                <div class="text-muted" style="font-size:10.5px; line-height:1.3; margin-top:2px">{{ p.observacoes }}</div>
+                {% endif %}
+                {% else %}
+                {{ p.get_tipo_display }}
+                {% endif %}
+              </td>
+              <td class="small">
+                {% if p.tipo == 'acerto' %}
+                <span class="badge" style="background:#fdf6e0; color:#6b4f08; border:1px solid #f0cfa0">Acerto</span>
+                {% elif p.origem == 'prorrogacao' %}
+                <span class="badge" style="background:#fdf6e0; color:#6b4f08; border:1px solid #f0cfa0">Prorrogação</span>
+                {% else %}
+                <span class="text-muted">Original</span>
+                {% endif %}
+              </td>
+              <td class="small {% if p.em_atraso %}text-danger fw-semibold{% endif %}">
+                {{ p.data_vencimento|date:"d/m/Y" }}
+                {% if p.em_atraso %}<span class="badge bg-danger ms-1">{{ p.dias_atraso }}d atraso</span>{% endif %}
+              </td>
+              <td class="text-end fw-semibold {% if p.tipo == 'acerto' and p.situacao != 'pago' %}text-warning{% endif %}">{{ p.valor|brl }}</td>
+              <td>
+                {% if p.situacao == 'pago' %}
+                <span class="badge bg-success">Pago</span>
+                {% elif p.situacao == 'em_atraso' %}
+                <span class="badge bg-danger">Em Atraso</span>
+                {% elif p.situacao == 'cancelada' %}
+                <span class="badge bg-secondary">Cancelada</span>
+                {% else %}
+                <span class="badge bg-warning text-dark">Pendente</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                {% if p.situacao == 'pendente' or p.situacao == 'em_atraso' %}
+                <button class="btn btn-sm btn-outline-success"
+                  onclick="abrirPagamentoParcela({{ p.pk }}, '{{ p.valor|floatformat:2 }}', '{% if p.tipo == "caucao" %}Caução{% elif p.tipo == "acerto" %}Acerto Final{% else %}Parcela {{ p.numero }}{% endif %}', '{{ p.valor_corrigido|floatformat:2 }}')">
+                  <i class="bi bi-cash"></i>
+                </button>
+                {% elif p.situacao == 'pago' %}
+                <span class="small text-muted">{{ p.data_pagamento|date:"d/m/Y" }}</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Histórico de Pagamentos recebidos -->
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history me-2 text-success"></i>Pagamentos Recebidos</span>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-sm btn-outline-info"
+                  data-bs-toggle="modal" data-bs-target="#modalRegistrarPagamento"
+                  title="Registrar caução, multa ou outros recebimentos avulsos (avaria usa o botão Marcar como Paga na avaria)">
+            <i class="bi bi-plus-lg me-1"></i>Caução / Multa / Outros
+          </button>
+          <a href="{% url 'contratos:pagamentos' contrato.pk %}" class="btn btn-sm btn-outline-secondary" title="Ver histórico completo">
+            <i class="bi bi-list-ul"></i>
+          </a>
+        </div>
+      </div>
+      {% if pagamentos %}
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Data</th><th>Referente a</th><th>Forma</th><th class="text-end">Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pag in pagamentos %}
+            <tr>
+              <td class="text-muted small">{{ pag.data_pagamento|date:"d/m/Y H:i" }}</td>
+              <td>
+                <span class="badge
+                  {% if pag.tipo == 'locacao' %}bg-primary
+                  {% elif pag.tipo == 'caucao' %}bg-info text-dark
+                  {% elif pag.tipo == 'avaria' %}bg-danger
+                  {% elif pag.tipo == 'multa' %}bg-warning text-dark
+                  {% else %}bg-secondary{% endif %}">
+                  {{ pag.get_tipo_display }}
+                </span>
+                {% if pag.observacoes %}<span class="small text-muted ms-1">{{ pag.observacoes|truncatechars:30 }}</span>{% endif %}
+              </td>
+              <td class="small text-muted">
+                <i class="bi {% if pag.forma_pagamento == 'pix' %}bi-qr-code{% elif pag.forma_pagamento == 'dinheiro' %}bi-cash{% elif 'cartao' in pag.forma_pagamento %}bi-credit-card{% elif pag.forma_pagamento == 'transferencia' %}bi-bank{% else %}bi-receipt{% endif %} me-1"></i>
+                {{ pag.get_forma_pagamento_display }}
+              </td>
+              <td class="text-end fw-semibold {% if pag.tipo == 'caucao' %}text-info{% else %}text-success{% endif %}">
+                {{ pag.valor|brl }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot class="table-light">
+            <tr>
+              <td colspan="3" class="text-end small text-muted fw-semibold">Total recebido (excl. caução):</td>
+              <td class="text-end fw-bold text-success">{{ contrato.total_pago|brl }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state py-4">
+        <div class="empty-state-icon"><i class="bi bi-cash-coin" style="color:#1e7a4c; opacity:.4"></i></div>
+        <div class="empty-state-title">Nenhum pagamento registrado</div>
+        <div class="empty-state-text">Use o botão "Registrar" para lançar um pagamento recebido.</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Fotos -->
+    {% if fotos_saida or fotos_devolucao %}
+    <div class="card mb-4">
+      <div class="card-header"><i class="bi bi-images me-2 text-primary"></i>Fotos do Contrato</div>
+      <div class="card-body">
+        {% if fotos_saida %}
+        <p class="small fw-semibold text-muted mb-2">Saída</p>
+        <div class="row g-2 {% if fotos_devolucao %}mb-3{% endif %}">
+          {% for foto in fotos_saida %}
+          <div class="col-3">
+            <img src="{{ foto.imagem.url }}" class="img-fluid rounded" style="height:90px; object-fit:cover; width:100%">
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if fotos_devolucao %}
+        <p class="small fw-semibold text-muted mb-2">Devolução</p>
+        <div class="row g-2">
+          {% for foto in fotos_devolucao %}
+          <div class="col-3">
+            <img src="{{ foto.imagem.url }}" class="img-fluid rounded" style="height:90px; object-fit:cover; width:100%">
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- ── Coluna lateral (direita) ───────────────────────────────────────── -->
+  <div class="col-lg-4">
+
+    <!-- Composição Financeira -->
+    <div class="card mb-3 {% if contrato.saldo_devedor > 0 %}border-danger border-opacity-50{% else %}border-success border-opacity-50{% endif %}">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-cash-coin me-2 text-primary"></i>Financeiro</span>
+        <button type="button" class="btn btn-sm btn-outline-info"
+                data-bs-toggle="modal" data-bs-target="#modalRegistrarPagamento"
+                title="Registrar caução, multa ou outros recebimentos avulsos (avarias: use o botão 'Marcar como Paga' na avaria)">
+          <i class="bi bi-plus-lg me-1"></i>Extras
+        </button>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% if contrato.total_dias and contrato.valor_km_excedente_total or contrato.total_dias and contrato.valor_dias_extras or contrato.total_dias and contrato.valor_diferenca_combustivel %}
+        <!-- Post-checkin com acréscimos: breakdown explícito -->
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Diária ({{ contrato.total_dias }} dia{{ contrato.total_dias|pluralize:"s" }} × {{ contrato.diaria|brl }})</span>
+          <span>{{ contrato.valor_locacao_base|brl }}</span>
+        </li>
+        {% if contrato.valor_km_excedente_total %}
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">KM excedente ({{ contrato.km_excedente }} km × {{ contrato.valor_km_excedente|brl }})</span>
+          <span class="text-warning-emphasis">{{ contrato.valor_km_excedente_total|brl }}</span>
+        </li>
+        {% endif %}
+        {% if contrato.valor_dias_extras %}
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">{{ contrato.dias_extras }} dia{{ contrato.dias_extras|pluralize:"s" }} extra{{ contrato.dias_extras|pluralize:"s" }} × {{ contrato.diaria|brl }}</span>
+          <span class="text-warning-emphasis">{{ contrato.valor_dias_extras|brl }}</span>
+        </li>
+        {% endif %}
+        {% if contrato.valor_diferenca_combustivel %}
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Diferença combustível</span>
+          <span class="text-warning-emphasis">{{ contrato.valor_diferenca_combustivel|brl }}</span>
+        </li>
+        {% endif %}
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2" style="border-top:1px dashed #dee2e6">
+          <span class="text-muted fw-semibold">Subtotal locação</span>
+          <span class="fw-semibold">{{ contrato.total_locacao|brl }}</span>
+        </li>
+        {% else %}
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">
+            Locação
+            {% if not contrato.total_dias %}<span class="badge bg-secondary ms-1" style="font-size:10px" title="Calculado sobre dias previstos — confirmado no check-in">est.</span>{% endif %}
+          </span>
+          <span>{{ contrato.total_locacao|brl }}</span>
+        </li>
+        {% endif %}
+        {% if contrato.total_adicionais %}
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">
+            Adicionais
+            {% if not contrato.total_dias %}<span class="badge bg-secondary ms-1" style="font-size:10px">est.</span>{% endif %}
+          </span>
+          <span>{{ contrato.total_adicionais|brl }}</span>
+        </li>
+        {% endif %}
+        {% if contrato.total_avarias %}
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Avarias cobradas</span>
+          <span class="text-danger">{{ contrato.total_avarias|brl }}</span>
+        </li>
+        {% endif %}
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2 fw-semibold" style="border-top:2px solid var(--border)">
+          <span>
+            Total a receber
+            {% if not contrato.total_dias %}<span class="badge bg-secondary ms-1" style="font-size:10px">est.</span>{% endif %}
+          </span>
+          <span>{{ contrato.total_geral|brl }}</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2 text-success">
+          <span>Total recebido</span>
+          <span class="fw-semibold">{{ contrato.total_pago|brl }}</span>
+        </li>
+        {% if contrato.saldo_devedor > 0 %}
+        <li class="list-group-item d-flex justify-content-between px-3 py-2 fw-bold text-danger">
+          <span>Saldo devedor</span>
+          <span>{{ contrato.saldo_devedor|brl }}</span>
+        </li>
+        {% elif contrato.saldo_devedor == 0 %}
+        <li class="list-group-item d-flex justify-content-between px-3 py-2 fw-bold text-success">
+          <span>✓ Quitado</span>
+          <span>{{ contrato.saldo_devedor|brl }}</span>
+        </li>
+        {% else %}
+        <li class="list-group-item d-flex justify-content-between px-3 py-2 fw-bold text-success">
+          <span>✓ Quitado</span>
+          <span>R$ 0,00</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2"
+            style="background:#fdf6e0; border-top:1px dashed #e0c27a"
+            title="O cliente pagou mais do que o valor do contrato. Verifique pagamentos duplicados ou revise parcelas.">
+          <span style="color:#6b4f08">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            Crédito do cliente
+          </span>
+          <span class="fw-semibold" style="color:#6b4f08">{{ contrato.saldo_devedor|brl }}</span>
+        </li>
+        {% endif %}
+        {% if contrato.total_caucao_coletado %}
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2"
+            style="background:#eef5fa; border-top:2px dashed #b9d3e3"
+            title="Caução é depósito de garantia — não abate o saldo devedor da locação">
+          <span class="text-muted">
+            <i class="bi bi-shield-check me-1" style="color:#2f6690"></i>
+            Caução retido
+            <span style="font-size:11px; color:#2f6690">(depósito)</span>
+          </span>
+          <span style="color:#2f6690">{{ contrato.total_caucao_coletado|brl }}</span>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+
+    <!-- Tarifas e período -->
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-receipt me-2 text-primary"></i>Tarifas</div>
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Diária</span>
+          <span class="fw-semibold">{{ contrato.diaria|brl }}</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Franquia km/dia</span>
+          <span>{{ contrato.km_franquia_diaria }} km</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Km excedente</span>
+          <span>{{ contrato.valor_km_excedente|brl }}/km</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Caução — {{ contrato.get_caucao_situacao_display }}</span>
+          <span class="fw-semibold">{{ contrato.caucao_valor|brl }}</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Dev. prevista</span>
+          <span>{{ contrato.data_devolucao_prevista|date:"d/m/Y H:i" }}</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Adicionais -->
+    <div class="card mb-3" x-data="{ aberto: false }">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-plus-square me-2 text-primary"></i>Adicionais</span>
+        <div class="d-flex gap-1">
+          {% if contrato.situacao == 'aberto' or contrato.situacao == 'ativo' %}
+          <button type="button" class="btn btn-sm btn-outline-primary" @click="aberto = !aberto" title="Incluir adicional">
+            <i class="bi" :class="aberto ? 'bi-dash-lg' : 'bi-plus-lg'"></i>
+          </button>
+          {% endif %}
+          <a href="{% url 'contratos:adicionais' contrato.pk %}" class="btn btn-sm btn-outline-secondary" title="Gerenciar todos">
+            <i class="bi bi-list-ul"></i>
+          </a>
+        </div>
+      </div>
+      <div x-show="aberto" x-cloak style="border-bottom:1px solid var(--border)">
+        <form method="post" action="{% url 'contratos:adicionais' contrato.pk %}" class="p-3">
+          {% csrf_token %}
+          <div class="row g-2 mb-2">
+            <div class="col-12">
+              <label class="form-label">Tipo *</label>
+              {{ form_adicional.tipo }}
+            </div>
+            <div class="col-6">
+              <label class="form-label">Diária (R$) *</label>
+              {{ form_adicional.diaria }}
+            </div>
+            <div class="col-6">
+              <label class="form-label">Qtd *</label>
+              {{ form_adicional.quantidade }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Descrição</label>
+              {{ form_adicional.descricao }}
+            </div>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Incluir</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" @click="aberto = false">Cancelar</button>
+          </div>
+        </form>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for adicional in adicionais %}
+        <li class="list-group-item small px-3 py-2">
+          <div class="d-flex justify-content-between">
+            <span class="fw-medium">{{ adicional.get_tipo_display }}</span>
+            <span class="fw-semibold">{{ adicional.total|brl }}</span>
+          </div>
+          <div class="text-muted" style="font-size:11px">
+            {{ adicional.quantidade }}× {{ adicional.diaria|brl }}/dia
+          </div>
+        </li>
+        {% empty %}
+        <li class="list-group-item text-center text-muted small py-2">Nenhum adicional.</li>
+        {% endfor %}
+        {% if adicionais %}
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2 fw-bold" style="background:#f8fafc">
+          <span>Total adicionais</span>
+          <span>{{ contrato.total_adicionais|brl }}</span>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+
+    <!-- Avarias -->
+    <div class="card" x-data="{ aberto: false }">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-exclamation-diamond me-2 text-danger"></i>Avarias</span>
+        <div class="d-flex gap-1">
+          <button type="button" class="btn btn-sm btn-outline-danger" @click="aberto = !aberto" title="Registrar avaria">
+            <i class="bi" :class="aberto ? 'bi-dash-lg' : 'bi-plus-lg'"></i>
+          </button>
+          <a href="{% url 'contratos:avarias' contrato.pk %}" class="btn btn-sm btn-outline-secondary" title="Gerenciar todas">
+            <i class="bi bi-list-ul"></i>
+          </a>
+        </div>
+      </div>
+      <div x-show="aberto" x-cloak style="border-bottom:1px solid var(--border)">
+        <form method="post" action="{% url 'contratos:avarias' contrato.pk %}" enctype="multipart/form-data" class="p-3">
+          {% csrf_token %}
+          <div class="row g-2 mb-2">
+            <div class="col-12">
+              <label class="form-label">Descrição *</label>
+              {{ form_avaria.descricao }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Localização</label>
+              {{ form_avaria.localizacao }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Valor cobrado (R$)</label>
+              {{ form_avaria.valor_cobrado }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Situação *</label>
+              {{ form_avaria.situacao }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Foto</label>
+              {{ form_avaria.foto }}
+            </div>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-plus-lg me-1"></i>Registrar</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" @click="aberto = false">Cancelar</button>
+          </div>
+        </form>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for avaria in avarias %}
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-truncate">{{ avaria.descricao|truncatechars:35 }}</span>
+          {% if avaria.valor_cobrado %}
+          <span class="text-danger fw-semibold flex-shrink-0 ms-2">{{ avaria.valor_cobrado|brl }}</span>
+          {% endif %}
+        </li>
+        {% empty %}
+        <li class="list-group-item text-center text-muted small py-2">Nenhuma avaria.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Modal Recebimento Avulso (caução / multa / outros — NÃO avaria) ─────── -->
+<div class="modal fade" id="modalRegistrarPagamento" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:460px">
+    <div class="modal-content" style="border-radius:12px; border:none; box-shadow:0 20px 40px rgba(0,0,0,.15)">
+      <div class="modal-header border-0 pt-4 px-4 pb-0">
+        <div>
+          <h5 class="modal-title fw-bold mb-0" style="font-size:16px">
+            <i class="bi bi-cash-coin me-2 text-info"></i>Registrar Recebimento Extra
+          </h5>
+          <p class="text-muted mb-0 mt-1" style="font-size:12.5px">
+            Contrato {{ contrato.numero }} — {{ contrato.cliente.nome_exibicao }}
+          </p>
+        </div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'contratos:pagamentos' contrato.pk %}">
+        {% csrf_token %}
+        <div class="modal-body px-4 py-3">
+
+          <div class="alert alert-info py-2 mb-3 small d-flex gap-2 align-items-start">
+            <i class="bi bi-info-circle-fill flex-shrink-0 mt-1"></i>
+            <div>
+              Use este formulário para registrar <strong>caução, multa ou outros</strong> recebimentos avulsos.<br>
+              <strong>Avarias</strong> devem ser pagas pelo botão <strong>"Marcar como Paga"</strong> na avaria — isso sincroniza o valor corretamente no financeiro.<br>
+              Para quitar parcelas da locação, use o botão <strong>Pagar</strong> em cada linha da agenda acima.
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label fw-semibold small">Forma de Pagamento *</label>
+              {{ form_pagamento.forma_pagamento }}
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold small">Referente a *</label>
+              {{ form_pagamento.tipo }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold small">Valor (R$) *</label>
+              {{ form_pagamento.valor }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold small">Data/hora</label>
+              {{ form_pagamento.data_pagamento }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold small">Observações</label>
+              {{ form_pagamento.observacoes }}
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer border-0 pt-0 pb-4 px-4 gap-2">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-info text-white">
+            <i class="bi bi-check-lg me-1"></i>Registrar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal Prorrogar ────────────────────────────────────────────────────── -->
+<div class="modal fade" id="modalProrrogar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:460px">
+    <div class="modal-content" style="border-radius:12px; border:none; box-shadow:0 20px 40px rgba(0,0,0,.15)">
+      <div class="modal-header border-0 pt-4 px-4 pb-0">
+        <h5 class="modal-title fw-bold" style="font-size:16px"><i class="bi bi-calendar-plus me-2 text-primary"></i>Prorrogar Contrato</h5>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'contratos:prorrogar' contrato.pk %}">
+        {% csrf_token %}
+        <div class="modal-body px-4 py-3">
+          <p class="text-muted small mb-3">
+            Devolução atual: <strong>{{ contrato.data_devolucao_prevista|date:"d/m/Y H:i" }}</strong><br>
+            As parcelas para o período prorrogado serão geradas automaticamente.
+          </p>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Prorrogar por</label>
+            <div class="d-flex gap-2 align-items-center">
+              <input type="number" id="diasExtras" class="form-control" style="width:90px" min="1" max="365" placeholder="7">
+              <select id="unidadeProrrogacao" class="form-select" style="width:130px">
+                <option value="dias">dias</option>
+                <option value="semanas">semanas</option>
+              </select>
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="calcularNovaData()">
+                <i class="bi bi-calculator"></i>
+              </button>
+            </div>
+          </div>
+          <div class="mb-0">
+            <label class="form-label fw-semibold small">Nova data de devolução *</label>
+            <input type="datetime-local" name="nova_data_devolucao" id="novaDataDevolucao" class="form-control" required>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 pb-4 px-4 gap-2">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Prorrogar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal Encerrar Contrato ────────────────────────────────────────────── -->
+<div class="modal fade" id="modalEncerrar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:440px">
+    <div class="modal-content" style="border-radius:12px; border:none; box-shadow:0 20px 40px rgba(0,0,0,.15)">
+      <div class="modal-header border-0 pt-4 px-4 pb-0">
+        <h5 class="modal-title fw-bold" style="font-size:16px"><i class="bi bi-check2-circle me-2 text-success"></i>Encerrar Contrato</h5>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body px-4 py-3">
+        {% if parcelas_cancelaveis_qtd > 0 %}
+        <div class="alert alert-warning py-2 mb-3">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          <strong>{{ parcelas_cancelaveis_qtd }} parcela(s) pendente(s)</strong>
+          somando <strong>{{ parcelas_cancelaveis_valor|brl }}</strong>
+          serão <strong>canceladas</strong> ao encerrar.
+        </div>
+        {% else %}
+        <div class="alert alert-success py-2 mb-3">
+          <i class="bi bi-check-circle-fill me-2"></i>
+          Todas as parcelas da agenda já foram quitadas.
+        </div>
+        {% endif %}
+        <ul class="list-group list-group-flush mb-0 small">
+          <li class="list-group-item d-flex justify-content-between px-0">
+            <span class="text-muted">Total a receber</span>
+            <strong>{{ contrato.total_geral|brl }}</strong>
+          </li>
+          <li class="list-group-item d-flex justify-content-between px-0">
+            <span class="text-muted">Total recebido</span>
+            <span class="text-success fw-semibold">{{ contrato.total_pago|brl }}</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between px-0 {% if contrato.saldo_devedor > 0 %}text-danger{% else %}text-success{% endif %}">
+            <span class="fw-bold">{% if contrato.saldo_devedor > 0 %}Saldo pendente{% else %}Quitado{% endif %}</span>
+            <strong>{{ contrato.saldo_devedor|brl }}</strong>
+          </li>
+        </ul>
+      </div>
+      <div class="modal-footer border-0 pt-0 pb-4 px-4 gap-2">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Voltar</button>
+        <form method="post" action="{% url 'contratos:encerrar' contrato.pk %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-success"><i class="bi bi-check-lg me-1"></i>Confirmar Encerramento</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal Pagar Parcela ────────────────────────────────────────────────── -->
+<div class="modal fade" id="modalPagarParcela" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px">
+    <div class="modal-content" style="border-radius:12px; border:none; box-shadow:0 20px 40px rgba(0,0,0,.15)">
+      <div class="modal-header border-0 pt-4 px-4 pb-0">
+        <div>
+          <h5 class="modal-title fw-bold mb-0" style="font-size:16px">Registrar Pagamento</h5>
+          <p class="text-muted mb-0" style="font-size:12.5px" id="parcelaLabel">—</p>
+        </div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formPagarParcela" method="post">
+        {% csrf_token %}
+        <div class="modal-body px-4 py-3">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Valor a receber (R$) *</label>
+            <input type="number" name="valor" id="parcelaValorInput" class="form-control form-control-lg"
+              step="0.01" min="0.01" required>
+            <div id="parcelaValorInfo" class="form-text"></div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Forma de Pagamento *</label>
+            <select name="forma_pagamento" class="form-select" required>
+              <option value="">Selecione…</option>
+              {% for valor, rotulo in formas_pagamento %}
+              <option value="{{ valor }}">{{ rotulo }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Observações</label>
+            <textarea name="observacoes" class="form-control" rows="2" placeholder="Opcional…"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 pb-4 px-4 gap-2">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success"><i class="bi bi-check-lg me-1"></i>Confirmar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const _pagarUrl = "{% url 'contratos:parcela-pagar' pk=contrato.pk parcela_pk=0 %}";
+
+function abrirPagamentoParcela(parcelaPk, valor, label, valorCorrigido) {
+  document.getElementById('parcelaLabel').textContent = label;
+  const vFinal = (valorCorrigido && parseFloat(valorCorrigido) > 0) ? valorCorrigido : valor;
+  const input = document.getElementById('parcelaValorInput');
+  input.value = vFinal;
+  const infoEl = document.getElementById('parcelaValorInfo');
+  if (valorCorrigido && parseFloat(valorCorrigido) !== parseFloat(valor)) {
+    infoEl.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>'
+      + 'Em atraso — valor original: R$ ' + valor + ' | Com multa/juros: R$ ' + valorCorrigido + '</span>';
+    infoEl.className = 'form-text';
+  } else {
+    infoEl.textContent = 'Valor original da parcela.';
+    infoEl.className = 'form-text text-muted';
+  }
+  document.getElementById('formPagarParcela').action = _pagarUrl.replace('/0/', '/' + parcelaPk + '/');
+  const modalEl = document.getElementById('modalPagarParcela');
+  modalEl.addEventListener('shown.bs.modal', () => { input.focus(); input.select(); }, { once: true });
+  bootstrap.Modal.getOrCreateInstance(modalEl).show();
+}
+
+const _dataAtualContrato = '{{ contrato.data_devolucao_prevista|date:"c" }}';
+
+function calcularNovaData() {
+  const dias = parseInt(document.getElementById('diasExtras').value) || 7;
+  const unidade = document.getElementById('unidadeProrrogacao').value;
+  const d = new Date(_dataAtualContrato);
+  if (isNaN(d.getTime())) return;
+  const totalDias = unidade === 'semanas' ? dias * 7 : dias;
+  d.setDate(d.getDate() + totalDias);
+  const pad = n => String(n).padStart(2, '0');
+  document.getElementById('novaDataDevolucao').value =
+    d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+    'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+document.getElementById('modalProrrogar').addEventListener('show.bs.modal', function () {
+  document.getElementById('diasExtras').value = '7';
+  calcularNovaData();
+});
+</script>
+{% endblock %}

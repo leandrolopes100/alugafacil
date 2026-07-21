@@ -1,0 +1,132 @@
+{% extends 'core/relatorios/base_relatorio.html' %}
+{% load core_tags %}
+{% block titulo %}Análise de Clientes{% endblock %}
+{% block titulo_breadcrumb %}Clientes{% endblock %}
+{% block titulo_relatorio %}Análise de Clientes{% endblock %}
+{% block descricao %}{{ mes_nome }}{% if mes_sel %} de{% endif %} {{ ano_sel }} · {{ total_ativos }} cliente{{ total_ativos|pluralize:"s" }} ativo{{ total_ativos|pluralize:"s" }}{% endblock %}
+
+{% block acoes_extras %}
+<a href="{% url 'core:relatorio-exportar' 'clientes' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+  <i class="bi bi-download"></i> CSV
+</a>
+{% endblock %}
+
+{% block conteudo_relatorio %}
+
+<!-- KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#f8fafc; color:var(--text-secondary)">
+        <i class="bi bi-people"></i>
+      </div>
+      <div class="kpi-value">{{ total_clientes }}</div>
+      <div class="kpi-label">Total de Clientes</div>
+      <div class="kpi-sub">cadastrados</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--success-bg); color:var(--success)">
+        <i class="bi bi-person-check-fill"></i>
+      </div>
+      <div class="kpi-value" style="color:var(--success)">{{ total_ativos }}</div>
+      <div class="kpi-label">Ativos no Período</div>
+      <div class="kpi-sub">locaram no período</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--primary-light); color:var(--primary)">
+        <i class="bi bi-person-plus-fill"></i>
+      </div>
+      <div class="kpi-value" style="color:var(--primary)">{{ novos }}</div>
+      <div class="kpi-label">Novos Clientes</div>
+      <div class="kpi-sub">primeira locação</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--info-bg); color:var(--info)">
+        <i class="bi bi-arrow-repeat"></i>
+      </div>
+      <div class="kpi-value">{{ recorrentes }}</div>
+      <div class="kpi-label">Recorrentes</div>
+      <div class="kpi-sub">já locaram antes</div>
+    </div>
+  </div>
+</div>
+
+<!-- Gráfico + tabela -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-bar-chart-horizontal"></i> Top 10 por Receita</div>
+      <div class="card-body" style="padding:16px">
+        <canvas id="chartClientes" style="max-height:280px"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-trophy"></i> Ranking de Clientes</div>
+      <div class="table-responsive">
+        <table class="table table-hover" style="font-size:13px">
+          <thead>
+            <tr><th>#</th><th>Cliente</th><th>Tipo</th><th class="text-center">Locações</th><th class="text-end">Ticket Médio</th><th class="text-end">Total Receita</th></tr>
+          </thead>
+          <tbody>
+            {% for c in clientes_receita %}
+            <tr>
+              <td style="color:#94a3b8; font-weight:700; font-size:12px">{{ forloop.counter }}</td>
+              <td>
+                <div style="font-weight:600; color:#0f172a">{{ c.nome_exibicao }}</div>
+                <div class="text-mono" style="font-size:11px; color:#94a3b8">{{ c.documento }}</div>
+              </td>
+              <td>
+                <span class="status-badge status-{% if c.cliente__tipo == 'pj' %}info{% else %}primary{% endif %}">
+                  {{ c.cliente__tipo|upper }}
+                </span>
+              </td>
+              <td class="text-center" style="font-weight:600">{{ c.locacoes }}</td>
+              <td class="text-end" style="color:#64748b">{{ c.ticket_medio|brl }}</td>
+              <td class="text-end" style="font-weight:700; color:#1e7a4c">{{ c.receita|brl }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon"><i class="bi bi-people"></i></div><div class="empty-state-title">Nenhum dado no período</div></div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const dados = {{ chart_clientes|safe }};
+new Chart(document.getElementById('chartClientes'), {
+  type: 'bar',
+  data: {
+    labels: dados.labels,
+    datasets: [{
+      label: 'Receita R$',
+      data: dados.receita,
+      backgroundColor: 'rgba(217,119,6,.7)',
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: '#f1f5f9' }, ticks: { callback: v => 'R$' + v.toLocaleString('pt-BR') } },
+      y: { grid: { display: false } }
+    }
+  }
+});
+</script>
+{% endblock %}
