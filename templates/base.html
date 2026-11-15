@@ -863,6 +863,12 @@
        class="sidebar-link {% if 'multa' in request.resolver_match.url_name|default:'' %}active{% endif %}">
       <i class="bi bi-exclamation-octagon-fill"></i> Multas de Trânsito
     </a>
+    {% if pode_configurar_locadora %}
+    <a href="{% url 'financeiro:configuracao' %}"
+       class="sidebar-link {% if request.resolver_match.url_name == 'configuracao' %}active{% endif %}">
+      <i class="bi bi-gear-fill"></i> Configurações
+    </a>
+    {% endif %}
 
     <!-- MANUTENÇÃO -->
     <span class="sidebar-section">Manutenção</span>
@@ -875,6 +881,7 @@
       <i class="bi bi-shield-check"></i> Alertas Preventivos
     </a>
 
+    {% if modulo_investidores %}
     <!-- INVESTIDORES -->
     <span class="sidebar-section">Investidores</span>
     <a href="{% url 'investidores:lista' %}"
@@ -889,6 +896,7 @@
       <span class="sidebar-badge">{{ investidores_badge }}</span>
       {% endif %}
     </a>
+    {% endif %}
 
     <!-- RELATÓRIOS -->
     <span class="sidebar-section">Relatórios</span>
@@ -1115,6 +1123,15 @@
       btn.innerHTML = btn.dataset.orig;
     }, 15000);
   });
+
+  window.copiarLinkCobranca = function (caminho) {
+    const url = window.location.origin + caminho;
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(url);
+    }
+    window.prompt('Copie o link de pagamento:', url);
+    return Promise.resolve();
+  };
 </script>
 {% block extra_scripts %}{% endblock %}
 </body>

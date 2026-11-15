@@ -14,7 +14,7 @@
 <div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
   <div>
     <h1 class="page-title">Fluxo de Caixa</h1>
-    <p class="page-subtitle mb-0">{{ mes_nome }} de {{ ano }}</p>
+    <p class="page-subtitle mb-0">{{ mes_nome }} de {{ ano }} · todo dinheiro que entrou e saiu, inclusive caução recebido e devolvido</p>
   </div>
   <div class="d-flex gap-2 flex-wrap">
     <a href="{% url 'financeiro:despesas' %}" class="btn btn-outline-danger btn-sm">
@@ -44,13 +44,16 @@
       <div class="text-success small fw-semibold">Entradas</div>
       <div class="fw-bold fs-3 text-success">{{ total_entradas|brl }}</div>
       <div class="text-muted small">{{ pagamentos|length }} pagamento{{ pagamentos|length|pluralize:"s" }}</div>
+      {% if total_regularizacao %}
+      <div class="text-muted small">{{ total_entradas_do_mes|brl }} do mês + {{ total_regularizacao|brl }} de regularização de migração</div>
+      {% endif %}
     </div>
   </div>
   <div class="col-md-4">
     <div class="card text-center py-3 border-danger border-opacity-50 bg-danger bg-opacity-10">
-      <div class="text-danger small fw-semibold">Saídas</div>
+      <div class="text-danger small fw-semibold">Saídas pagas</div>
       <div class="fw-bold fs-3 text-danger">{{ total_saidas|brl }}</div>
-      <div class="text-muted small">{{ saidas_detalhadas|length }} lançamento{{ saidas_detalhadas|length|pluralize:"s" }}</div>
+      <div class="text-muted small">{% if total_a_pagar %}+ {{ total_a_pagar|brl }} a pagar no mês (fora do saldo){% else %}nada a pagar no mês{% endif %}</div>
     </div>
   </div>
   <div class="col-md-4">
@@ -89,8 +92,16 @@
               <td class="text-end fw-semibold text-success">{{ item.total|brl }}</td>
             </tr>
             {% empty %}
+            {% if not total_regularizacao %}
             <tr><td colspan="2" class="text-center text-muted small py-3">Nenhum pagamento no período.</td></tr>
+            {% endif %}
             {% endfor %}
+            {% if total_regularizacao %}
+            <tr class="table-light">
+              <td class="small">Regularização de migração<div class="text-muted" style="font-size:11px">recebido antes do cadastro no sistema</div></td>
+              <td class="text-end fw-semibold text-success">{{ total_regularizacao|brl }}</td>
+            </tr>
+            {% endif %}
           </tbody>
         </table>
       </div>
@@ -152,9 +163,13 @@
             <tr>
               <td class="small text-muted">{{ item.data|date:"d/m" }}</td>
               <td class="small">
+                {% if item.despesa_pk %}
                 <a href="{% url 'financeiro:despesa-detalhe' item.despesa_pk %}" class="text-decoration-none text-dark">
                   {{ item.descricao|truncatechars:24 }}
                 </a>
+                {% else %}
+                <span title="{{ item.descricao }}">{{ item.descricao|truncatechars:24 }}</span>
+                {% endif %}
                 {% if item.parcela_info %}
                 <span class="badge bg-primary-subtle text-primary border" style="font-size:10px">{{ item.parcela_info }}</span>
                 {% endif %}
@@ -171,7 +186,7 @@
                 <span class="badge bg-warning-subtle text-warning border" style="font-size:10px">Pendente</span>
                 {% endif %}
               </td>
-              <td class="text-end text-danger fw-semibold small">{{ item.valor|brl }}</td>
+              <td class="text-end fw-semibold small {% if item.situacao == 'pago' %}text-danger{% else %}text-muted{% endif %}">{{ item.valor|brl }}</td>
             </tr>
             {% endfor %}
           </tbody>

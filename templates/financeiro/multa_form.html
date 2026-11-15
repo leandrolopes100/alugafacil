@@ -57,7 +57,36 @@
             <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.valor.errors.0 }}</div>
             {% endif %}
           </div>
+          {% if form.situacao %}
           <div class="col-md-4"><label class="form-label fw-semibold small">Situação</label>{{ form.situacao }}</div>
+          {% else %}
+          <div class="col-md-4">
+            <label class="form-label fw-semibold small">Situação</label>
+            <div class="form-control-plaintext small py-0">{{ form.instance.get_situacao_display }}</div>
+            <div class="form-text">Para mudar, use os botões na tela da multa.</div>
+          </div>
+          {% endif %}
+          {% if form.contrato %}
+          {% if form.contrato.errors or form.contrato.field.queryset.exists %}
+          <div class="col-12 {% if form.contrato.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Contrato</label>
+            {{ form.contrato }}
+            {% if form.contrato.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.contrato.errors.0 }}</div>
+            {% elif form.contratos_em_duvida %}
+            <div class="form-text">Mais de um contrato usou este veículo nesse dia. Confira de qual cliente cobrar.</div>
+            {% else %}
+            <div class="form-text">Contrato que estava com o veículo na data da infração.</div>
+            {% endif %}
+          </div>
+          {% endif %}
+          {% elif form.instance.contrato %}
+          <div class="col-12">
+            <label class="form-label fw-semibold small">Contrato</label>
+            <div class="form-control-plaintext small py-0">{{ form.instance.contrato.numero }} — {{ form.instance.contrato.cliente }}</div>
+            <div class="form-text">A multa já foi cobrada neste contrato; o contrato não pode ser trocado.</div>
+          </div>
+          {% endif %}
           <div class="col-md-6"><label class="form-label fw-semibold small">Condutor (nome)</label>{{ form.condutor_nome }}</div>
           <div class="col-md-6"><label class="form-label fw-semibold small">Condutor (CPF)</label>{{ form.condutor_cpf }}</div>
           <div class="col-12"><label class="form-label fw-semibold small">Observações</label>{{ form.observacoes }}</div>
@@ -74,7 +103,7 @@
       <h6 class="fw-bold"><i class="bi bi-info-circle me-1"></i>Lembrete Legal</h6>
       <ul class="small mb-0">
         <li>A locadora tem prazo para indicar o condutor infrator ao DETRAN.</li>
-        <li>Selecione o veículo e a data correta para que o sistema identifique automaticamente o contrato ativo naquele período.</li>
+        <li>Selecione o veículo e a data correta para que o sistema identifique automaticamente o contrato daquele dia. Se mais de um contrato usou o veículo nesse dia, o sistema pede para você escolher.</li>
         <li>Após identificação, notifique o cliente e registre a cobrança.</li>
       </ul>
     </div>

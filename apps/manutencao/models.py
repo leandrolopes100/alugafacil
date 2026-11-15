@@ -65,10 +65,59 @@ class OrdemManutencao(models.Model):
         ):
             self._remover_despesa_gerada()
 
+    def veiculo_esta_locado(self):
+        from apps.contracts.models import Contrato
+        return Contrato.objects.filter(
+            veiculo_id=self.veiculo_id, situacao__in=['ativo', 'aguardando_devolucao'],
+        ).exists()
+
+    def erro_ao_iniciar(self):
+        if self.situacao == 'em_andamento' and self.veiculo_esta_locado():
+            return (
+                f'O veículo {self.veiculo.placa} está locado. Faça o check-in do contrato '
+                f'antes de colocar a OS em andamento.'
+            )
+        return None
+
+    @staticmethod
+    def sincronizar_situacao_veiculos(*veiculo_ids):
+        from apps.fleet.models import Veiculo
+        for veiculo in Veiculo.objects.select_for_update().filter(pk__in=set(filter(None, veiculo_ids))):
+            em_oficina = OrdemManutencao.objects.filter(
+                veiculo=veiculo, situacao='em_andamento',
+            ).exists()
+            if em_oficina and veiculo.situacao in ('disponivel', 'reservado'):
+                veiculo.situacao = 'manutencao'
+                veiculo.save(update_fields=['situacao'])
+            elif not em_oficina and veiculo.situacao == 'manutencao':
+                veiculo.situacao = 'disponivel'
+                veiculo.save(update_fields=['situacao'])
+
+    def aplicar_conclusao(self):
+        from apps.fleet.models import HistoricoKmVeiculo, Veiculo
+        if not self.km_na_manutencao:
+            return
+        veiculo = Veiculo.objects.select_for_update().get(pk=self.veiculo_id)
+        if self.km_na_manutencao > (veiculo.km_atual or 0):
+            veiculo.km_atual = self.km_na_manutencao
+            veiculo.save(update_fields=['km_atual'])
+        for alerta in veiculo.alertas_manutencao.filter(tipo_alerta='km', ativo=True):
+            if alerta.vencido and alerta.km_intervalo:
+                alerta.km_proximo_servico = self.km_na_manutencao + alerta.km_intervalo
+                alerta.save()
+        marcador = f'OS #{self.pk}'
+        if not HistoricoKmVeiculo.objects.filter(
+            veiculo=veiculo, origem='manutencao', observacao__startswith=marcador,
+        ).exists():
+            HistoricoKmVeiculo.objects.create(
+                veiculo=veiculo, origem='manutencao', km=self.km_na_manutencao,
+                data=timezone.now(), observacao=f'{marcador} — {self.descricao[:100]}',
+            )
+
     def _sincronizar_despesa(self):
         from apps.financeiro.models import DespesaOperacional
         descricao = f'Manutencao OS #{self.pk} — {self.descricao[:100]}'
-        data_comp = self.data_saida or timezone.now().date()
+        data_comp = self.data_saida or timezone.localdate()
         obs = f'Gerada automaticamente pela OS #{self.pk}.'
         if self.fornecedor:
             obs += f' Fornecedor: {self.fornecedor}.'
@@ -136,7 +185,7 @@ class AlertaManutencao(models.Model):
         if self.tipo_alerta == 'km' and self.km_proximo_servico:
             return self.veiculo.km_atual >= self.km_proximo_servico
         if self.tipo_alerta == 'data' and self.data_proximo_servico:
-            return self.data_proximo_servico <= timezone.now().date()
+            return self.data_proximo_servico <= timezone.localdate()
         return False
 
     @property
@@ -147,6 +196,6 @@ class AlertaManutencao(models.Model):
         if self.tipo_alerta == 'km' and self.km_proximo_servico:
             return self.veiculo.km_atual >= self.km_proximo_servico - 500
         if self.tipo_alerta == 'data' and self.data_proximo_servico:
-            delta = self.data_proximo_servico - timezone.now().date()
+            delta = self.data_proximo_servico - timezone.localdate()
             return delta.days <= 7
         return False

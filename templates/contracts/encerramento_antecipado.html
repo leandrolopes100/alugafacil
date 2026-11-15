@@ -10,6 +10,7 @@
 {% block conteudo %}
 
 {{ parcelas_resumo|json_script:"parcelas-data" }}
+{{ regra_devolucao|json_script:"regra-devolucao" }}
 
 <div class="page-header">
   <h1 class="page-title"><i class="bi bi-exclamation-octagon text-danger me-2"></i>Quebra de Contrato</h1>
@@ -26,8 +27,8 @@
     </span>
     <div>
       Você está encerrando este contrato <strong>antes do prazo previsto</strong>, não pelo fluxo normal de check-in/encerramento.
-      Esta ação é irreversível: parcelas já pagas permanecem no histórico, parcelas vencidas em aberto continuam em cobrança,
-      e <strong>parcelas futuras (com vencimento após a devolução) serão canceladas</strong>.
+      Esta ação é irreversível: parcelas já pagas permanecem no histórico, parcelas vencidas, multas de trânsito e acertos em aberto continuam em cobrança,
+      e <strong>parcelas semanais/mensais de períodos ainda não usados serão canceladas (semana já começada continua devida)</strong>.
       Se o veículo está sendo devolvido normalmente, no prazo, use <strong>Check-in</strong> em vez desta tela.
     </div>
   </div>
@@ -173,7 +174,7 @@
                 <i class="bi bi-clock-history"></i>
               </div>
               <div class="kpi-value" style="font-size:20px; color:var(--warning)" x-text="brl(valorMantidas)"></div>
-              <div class="kpi-label"><span x-text="mantidas.length"></span> vencida(s) em aberto</div>
+              <div class="kpi-label"><span x-text="mantidas.length"></span> cobrança(s) em aberto</div>
               <div class="kpi-sub">Continuam em cobrança</div>
             </div>
           </div>
@@ -192,6 +193,21 @@
           <i class="bi bi-info-circle me-1"></i>
           Não inclui eventual acerto de KM excedente/combustível — calculado após a confirmação, com base nos dados informados no Passo 1.
         </p>
+        {% if contrato.caucao_em_poder %}
+        <div class="alert alert-info small py-2 mb-4">
+          <i class="bi bi-shield-check me-1"></i>
+          O caução de <strong>{{ contrato.caucao_em_poder|brl }}</strong> abate, nesta ordem, as parcelas vencidas
+          e o acerto, as avarias cobradas e as multas de trânsito com condutor identificado. O que sobrar é devolvido
+          ao cliente na confirmação.
+          {% with multas=contrato.multas_sem_condutor %}{% if multas %}
+          <div class="mt-1">
+            <i class="bi bi-exclamation-triangle me-1"></i>{{ multas|length }} multa(s) sem condutor identificado
+            não serão abatidas:
+            {% for multa in multas %}{{ multa.data_infracao|date:"d/m/Y" }} ({{ multa.valor|brl }}){% if not forloop.last %}, {% endif %}{% endfor %}.
+          </div>
+          {% endif %}{% endwith %}
+        </div>
+        {% endif %}
 
         <div class="card mb-4" style="border-left:3px solid var(--danger)">
           <div class="card-body">
@@ -222,9 +238,11 @@
       passo: 1,
       confirmado: false,
       parcelas: [],
-      dataCorte: '{{ data_corte_inicial }}',
+      diasUsados: 1,
+      regra: null,
       init() {
         this.parcelas = JSON.parse(document.getElementById('parcelas-data').textContent);
+        this.regra = JSON.parse(document.getElementById('regra-devolucao').textContent);
         const campoData = this.$refs.form.querySelector('#id_data_devolucao_real');
         if (campoData) {
           this.atualizarDataCorte(campoData.value);
@@ -232,7 +250,12 @@
         }
       },
       atualizarDataCorte(valor) {
-        if (valor) this.dataCorte = valor.split('T')[0];
+        const devolucao = new Date(valor);
+        if (isNaN(devolucao.getTime())) return;
+        const segundos = Math.max((devolucao - new Date(this.regra.saida)) / 1000, 0);
+        let dias = Math.floor(segundos / 86400);
+        if (segundos - dias * 86400 > this.regra.tolerancia_minutos * 60) dias += 1;
+        this.diasUsados = Math.max(dias, 1);
       },
       irParaResumo() {
         if (!this.$refs.form.reportValidity()) return;
@@ -240,8 +263,9 @@
       },
       get pagas() { return this.parcelas.filter(p => p.situacao === 'pago'); },
       get abertas() { return this.parcelas.filter(p => p.situacao === 'pendente' || p.situacao === 'em_atraso'); },
-      get mantidas() { return this.abertas.filter(p => p.data_vencimento <= this.dataCorte); },
-      get futuras() { return this.abertas.filter(p => p.data_vencimento > this.dataCorte); },
+      ehFutura(p) { return (p.tipo === 'semanal' || p.tipo === 'mensal') && p.dia_inicio >= this.diasUsados; },
+      get mantidas() { return this.abertas.filter(p => p.tipo !== 'caucao' && !this.ehFutura(p)); },
+      get futuras() { return this.abertas.filter(p => this.ehFutura(p)); },
       get valorPagas() { return this.pagas.reduce((s, p) => s + p.valor, 0); },
       get valorMantidas() { return this.mantidas.reduce((s, p) => s + p.valor, 0); },
       get valorFuturas() { return this.futuras.reduce((s, p) => s + p.valor, 0); },

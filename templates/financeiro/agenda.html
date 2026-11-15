@@ -10,8 +10,17 @@
 <div class="page-header">
   <div>
     <h1 class="page-title">Agenda de Cobranças</h1>
-    <p class="page-subtitle mb-0">Cobranças semanais dos contratos ativos</p>
+    <p class="page-subtitle mb-0">Parcelas em aberto: quem cobrar hoje e nos próximos dias</p>
   </div>
+</div>
+
+<div class="alert alert-light border d-flex align-items-center gap-2 mb-4" style="font-size:13px">
+  <i class="bi bi-info-circle text-primary"></i>
+  <span>
+    Cada linha é uma parcela. Parcelas atrasadas já aparecem com multa e juros.
+    Para ver o saldo total de cada contrato, use
+    <a href="{% url 'financeiro:contas-receber' %}" class="fw-semibold">Contas a Receber</a>.
+  </span>
 </div>
 
 <!-- KPIs -->
@@ -58,6 +67,56 @@
   </div>
 </div>
 
+<!-- A contatar hoje -->
+{% if a_contatar %}
+<div class="card mb-4">
+  <div class="card-header">
+    <i class="bi bi-whatsapp" style="color:var(--success)"></i>
+    A contatar hoje — {{ a_contatar|length }} cobrança{{ a_contatar|length|pluralize:"s" }}
+  </div>
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead><tr><th>Cliente</th><th>Veículo</th><th>Contrato</th><th>Parcela</th><th>Vencimento</th><th>Etapa</th><th class="text-end">Valor</th><th></th></tr></thead>
+      <tbody>
+        {% for item in a_contatar %}
+        {% with p=item.parcela %}
+        <tr x-data="{ cobrado: {{ item.enviada|yesno:'true,false' }}, hora: '{% if item.enviada %}{{ item.enviada.enviado_em|time:"H:i" }}{% endif %}' }">
+          <td class="fw-semibold small">{{ p.contrato.cliente.nome_exibicao }}</td>
+          <td class="small text-muted text-mono">{{ p.contrato.veiculo.placa }}</td>
+          <td><a href="{% url 'contratos:detalhe' p.contrato.pk %}" class="text-primary text-mono text-decoration-none fw-semibold">{{ p.contrato.numero }}</a></td>
+          <td class="small">{{ p.rotulo }}</td>
+          <td class="small">{{ p.data_vencimento|date:"d/m/Y" }}</td>
+          <td class="small">
+            <span class="badge {% if item.etapa == 'd_menos_1' or item.etapa == 'd0' %}bg-warning text-dark{% else %}bg-danger{% endif %}">{{ item.etapa_rotulo }}</span>
+          </td>
+          <td class="text-end fw-bold">R$ {{ p.valor_corrigido|floatformat:2 }}</td>
+          <td class="text-end text-nowrap">
+            {% if item.link_whatsapp %}
+            <span x-show="cobrado" x-cloak class="badge bg-success-subtle text-success border border-success-subtle me-1">
+              <i class="bi bi-check2-all me-1"></i>Já cobrado <span x-text="hora"></span>
+            </span>
+            <a href="{{ item.link_whatsapp }}" target="_blank" rel="noopener"
+               class="btn btn-sm" :class="cobrado ? 'btn-outline-success' : 'btn-success'"
+               :title="cobrado ? 'Abrir a conversa de novo (não registra outro envio)' : 'Abrir o WhatsApp com a mensagem pronta'"
+               @click="if (!cobrado) registrarCobranca('{% url 'financeiro:cobrar-whatsapp' p.pk %}').then(d => { cobrado = true; hora = d.enviado_em })">
+              <i class="bi bi-whatsapp me-1"></i><span x-text="cobrado ? 'Reabrir' : 'Cobrar no WhatsApp'">Cobrar no WhatsApp</span>
+            </a>
+            {% else %}
+            <span class="small text-muted me-1">Sem celular válido</span>
+            <a href="{% url 'clientes:editar' p.contrato.cliente.pk %}" class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-pencil me-1"></i>Corrigir cadastro
+            </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endwith %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
 <!-- Em Atraso -->
 {% if em_atraso %}
 <div class="card mb-4">
@@ -76,16 +135,52 @@
           <td><a href="{% url 'contratos:detalhe' p.contrato.pk %}" class="text-primary text-mono text-decoration-none fw-semibold">{{ p.contrato.numero }}</a></td>
           <td class="small">
             <span class="status-badge status-danger">
-              {% if p.tipo == 'caucao' %}Caução{% else %}Parcela {{ p.numero }}{% endif %}
+              {{ p.rotulo }}
             </span>
           </td>
           <td class="small text-danger fw-semibold">{{ p.data_vencimento|date:"d/m/Y" }}</td>
           <td><span class="badge bg-danger">{{ p.dias_atraso }}d</span></td>
-          <td class="text-end fw-bold text-danger">R$ {{ p.valor|floatformat:2 }}</td>
           <td class="text-end">
-            <button class="btn btn-sm btn-danger" onclick="abrirPagamento({{ p.pk }}, {{ p.contrato.pk }}, '{{ p.contrato.cliente.nome_exibicao }}', '{{ p.valor|floatformat:2 }}', '{% if p.tipo == "caucao" %}Caução{% else %}Parcela {{ p.numero }}{% endif %}')">
+            <div class="fw-bold text-danger">R$ {{ p.valor_corrigido|floatformat:2 }}</div>
+            {% if p.valor_corrigido != p.valor %}<div class="text-muted" style="font-size:11px">original R$ {{ p.valor|floatformat:2 }}</div>{% endif %}
+          </td>
+          <td class="text-end text-nowrap">
+            {% include 'financeiro/partials/acoes_pix_parcela.html' with parcela=p %}
+            <button class="btn btn-sm btn-danger" onclick="abrirPagamento({{ p.pk }}, {{ p.contrato.pk }}, '{{ p.contrato.cliente.nome_exibicao }}', '{{ p.valor_corrigido|floatformat:2 }}', '{{ p.rotulo }}')">
               <i class="bi bi-cash me-1"></i>Receber
             </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Avarias a cobrar -->
+{% if avarias_a_cobrar %}
+<div class="card mb-4">
+  <div class="card-header">
+    <i class="bi bi-tools" style="color:var(--warning)"></i>
+    Avarias a cobrar — {{ avarias_a_cobrar|length }} avaria{{ avarias_a_cobrar|length|pluralize:"s" }}
+  </div>
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead><tr><th>Cliente</th><th>Veículo</th><th>Contrato</th><th>Avaria</th><th>Registrada em</th><th class="text-end">Valor</th><th></th></tr></thead>
+      <tbody>
+        {% for a in avarias_a_cobrar %}
+        <tr>
+          <td class="fw-semibold small">{{ a.contrato.cliente.nome_exibicao }}</td>
+          <td class="small text-muted text-mono">{{ a.contrato.veiculo.placa }}</td>
+          <td><a href="{% url 'contratos:detalhe' a.contrato.pk %}" class="text-primary text-mono text-decoration-none fw-semibold">{{ a.contrato.numero }}</a></td>
+          <td class="small">{{ a.descricao|truncatechars:60 }}</td>
+          <td class="small text-muted">{{ a.criado_em|date:"d/m/Y" }}</td>
+          <td class="text-end fw-bold">R$ {{ a.valor_cobrado|floatformat:2 }}</td>
+          <td class="text-end">
+            <a href="{% url 'contratos:avarias' a.contrato.pk %}" class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-cash me-1"></i>Receber
+            </a>
           </td>
         </tr>
         {% endfor %}
@@ -113,13 +208,17 @@
           <td><a href="{% url 'contratos:detalhe' p.contrato.pk %}" class="text-primary text-mono text-decoration-none fw-semibold">{{ p.contrato.numero }}</a></td>
           <td class="small">
             <span class="status-badge status-warning">
-              {% if p.tipo == 'caucao' %}Caução{% else %}Parcela {{ p.numero }}{% endif %}
+              {{ p.rotulo }}
             </span>
           </td>
           <td class="small fw-semibold">{{ p.data_vencimento|date:"d/m/Y" }}{% if p.data_vencimento == hoje %} <span class="badge bg-warning text-dark ms-1">Hoje</span>{% endif %}</td>
-          <td class="text-end fw-bold">R$ {{ p.valor|floatformat:2 }}</td>
           <td class="text-end">
-            <button class="btn btn-sm btn-warning text-dark" onclick="abrirPagamento({{ p.pk }}, {{ p.contrato.pk }}, '{{ p.contrato.cliente.nome_exibicao }}', '{{ p.valor|floatformat:2 }}', '{% if p.tipo == "caucao" %}Caução{% else %}Parcela {{ p.numero }}{% endif %}')">
+            <div class="fw-bold {% if p.valor_corrigido != p.valor %}text-danger{% endif %}">R$ {{ p.valor_corrigido|floatformat:2 }}</div>
+            {% if p.valor_corrigido != p.valor %}<div class="text-muted" style="font-size:11px">original R$ {{ p.valor|floatformat:2 }}</div>{% endif %}
+          </td>
+          <td class="text-end text-nowrap">
+            {% include 'financeiro/partials/acoes_pix_parcela.html' with parcela=p %}
+            <button class="btn btn-sm btn-warning text-dark" onclick="abrirPagamento({{ p.pk }}, {{ p.contrato.pk }}, '{{ p.contrato.cliente.nome_exibicao }}', '{{ p.valor_corrigido|floatformat:2 }}', '{{ p.rotulo }}')">
               <i class="bi bi-cash me-1"></i>Receber
             </button>
           </td>
@@ -149,13 +248,14 @@
           <td><a href="{% url 'contratos:detalhe' p.contrato.pk %}" class="text-primary text-mono text-decoration-none fw-semibold">{{ p.contrato.numero }}</a></td>
           <td class="small">
             <span class="badge bg-light text-dark border">
-              {% if p.tipo == 'caucao' %}Caução{% else %}Parcela {{ p.numero }}{% endif %}
+              {{ p.rotulo }}
             </span>
           </td>
           <td class="small text-muted">{{ p.data_vencimento|date:"d/m/Y" }}</td>
           <td class="text-end text-muted">R$ {{ p.valor|floatformat:2 }}</td>
-          <td class="text-end">
-            <button class="btn btn-sm btn-outline-primary" onclick="abrirPagamento({{ p.pk }}, {{ p.contrato.pk }}, '{{ p.contrato.cliente.nome_exibicao }}', '{{ p.valor|floatformat:2 }}', '{% if p.tipo == "caucao" %}Caução{% else %}Parcela {{ p.numero }}{% endif %}')">
+          <td class="text-end text-nowrap">
+            {% include 'financeiro/partials/acoes_pix_parcela.html' with parcela=p %}
+            <button class="btn btn-sm btn-outline-primary" onclick="abrirPagamento({{ p.pk }}, {{ p.contrato.pk }}, '{{ p.contrato.cliente.nome_exibicao }}', '{{ p.valor_corrigido|floatformat:2 }}', '{{ p.rotulo }}')">
               <i class="bi bi-cash me-1"></i>Receber
             </button>
           </td>
@@ -194,6 +294,7 @@
           <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px; margin-bottom:16px">
             <div class="text-muted" style="font-size:11px; text-transform:uppercase; letter-spacing:.06em; font-weight:600">Valor</div>
             <div style="font-size:22px; font-weight:700; color:var(--success)" id="modalValor">R$ —</div>
+            <div class="text-muted mt-1" style="font-size:11.5px">Dá baixa somente nesta parcela.</div>
           </div>
           <div class="mb-3">
             <label class="form-label">Forma de Pagamento *</label>
@@ -227,6 +328,17 @@ function abrirPagamento(parcelaPk, contratoPk, cliente, valor, label) {
   document.getElementById('modalValor').textContent = 'R$ ' + valor;
   document.getElementById('formPagamento').action = '/contratos/' + contratoPk + '/parcelas/' + parcelaPk + '/pagar/';
   new bootstrap.Modal(document.getElementById('modalPagamento')).show();
+}
+
+function registrarCobranca(url) {
+  return fetch(url, {
+    method: 'POST',
+    keepalive: true,
+    headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+  }).then(r => {
+    if (!r.ok) throw new Error('Falha ao registrar a cobrança');
+    return r.json();
+  });
 }
 </script>
 {% endblock %}

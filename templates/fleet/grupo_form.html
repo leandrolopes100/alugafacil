@@ -79,12 +79,20 @@
           <div class="col-md-4">
             <label class="form-label fw-semibold small">Semanal (R$)</label>
             {{ form.semanal }}
-            <div class="form-text">Opcional</div>
+            {% if form.semanal.errors %}
+            <div class="invalid-feedback d-block">{{ form.semanal.errors.0 }}</div>
+            {% else %}
+            <div class="form-text">Pacote de 7 dias. Vazio = pela diária</div>
+            {% endif %}
           </div>
           <div class="col-md-4">
             <label class="form-label fw-semibold small">Mensal (R$)</label>
             {{ form.mensal }}
-            <div class="form-text">Opcional</div>
+            {% if form.mensal.errors %}
+            <div class="invalid-feedback d-block">{{ form.mensal.errors.0 }}</div>
+            {% else %}
+            <div class="form-text">Pacote de 1 mês. Vazio = pela diária</div>
+            {% endif %}
           </div>
           <div class="col-md-4">
             <label class="form-label fw-semibold small">Franquia km/dia</label>
@@ -108,20 +116,75 @@
               <label class="form-check-label small">Grupo ativo (disponível para reservas)</label>
             </div>
           </div>
+
+          <div class="col-12" id="blocoConfirmar" {% if not form.confirmar_tarifas.errors %}hidden{% endif %}>
+            <div class="form-check p-3 rounded" style="background:var(--warning-bg); padding-left:2.25rem !important">
+              {{ form.confirmar_tarifas }}
+              <label class="form-check-label small fw-semibold" for="{{ form.confirmar_tarifas.id_for_label }}" style="color:var(--warning-text)">
+                Confirmo estes valores (o desconto alto é intencional)
+              </label>
+              {% if form.confirmar_tarifas.errors %}
+              <div class="invalid-feedback d-block">{{ form.confirmar_tarifas.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="card-footer bg-transparent d-flex gap-2 justify-content-end">
+      <div class="card-footer bg-transparent d-flex gap-2 justify-content-end align-items-center">
+        <span id="avisoBloqueio" class="small me-auto" style="color:var(--danger)" hidden>
+          <i class="bi bi-x-octagon-fill me-1"></i>Corrija os valores indicados ao lado para salvar.
+        </span>
         <a href="{% url 'frota:grupos' %}" class="btn btn-outline-secondary">Cancelar</a>
-        <button type="submit" class="btn btn-primary">
+        <button type="submit" class="btn btn-primary" id="botaoSalvarGrupo">
           <i class="bi bi-check-lg me-1"></i>Salvar Grupo
         </button>
       </div>
     </form>
   </div>
 
-  <!-- Dica lateral -->
   <div class="col-lg-5">
+    <div class="card mb-3" id="painelCobranca" aria-live="polite">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-calculator me-2 text-primary"></i>Como este grupo vai cobrar</span>
+        <span class="spinner-border spinner-border-sm text-primary" id="simulandoTarifas" hidden></span>
+      </div>
+      <div class="card-body">
+        <p class="small text-muted mb-0" id="painelVazio">Informe a diária para ver a simulação.</p>
+        <div id="painelConteudo" hidden>
+          <table class="table table-sm mb-3">
+            <tbody>
+              <tr>
+                <td class="small text-secondary">Semana (7 dias)</td>
+                <td class="text-end"><div class="fw-bold" id="simSemana"></div><div class="small text-muted" id="simSemanaDet"></div></td>
+              </tr>
+              <tr>
+                <td class="small text-secondary">Mês (30 dias)</td>
+                <td class="text-end"><div class="fw-bold" id="simMes"></div><div class="small text-muted" id="simMesDet"></div></td>
+              </tr>
+              <tr>
+                <td class="small text-secondary">Contrato semanal de 10 dias</td>
+                <td class="text-end fw-semibold" id="simEx10"></td>
+              </tr>
+              <tr>
+                <td class="small text-secondary">Contrato mensal de 45 dias</td>
+                <td class="text-end fw-semibold" id="simEx45"></td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="small text-muted mb-3">Dias que não fecham semana ou mês pagam a diária, nunca mais que o pacote cheio. Adicionais e dias extras na devolução são cobrados por dia.</p>
+          <div id="simMensagens" class="d-grid gap-2"></div>
+        </div>
+      </div>
+    </div>
+
+    {% if total_veiculos %}
+    <div class="alert alert-info small d-flex gap-2 mb-3">
+      <i class="bi bi-info-circle-fill"></i>
+      <span>{{ total_veiculos }} veículo{{ total_veiculos|pluralize }} usa{{ total_veiculos|pluralize:"m" }} este grupo. Mudar as tarifas vale só para contratos novos; os já criados mantêm os valores combinados.</span>
+    </div>
+    {% endif %}
+
     <div class="card border-0 bg-light">
       <div class="card-body">
         <h6 class="fw-bold mb-3"><i class="bi bi-lightbulb text-warning me-2"></i>Como os grupos funcionam</h6>
@@ -137,4 +200,100 @@
   </div>
 </div>
 
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const url = "{% url 'frota:grupo-simular-tarifas' %}";
+  const campos = {
+    diaria: document.getElementById('id_diaria'),
+    semanal: document.getElementById('id_semanal'),
+    mensal: document.getElementById('id_mensal'),
+  };
+  const el = id => document.getElementById(id);
+  const brl = v => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const pct = v => Math.round(Number(v) * 100) + '%';
+  let temporizador = null;
+  let ultima = 0;
+
+  function detalhe(porDia, desconto, temPacote) {
+    if (!temPacote) return 'pela diária';
+    const d = Number(desconto) > 0 ? ' · ' + pct(desconto) + ' de desconto' : '';
+    return 'pacote · ' + brl(porDia) + '/dia' + d;
+  }
+
+  function mensagem(item, tipo) {
+    const cores = {
+      erro: ['var(--danger-bg)', 'var(--danger-text)', 'bi-x-octagon-fill'],
+      aviso: ['var(--warning-bg)', 'var(--warning-text)', 'bi-exclamation-triangle-fill'],
+      info: ['#f1f5f9', '#475569', 'bi-info-circle'],
+    }[tipo];
+    const caixa = document.createElement('div');
+    caixa.className = 'small rounded p-2 d-flex gap-2 align-items-start';
+    caixa.style.background = cores[0];
+    caixa.style.color = cores[1];
+    const icone = document.createElement('i');
+    icone.className = 'bi ' + cores[2] + ' mt-1';
+    const corpo = document.createElement('div');
+    corpo.textContent = item.texto;
+    if (item.sugestao) {
+      const botao = document.createElement('button');
+      botao.type = 'button';
+      botao.className = 'btn btn-sm btn-light border d-block mt-2';
+      botao.textContent = 'Usar ' + brl(item.sugestao);
+      botao.addEventListener('click', () => {
+        campos[item.campo].value = Number(item.sugestao).toFixed(2);
+        simular();
+      });
+      corpo.appendChild(botao);
+    }
+    caixa.append(icone, corpo);
+    return caixa;
+  }
+
+  async function simular() {
+    const pedido = ++ultima;
+    const params = new URLSearchParams({
+      diaria: campos.diaria.value, semanal: campos.semanal.value, mensal: campos.mensal.value,
+    });
+    el('simulandoTarifas').hidden = false;
+    try {
+      const resposta = await fetch(url + '?' + params, { headers: { 'Accept': 'application/json' } });
+      const dados = await resposta.json();
+      if (pedido !== ultima) return;
+      el('painelVazio').hidden = dados.pronto;
+      el('painelConteudo').hidden = !dados.pronto;
+      if (!dados.pronto) { el('avisoBloqueio').hidden = true; el('botaoSalvarGrupo').disabled = false; return; }
+      const r = dados.resumo;
+      el('simSemana').textContent = brl(r.semana);
+      el('simSemanaDet').textContent = detalhe(r.semana_por_dia, r.semana_desconto, Number(campos.semanal.value) > 0);
+      el('simMes').textContent = brl(r.mes);
+      el('simMesDet').textContent = detalhe(r.mes_por_dia, r.mes_desconto, Number(campos.mensal.value) > 0);
+      el('simEx10').textContent = brl(r.exemplo_semanal_10_dias);
+      el('simEx45').textContent = brl(r.exemplo_mensal_45_dias);
+      const lista = el('simMensagens');
+      lista.replaceChildren(
+        ...dados.erros.map(i => mensagem(i, 'erro')),
+        ...dados.avisos.map(i => mensagem(i, 'aviso')),
+        ...dados.infos.map(i => mensagem(i, 'info')),
+      );
+      const bloqueado = dados.erros.length > 0;
+      el('botaoSalvarGrupo').disabled = bloqueado;
+      el('avisoBloqueio').hidden = !bloqueado;
+      el('blocoConfirmar').hidden = !(dados.avisos.length && !bloqueado);
+    } catch (e) {
+      el('botaoSalvarGrupo').disabled = false;
+    } finally {
+      if (pedido === ultima) el('simulandoTarifas').hidden = true;
+    }
+  }
+
+  Object.values(campos).forEach(campo => campo && campo.addEventListener('input', () => {
+    clearTimeout(temporizador);
+    temporizador = setTimeout(simular, 300);
+  }));
+  simular();
+})();
+</script>
 {% endblock %}

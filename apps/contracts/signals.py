@@ -1,114 +1,68 @@
 from django.db import transaction
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 
-from .models import AdicionalContrato, AvariaContrato, Contrato, PagamentoContrato
+from .models import AdicionalContrato, AvariaContrato, Contrato, PagamentoContrato, ParcelaContrato
+
+
+def _criar_conta_receber(contrato, data_vencimento):
+    from apps.financeiro.models import ContaReceber
+    ContaReceber.objects.create(
+        contrato=contrato,
+        cliente=contrato.cliente,
+        descricao=f'Locacao - Contrato {contrato.numero}',
+        valor_total=contrato.total_geral,
+        data_emissao=timezone.localdate(contrato.data_saida),
+        data_vencimento=data_vencimento,
+        situacao='pendente',
+    )
+    contrato.sincronizar_conta_receber()
 
 
 @receiver(post_save, sender=Contrato)
 def contrato_post_save(sender, instance, created, **kwargs):
-    """
-    Cria ou atualiza ContaReceber ao mudar situacao do contrato.
-    Usa transaction.atomic + select_for_update para evitar race condition.
-
-    - 'ativo': cria/atualiza ContaReceber com valor e data_vencimento atuais (cobre prorrogações).
-    - 'encerrado': atualiza com o total final calculado no fechamento.
-    - 'cancelado': cancela a ContaReceber para limpar o dashboard financeiro.
-    """
     from apps.financeiro.models import ContaReceber
 
-    # Invalida cached_properties para garantir calculo fresco do total
-    for attr in ('total_geral', 'total_adicionais', 'total_avarias',
-                 'total_locacao', 'total_pago', 'total_caucao_coletado', 'saldo_devedor'):
-        instance.__dict__.pop(attr, None)
+    instance.limpar_cache_financeiro()
 
     if instance.situacao == 'ativo' and instance.data_saida:
-        novo_total = instance.total_geral
-        novo_vencimento = instance.data_devolucao_prevista.date()
+        novo_vencimento = timezone.localdate(instance.data_devolucao_prevista)
         with transaction.atomic():
-            conta_qs = ContaReceber.objects.select_for_update().filter(contrato=instance)
-            if conta_qs.exists():
-                conta_qs.first().atualizar_situacao(
-                    novo_valor_total=novo_total,
-                    novo_vencimento=novo_vencimento,
-                )
+            if ContaReceber.objects.select_for_update().filter(contrato=instance).exists():
+                instance.sincronizar_conta_receber(novo_vencimento=novo_vencimento)
             else:
-                ContaReceber.objects.create(
-                    contrato=instance,
-                    cliente=instance.cliente,
-                    descricao=f'Locacao - Contrato {instance.numero}',
-                    valor_total=novo_total,
-                    data_emissao=instance.data_saida.date(),
-                    data_vencimento=novo_vencimento,
-                    situacao='pendente',
-                )
+                _criar_conta_receber(instance, novo_vencimento)
 
-    elif instance.situacao == 'encerrado':
-        novo_total = instance.total_geral
+    elif instance.situacao in ('aguardando_devolucao', 'encerrado'):
         with transaction.atomic():
-            try:
-                ContaReceber.objects.select_for_update().get(
-                    contrato=instance
-                ).atualizar_situacao(novo_valor_total=novo_total)
-            except ContaReceber.DoesNotExist:
-                if instance.data_saida:
-                    ContaReceber.objects.create(
-                        contrato=instance,
-                        cliente=instance.cliente,
-                        descricao=f'Locacao - Contrato {instance.numero}',
-                        valor_total=novo_total,
-                        data_emissao=instance.data_saida.date(),
-                        data_vencimento=(
-                            instance.data_devolucao_real.date()
-                            if instance.data_devolucao_real
-                            else instance.data_devolucao_prevista.date()
-                        ),
-                        situacao='pendente',
-                    )
-        # Reserva vinculada → concluida (fecha o ciclo da reserva)
-        if instance.reserva_id:
+            if ContaReceber.objects.select_for_update().filter(contrato=instance).exists():
+                instance.sincronizar_conta_receber()
+            elif instance.data_saida:
+                _criar_conta_receber(instance, timezone.localdate(
+                    instance.data_devolucao_real or instance.data_devolucao_prevista
+                ))
+        if instance.situacao == 'encerrado' and instance.reserva_id:
             from .models import Reserva
             Reserva.objects.filter(pk=instance.reserva_id, situacao='ativa').update(situacao='concluida')
 
     elif instance.situacao == 'cancelado':
-        # Remove a conta do radar financeiro ao cancelar o contrato
         ContaReceber.objects.filter(
             contrato=instance
         ).exclude(situacao='cancelado').update(situacao='cancelado')
 
 
 @receiver(post_save, sender=PagamentoContrato)
-def pagamento_post_save(sender, instance, created, **kwargs):
-    """Atualiza ContaReceber sempre que um pagamento e registrado."""
-    from apps.financeiro.models import ContaReceber
-    with transaction.atomic():
-        try:
-            conta = ContaReceber.objects.select_for_update().get(contrato=instance.contrato)
-            conta.atualizar_situacao()
-        except ContaReceber.DoesNotExist:
-            pass
-
-
+@receiver(post_delete, sender=PagamentoContrato)
+@receiver(post_save, sender=ParcelaContrato)
+@receiver(post_delete, sender=ParcelaContrato)
 @receiver(post_save, sender=AdicionalContrato)
+@receiver(post_delete, sender=AdicionalContrato)
 @receiver(post_save, sender=AvariaContrato)
-def adicional_avaria_post_save(sender, instance, **kwargs):
-    """Atualiza ContaReceber quando um adicional ou avaria é adicionado ao contrato."""
+@receiver(post_delete, sender=AvariaContrato)
+def lancamento_financeiro_alterado(sender, instance, **kwargs):
     from apps.financeiro.models import ContaReceber
-
-    contrato = instance.contrato
-    for attr in ('total_geral', 'total_adicionais', 'total_avarias',
-                 'total_locacao', 'total_pago', 'total_caucao_coletado', 'saldo_devedor'):
-        contrato.__dict__.pop(attr, None)
-
-    novo_total = contrato.total_geral
-    with transaction.atomic():
-        try:
-            ContaReceber.objects.select_for_update().get(
-                contrato=contrato
-            ).atualizar_situacao(novo_valor_total=novo_total)
-        except ContaReceber.DoesNotExist:
-            pass
+    ContaReceber.sincronizar(instance.contrato_id)
 
 
 @receiver(pre_save, sender=Contrato)
@@ -157,8 +111,8 @@ def contrato_caucao_post_save(sender, instance, created, **kwargs):
         categoria='caucao',
         descricao=f'Devolucao de caucao — Contrato {instance.numero} ({instance.cliente})',
         valor=getattr(instance, '_caucao_valor_devolvido', instance.caucao_valor),
-        data_competencia=timezone.now().date(),
-        data_pagamento=timezone.now().date(),
+        data_competencia=timezone.localdate(),
+        data_pagamento=timezone.localdate(),
         observacoes=marker,
     )
 

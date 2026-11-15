@@ -663,7 +663,7 @@ class Command(BaseCommand):
         from apps.contracts.models import Contrato
 
         self.stdout.write('  Criando dados financeiros...')
-        hoje = timezone.now().date()
+        hoje = timezone.localdate()
 
         c1 = Contrato.objects.filter(veiculo=self.v_corolla, situacao='ativo').latest('criado_em')
         c3 = Contrato.objects.filter(veiculo=self.v_civic, situacao='aguardando_devolucao').latest('criado_em')
@@ -796,7 +796,7 @@ class Command(BaseCommand):
         from apps.contracts.models import Contrato
 
         self.stdout.write('  Criando manutencoes...')
-        hoje = timezone.now().date()
+        hoje = timezone.localdate()
         c1 = Contrato.objects.filter(veiculo=self.v_corolla, situacao='ativo').latest('criado_em')
 
         OrdemManutencao.objects.create(
@@ -901,7 +901,7 @@ class Command(BaseCommand):
         from apps.investidores.models import Investidor, VeiculoInvestidor, CobrancaGestao
 
         self.stdout.write('  Criando investidores...')
-        hoje = timezone.now().date()
+        hoje = timezone.localdate()
 
         inv_ricardo = Investidor.objects.create(
             tipo='pf', nome='Ricardo Nogueira Investimentos',

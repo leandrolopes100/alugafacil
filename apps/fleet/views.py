@@ -88,11 +88,30 @@ class VeiculoDetailView(GrupoRequiredMixin, DetailView):
         contexto['historico_km'] = self.object.historico_km.select_related(
             'contrato', 'registrado_por'
         ).order_by('-data')[:15]
+        contexto['bloqueio_situacao'] = self.object.bloqueio_mudanca_situacao()
         contexto['pode_excluir'] = (
             self.object.situacao in ('disponivel', 'inativo') and
             not self.object.contratos.exists()
         )
         return contexto
+
+
+class VeiculoAlterarSituacaoView(GrupoRequiredMixin, View):
+    grupos_permitidos = ['admin_locadora', 'atendente', 'mecanico']
+
+    def post(self, request, pk):
+        from django.db import transaction
+        with transaction.atomic():
+            veiculo = get_object_or_404(Veiculo.objects.select_for_update(), pk=pk)
+            nova = request.POST.get('situacao', '')
+            erro = veiculo.erro_ao_mudar_situacao(nova)
+            if erro:
+                messages.error(request, erro)
+                return redirect('frota:detalhe', pk=pk)
+            veiculo.situacao = nova
+            veiculo.save(update_fields=['situacao', 'atualizado_em'])
+        messages.success(request, f'Veículo {veiculo.placa} agora está "{veiculo.get_situacao_display()}".')
+        return redirect('frota:detalhe', pk=pk)
 
 
 class VeiculoDeleteView(GrupoRequiredMixin, View):
@@ -247,8 +266,11 @@ class GrupoCreateView(GrupoRequiredMixin, CreateView):
         return contexto
 
     def form_valid(self, form):
-        messages.success(self.request, f'Grupo "{form.instance.nome}" criado com sucesso.')
-        return super().form_valid(form)
+        resposta = super().form_valid(form)
+        messages.success(
+            self.request, f'Grupo "{self.object.nome}" criado. {_resumo_tarifas_texto(self.object)}',
+        )
+        return resposta
 
 
 class GrupoUpdateView(GrupoRequiredMixin, UpdateView):
@@ -261,11 +283,68 @@ class GrupoUpdateView(GrupoRequiredMixin, UpdateView):
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
         contexto['titulo'] = f'Editar — {self.object.nome}'
+        contexto['total_veiculos'] = self.object.veiculos.count()
         return contexto
 
     def form_valid(self, form):
-        messages.success(self.request, f'Grupo "{form.instance.nome}" atualizado.')
-        return super().form_valid(form)
+        tarifas_mudaram = bool({'diaria', 'semanal', 'mensal'} & set(form.changed_data))
+        resposta = super().form_valid(form)
+        messages.success(
+            self.request, f'Grupo "{self.object.nome}" atualizado. {_resumo_tarifas_texto(self.object)}',
+        )
+        total_veiculos = self.object.veiculos.count()
+        if tarifas_mudaram and total_veiculos:
+            messages.info(
+                self.request,
+                f'{total_veiculos} veículo(s) usam este grupo. Contratos já criados não mudam; '
+                f'só os novos contratos usarão os valores novos.',
+            )
+        return resposta
+
+
+def _resumo_tarifas_texto(grupo):
+    from .tarifas import _brl, resumo_cobranca
+    resumo = resumo_cobranca(grupo.diaria, grupo.semanal, grupo.mensal)
+    return (
+        f'Diária {_brl(grupo.diaria)} · semana {_brl(resumo["semana"])}'
+        f'{" (pacote)" if grupo.semanal else " (pela diária)"} · mês de 30 dias {_brl(resumo["mes"])}'
+        f'{" (pacote)" if grupo.mensal else " (pela diária)"}.'
+    )
+
+
+class GrupoTarifasSimularView(GrupoRequiredMixin, View):
+    grupos_permitidos = ['admin_locadora']
+
+    def get(self, request):
+        from decimal import Decimal, InvalidOperation
+        from .tarifas import conferir_tarifas, resumo_cobranca
+
+        def ler(nome):
+            try:
+                valor = Decimal(request.GET.get(nome, '').replace(',', '.'))
+            except (InvalidOperation, ValueError):
+                return None
+            return valor if valor > 0 else None
+
+        diaria = ler('diaria')
+        if not diaria:
+            return JsonResponse({'pronto': False})
+        semanal, mensal = ler('semanal'), ler('mensal')
+        resumo = resumo_cobranca(diaria, semanal, mensal)
+        conferencia = conferir_tarifas(diaria, semanal, mensal)
+
+        def item(i):
+            return {**i, 'sugestao': str(i['sugestao']) if i['sugestao'] is not None else None}
+
+        resposta = JsonResponse({
+            'pronto': True,
+            'resumo': {chave: str(valor) for chave, valor in resumo.items()},
+            'erros': [item(i) for i in conferencia['erros']],
+            'avisos': [item(i) for i in conferencia['avisos']],
+            'infos': [item(i) for i in conferencia['infos']],
+        })
+        resposta['Cache-Control'] = 'no-store'
+        return resposta
 
 
 # ─── Categorias ──────────────────────────────────────────────────────────────
@@ -374,15 +453,20 @@ class VeiculoTarifasView(GrupoRequiredMixin, View):
         veiculo_id = request.GET.get('veiculo_id')
         if not veiculo_id:
             return JsonResponse({})
-        try:
-            veiculo = Veiculo.objects.select_related('grupo').get(pk=veiculo_id)
-            grupo = veiculo.grupo
-            return JsonResponse({
-                'diaria': str(grupo.diaria),
-                'km_franquia_diaria': grupo.km_franquia_diaria,
-                'valor_km_excedente': str(grupo.valor_km_excedente),
-                'caucao': str(grupo.caucao),
-                'grupo_nome': grupo.nome,
-            })
-        except Veiculo.DoesNotExist:
+        from .tarifas import forma_cobranca_sugerida
+        veiculo = Veiculo.objects.select_related('grupo').filter(pk=veiculo_id).first()
+        if veiculo is None or veiculo.grupo is None:
             return JsonResponse({})
+        grupo = veiculo.grupo
+        resposta = JsonResponse({
+            'diaria': str(grupo.diaria),
+            'semanal': str(grupo.semanal) if grupo.semanal else '',
+            'mensal': str(grupo.mensal) if grupo.mensal else '',
+            'forma_cobranca': forma_cobranca_sugerida(grupo),
+            'km_franquia_diaria': grupo.km_franquia_diaria,
+            'valor_km_excedente': str(grupo.valor_km_excedente),
+            'caucao': str(grupo.caucao),
+            'grupo_nome': grupo.nome,
+        })
+        resposta['Cache-Control'] = 'no-store'
+        return resposta

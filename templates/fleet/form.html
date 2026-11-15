@@ -147,6 +147,7 @@
             <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.grupo.errors.0 }}</div>
             {% endif %}
           </div>
+          {% if form.situacao %}
           <div class="mb-3 {% if form.situacao.errors %}field-has-error{% endif %}">
             <label class="form-label fw-semibold small">Situação</label>
             {{ form.situacao }}
@@ -154,6 +155,13 @@
             <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.situacao.errors.0 }}</div>
             {% endif %}
           </div>
+          {% else %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Situação</label>
+            <div class="form-control-plaintext small py-0">{{ form.instance.get_situacao_display }}</div>
+            <div class="form-text">Para mudar, use o botão "Mudar situação" na tela do veículo.</div>
+          </div>
+          {% endif %}
           <div class="{% if form.km_atual.errors %}field-has-error{% endif %}">
             <label class="form-label fw-semibold small">KM Atual</label>
             {{ form.km_atual }}

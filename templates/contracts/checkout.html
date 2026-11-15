@@ -35,6 +35,18 @@
         <div class="card-header"><i class="bi bi-speedometer2 me-2 text-primary"></i>Dados de Saída</div>
         <div class="card-body">
           <div class="row g-3">
+            <div class="col-12 {% if form.data_devolucao_prevista.errors %}field-has-error{% endif %}">
+              <label class="form-label fw-semibold small" for="id_data_devolucao_prevista">Devolução prevista *</label>
+              {{ form.data_devolucao_prevista }}
+              {% if form.data_devolucao_prevista.errors %}
+              <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.data_devolucao_prevista.errors.0 }}</div>
+              {% endif %}
+              <div class="form-text" id="periodoContratado"></div>
+              <div id="avisoHoraPrevista" class="alert alert-warning d-none gap-2 mt-2 mb-0" style="font-size:13px">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span id="avisoHoraPrevistaTexto"></span>
+              </div>
+            </div>
             <div class="col-md-6 {% if form.km_saida.errors %}field-has-error{% endif %}">
               <label class="form-label fw-semibold small">KM de Saída *</label>
               {{ form.km_saida }}
@@ -219,6 +231,10 @@
           <span>{{ contrato.diaria|brl }}</span>
         </li>
         <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Forma de cobrança</span>
+          <span class="fw-semibold">{{ contrato.get_forma_cobranca_display }}{% if contrato.usa_pacote %} — pacote {{ contrato.valor_pacote|brl }}{% else %} — pela diária{% endif %}</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
           <span class="text-muted">Caução</span>
           <span class="{% if contrato.caucao_situacao == 'pendente' and contrato.caucao_valor > 0 %}text-danger fw-semibold{% endif %}">
             {{ contrato.caucao_valor|brl }} — {{ contrato.get_caucao_situacao_display }}
@@ -229,4 +245,41 @@
   </div>
 
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ regra_saida|json_script:"regra-saida" }}
+<script>
+(function () {
+  const regra = JSON.parse(document.getElementById('regra-saida').textContent);
+  const campo = document.getElementById('id_data_devolucao_prevista');
+  const periodo = document.getElementById('periodoContratado');
+  const aviso = document.getElementById('avisoHoraPrevista');
+  const texto = document.getElementById('avisoHoraPrevistaTexto');
+  if (!campo) return;
+  const brl = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const hora = d => d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const dia = d => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  const soData = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  function mostrar(sim) { aviso.classList.toggle('d-none', !sim); aviso.classList.toggle('d-flex', sim); }
+  function atualizar() {
+    const saida = new Date();
+    const prevista = new Date(campo.value);
+    if (isNaN(prevista.getTime()) || prevista <= saida) { periodo.textContent = ''; mostrar(false); return; }
+    const dias = Math.max(Math.round((soData(prevista) - soData(saida)) / 86400000), 1);
+    const fim = new Date(saida.getTime() + dias * 86400000);
+    const limite = new Date(fim.getTime() + regra.tolerancia_minutos * 60000);
+    periodo.textContent = 'Saída agora (' + hora(saida) + '): ' + dias + ' dia(s) cobrado(s), até '
+      + dia(fim) + ' às ' + hora(fim) + ', com tolerância de ' + regra.tolerancia_minutos + ' min.';
+    if (prevista <= limite) { mostrar(false); return; }
+    texto.textContent = 'A devolução prevista (' + hora(prevista) + ') passa do fim do período cobrado ('
+      + hora(fim) + ' + ' + regra.tolerancia_minutos + ' min). Se o veículo voltar nesse horário, será cobrada 1 diária extra de '
+      + brl(regra.diaria) + ' no acerto. Para não cobrar, ajuste a devolução prevista para até ' + hora(limite) + '.';
+    mostrar(true);
+  }
+  campo.addEventListener('input', atualizar);
+  campo.addEventListener('change', atualizar);
+  atualizar();
+})();
+</script>
 {% endblock %}

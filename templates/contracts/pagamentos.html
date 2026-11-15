@@ -62,6 +62,7 @@
           <th>Forma</th>
           <th>Observações</th>
           <th class="text-end">Valor</th>
+          {% if pode_estornar %}<th></th>{% endif %}
         </tr>
       </thead>
       <tbody>
@@ -91,10 +92,24 @@
           <td class="text-end fw-semibold {% if pag.tipo == 'caucao' %}text-info{% else %}text-success{% endif %}">
             {{ pag.valor|brl }}
           </td>
+          {% if pode_estornar %}
+          <td class="text-end">
+            {% if pag.forma_pagamento != 'abatido_caucao' %}
+            <form method="post" action="{% url 'contratos:pagamento-estornar' contrato.pk pag.pk %}" class="d-inline">
+              {% csrf_token %}
+              <input type="hidden" name="motivo">
+              <button type="button" class="btn btn-sm btn-outline-danger" title="Estornar este pagamento"
+                      onclick="estornarPagamento(this, '{{ pag.valor|brl }}')">
+                <i class="bi bi-arrow-counterclockwise"></i>
+              </button>
+            </form>
+            {% endif %}
+          </td>
+          {% endif %}
         </tr>
         {% empty %}
         <tr>
-          <td colspan="5" class="text-center py-5 text-muted">
+          <td colspan="6" class="text-center py-5 text-muted">
             <i class="bi bi-cash-coin d-block fs-1 mb-2 opacity-25"></i>
             Nenhum pagamento registrado ainda.
           </td>
@@ -106,6 +121,7 @@
         <tr>
           <td colspan="4" class="text-end fw-bold small text-muted">Total recebido (excl. caução):</td>
           <td class="text-end fw-bold text-success">{{ contrato.total_pago|brl }}</td>
+          {% if pode_estornar %}<td></td>{% endif %}
         </tr>
       </tfoot>
       {% endif %}
@@ -113,4 +129,17 @@
   </div>
 </div>
 
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function estornarPagamento(botao, valor) {
+  const motivo = window.prompt('Estornar o pagamento de ' + valor + '? A cobrança volta a ficar em aberto. Informe o motivo:');
+  if (motivo === null) return;
+  if (!motivo.trim()) { window.alert('O motivo é obrigatório.'); return; }
+  const form = botao.closest('form');
+  form.querySelector('input[name="motivo"]').value = motivo.trim();
+  form.submit();
+}
+</script>
 {% endblock %}

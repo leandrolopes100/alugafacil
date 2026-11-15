@@ -33,15 +33,6 @@
     <a href="{% url 'contratos:detalhe' conta.contrato.pk %}" class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-file-earmark-text me-1"></i>Ver Contrato
     </a>
-    {% if conta.situacao != 'pago' and conta.situacao != 'cancelado' %}
-    <form method="post" action="{% url 'financeiro:conta-receber-cancelar' conta.pk %}" class="d-inline">
-      {% csrf_token %}
-      <button type="button" class="btn btn-outline-danger btn-sm"
-              onclick="confirmarAcao(this, 'Cancelar esta conta?', 'Esta ação não pode ser desfeita.', 'danger')">
-        Cancelar
-      </button>
-    </form>
-    {% endif %}
   </div>
 </div>
 
@@ -78,6 +69,16 @@
               R$ {{ conta.valor_saldo|floatformat:2 }}
             </span>
           </div>
+          {% if conta.encargos_atraso %}
+          <div style="display:flex; justify-content:space-between; font-size:13px; margin-top:6px">
+            <span style="color:#64748b">Multa e juros de atraso</span>
+            <span style="font-weight:600; color:#b3261e">+ R$ {{ conta.encargos_atraso|floatformat:2 }}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:13px; margin-top:6px">
+            <span style="color:#64748b; font-weight:600">Valor atualizado</span>
+            <span style="font-size:15px; font-weight:700; color:#b3261e">R$ {{ conta.valor_atualizado|floatformat:2 }}</span>
+          </div>
+          {% endif %}
           {% if conta.contrato.total_caucao_coletado %}
           <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:8px; padding-top:8px; border-top:1px solid #f1f5f9; color:#64748b">
             <span><i class="bi bi-shield-check me-1" style="color:#d97706"></i>Caução coletado</span>
@@ -145,10 +146,11 @@
             <label class="form-label">
               Valor (R$)
               {% if conta.valor_saldo > 0 %}
-              <span style="font-size:11px; color:#1e7a4c; font-weight:600">— Saldo: R$ {{ conta.valor_saldo|floatformat:2 }}</span>
+              <span style="font-size:11px; color:#1e7a4c; font-weight:600">— {% if conta.encargos_atraso %}Atualizado: R$ {{ conta.valor_atualizado|floatformat:2 }} (saldo R$ {{ conta.valor_saldo|floatformat:2 }} + multa/juros){% else %}Saldo: R$ {{ conta.valor_saldo|floatformat:2 }}{% endif %}</span>
               {% endif %}
             </label>
             {{ form.valor }}
+            <div class="form-text">Em "Locação", o valor quita as parcelas mais antigas primeiro, já com multa e juros de atraso. "Multa de trânsito" e "Caução" quitam as cobranças desse tipo. Se não cobrir uma cobrança inteira, o que faltar continua em aberto. Avarias são recebidas na tela de avarias do contrato.</div>
           </div>
           <div class="mb-3">
             <label class="form-label">Data/hora</label>
@@ -199,22 +201,12 @@
         <div style="margin-top:16px; padding-top:16px; border-top:1px solid #f1f5f9">
           <div style="font-size:11px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:.05em; margin-bottom:10px">Composição do Valor</div>
           <div class="row g-2">
+            {% for rotulo, valor in conta.contrato.composicao_financeira %}
             <div class="col-6 col-md-3">
-              <div style="font-size:11px; color:#64748b">Locação</div>
-              <div style="font-size:13.5px; font-weight:600">R$ {{ conta.contrato.total_locacao|floatformat:2 }}</div>
+              <div style="font-size:11px; color:#64748b">{{ rotulo }}</div>
+              <div style="font-size:13.5px; font-weight:600">R$ {{ valor|floatformat:2 }}</div>
             </div>
-            {% if conta.contrato.total_adicionais %}
-            <div class="col-6 col-md-3">
-              <div style="font-size:11px; color:#64748b">Adicionais</div>
-              <div style="font-size:13.5px; font-weight:600">R$ {{ conta.contrato.total_adicionais|floatformat:2 }}</div>
-            </div>
-            {% endif %}
-            {% if conta.contrato.total_avarias %}
-            <div class="col-6 col-md-3">
-              <div style="font-size:11px; color:#64748b">Avarias</div>
-              <div style="font-size:13.5px; font-weight:600; color:#b3261e">R$ {{ conta.contrato.total_avarias|floatformat:2 }}</div>
-            </div>
-            {% endif %}
+            {% endfor %}
             <div class="col-6 col-md-3">
               <div style="font-size:11px; color:#64748b; font-weight:700">Total</div>
               <div style="font-size:15px; font-weight:700">R$ {{ conta.contrato.total_geral|floatformat:2 }}</div>

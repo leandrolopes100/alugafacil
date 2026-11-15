@@ -29,9 +29,12 @@ urlpatterns = [
     path('<int:pk>/adicionais/', views.ContratoAdicionaisView.as_view(), name='adicionais'),
     path('<int:pk>/avarias/', views.ContratoAvariasView.as_view(), name='avarias'),
     path('<int:pk>/pagamentos/', views.ContratoPagamentosView.as_view(), name='pagamentos'),
+    path('<int:pk>/pagamentos/<int:pagamento_pk>/estornar/', views.ContratoPagamentoEstornarView.as_view(), name='pagamento-estornar'),
     path('<int:pk>/prorrogar/', views.ContratoProrrogarView.as_view(), name='prorrogar'),
     path('<int:pk>/parcelas/<int:parcela_pk>/pagar/', views.PagarParcelaView.as_view(), name='parcela-pagar'),
     path('<int:pk>/avarias/<int:avaria_pk>/pagar/', views.ContratoAvariaMarcarPagaView.as_view(), name='avaria-pagar'),
+    path('<int:pk>/avarias/<int:avaria_pk>/ajustar/', views.ContratoAvariaAjustarView.as_view(), name='avaria-ajustar'),
+    path('<int:pk>/adicionais/<int:adicional_pk>/remover/', views.ContratoAdicionalRemoverView.as_view(), name='adicional-remover'),
 
     # Assinatura digital (URL pública)
     path('assinar/<uuid:token>/', views.AssinaturaView.as_view(), name='assinar'),

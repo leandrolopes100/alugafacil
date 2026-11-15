@@ -14,6 +14,8 @@
         {% if multa.situacao == 'paga' %}bg-success
         {% elif multa.situacao == 'pendente_identificacao' %}bg-danger
         {% elif multa.situacao == 'identificada' %}bg-warning text-dark
+        {% elif multa.situacao == 'cobrada_cliente' %}bg-info text-dark
+        {% elif multa.situacao == 'contestada' %}bg-dark
         {% else %}bg-secondary{% endif %}">
         {{ multa.get_situacao_display }}
       </span>
@@ -21,9 +23,39 @@
       {% if multa.prazo_vencido %}<span class="badge bg-dark ms-1">Prazo vencido</span>{% endif %}
     </div>
   </div>
-  <a href="{% url 'financeiro:multa-editar' multa.pk %}" class="btn btn-warning btn-sm">
-    <i class="bi bi-pencil me-1"></i>Editar
-  </a>
+  <div class="d-flex flex-wrap gap-2 align-items-center">
+    {% for situacao, rotulo in multa.proximas_situacoes %}
+    <form method="post" action="{% url 'financeiro:multa-situacao' multa.pk %}" class="d-inline">
+      {% csrf_token %}
+      <input type="hidden" name="situacao" value="{{ situacao }}">
+      {% if situacao == 'identificada' %}
+      <button type="submit" class="btn btn-outline-warning btn-sm">
+        <i class="bi bi-person-check me-1"></i>Condutor identificado
+      </button>
+      {% elif situacao == 'cobrada_cliente' %}
+      <button type="button" class="btn btn-primary btn-sm"
+              onclick="confirmarAcao(this, 'Cobrar do cliente?', 'Será criada uma cobrança de R$ {{ multa.valor|floatformat:2 }} no contrato{% if multa.contrato %} {{ multa.contrato.numero }}{% endif %}, com vencimento em 7 dias. Ela entra na agenda, em Contas a Receber e na régua.', 'primary')">
+        <i class="bi bi-cash-coin me-1"></i>Cobrar do cliente
+      </button>
+      {% elif situacao == 'paga' %}
+      <button type="button" class="btn btn-outline-success btn-sm"
+              onclick="confirmarAcao(this, 'Marcar como paga?', 'Registra que a multa foi paga ao órgão de trânsito. Esta é a situação final.', 'success')">
+        <i class="bi bi-check2-circle me-1"></i>Marcar como paga
+      </button>
+      {% elif situacao == 'contestada' %}
+      <button type="button" class="btn btn-outline-secondary btn-sm"
+              onclick="confirmarAcao(this, 'Contestar a multa?', '{% if multa.parcela %}A cobrança no contrato será cancelada enquanto a multa estiver em contestação.{% else %}A multa fica em contestação.{% endif %}', 'warning')">
+        <i class="bi bi-shield-exclamation me-1"></i>Contestar
+      </button>
+      {% else %}
+      <button type="submit" class="btn btn-outline-secondary btn-sm">{{ rotulo }}</button>
+      {% endif %}
+    </form>
+    {% endfor %}
+    <a href="{% url 'financeiro:multa-editar' multa.pk %}" class="btn btn-warning btn-sm">
+      <i class="bi bi-pencil me-1"></i>Editar
+    </a>
+  </div>
 </div>
 
 <div class="row g-4">
@@ -62,6 +94,26 @@
         <div class="text-muted small mt-1">{{ multa.contrato.cliente.nome_exibicao }}</div>
         <div class="text-muted small">{{ multa.contrato.data_saida|date:"d/m/Y" }} → {{ multa.contrato.data_devolucao_prevista|date:"d/m/Y" }}</div>
       </div>
+    </div>
+    {% endif %}
+    {% if multa.parcela %}
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-cash-coin me-2 text-primary"></i>Cobrança no Contrato</div>
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Situação</span>
+          <span class="fw-semibold {% if multa.parcela.situacao == 'pago' %}text-success{% elif multa.parcela.em_atraso %}text-danger{% elif multa.parcela.situacao == 'cancelada' %}text-muted{% endif %}">
+            {% if multa.parcela.em_atraso %}Em atraso{% else %}{{ multa.parcela.get_situacao_display }}{% endif %}
+          </span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2"><span class="text-muted">Valor</span><span>R$ {{ multa.parcela.valor|floatformat:2 }}</span></li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2"><span class="text-muted">Vencimento</span><span>{{ multa.parcela.data_vencimento|date:"d/m/Y" }}</span></li>
+      </ul>
+    </div>
+    {% elif multa.situacao == 'identificada' and not multa.contrato %}
+    <div class="alert alert-warning small">
+      <i class="bi bi-exclamation-triangle me-1"></i>
+      Esta multa não está ligada a nenhum contrato, por isso não pode ser cobrada de um cliente pelo sistema.
     </div>
     {% endif %}
     {% if multa.descricao %}

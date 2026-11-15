@@ -157,7 +157,7 @@ class Command(BaseCommand):
         from apps.fleet.models import CategoriaVeiculo, GrupoVeiculo, Veiculo, DocumentoVeiculo
 
         self.stdout.write('  Criando frota...')
-        hoje = timezone.now().date()
+        hoje = timezone.localdate()
 
         # Categorias
         cat_eco = CategoriaVeiculo.objects.create(
@@ -478,7 +478,7 @@ class Command(BaseCommand):
         from apps.fleet.models import HistoricoKmVeiculo
 
         self.stdout.write('  Criando contratos...')
-        hoje = timezone.now().date()
+        hoje = timezone.localdate()
         agora = timezone.now()
 
         # ── CONTRATO 1: ATIVO (Carlos + Corolla, iniciou há 7 dias) ──────────
@@ -907,7 +907,7 @@ class Command(BaseCommand):
         from apps.contracts.models import Contrato
 
         self.stdout.write('  Criando dados financeiros...')
-        hoje = timezone.now().date()
+        hoje = timezone.localdate()
 
         c1 = Contrato.objects.get(numero='AF-2026-0001')
         c3 = Contrato.objects.get(numero='AF-2026-0003')
@@ -1015,7 +1015,7 @@ class Command(BaseCommand):
         from apps.fleet.models import HistoricoKmVeiculo
 
         self.stdout.write('  Criando manutenções...')
-        hoje = timezone.now().date()
+        hoje = timezone.localdate()
         c1 = Contrato.objects.get(numero='AF-2026-0001')
 
         OrdemManutencao.objects.create(

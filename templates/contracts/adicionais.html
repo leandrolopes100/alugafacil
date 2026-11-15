@@ -17,7 +17,7 @@
     <div class="card">
       <div class="table-responsive">
         <table class="table table-hover mb-0">
-          <thead><tr><th>Tipo</th><th>Descrição</th><th class="text-end">Diária</th><th class="text-center">Qtd</th></tr></thead>
+          <thead><tr><th>Tipo</th><th>Descrição</th><th class="text-end">Diária</th><th class="text-center">Qtd</th>{% if pode_remover %}<th></th>{% endif %}</tr></thead>
           <tbody>
             {% for adicional in adicionais %}
             <tr>
@@ -25,9 +25,20 @@
               <td class="text-muted small">{{ adicional.descricao|default:"—" }}</td>
               <td class="text-end fw-semibold text-success">R$ {{ adicional.diaria }}</td>
               <td class="text-center">{{ adicional.quantidade }}</td>
+              {% if pode_remover %}
+              <td class="text-end">
+                <form method="post" action="{% url 'contratos:adicional-remover' contrato.pk adicional.pk %}" class="d-inline">
+                  {% csrf_token %}
+                  <button type="button" class="btn btn-sm btn-outline-danger"
+                          onclick="confirmarAcao(this, 'Remover {{ adicional.get_tipo_display|escapejs }}?', 'As parcelas futuras em aberto serão recalculadas sem este adicional. A remoção fica no histórico do contrato.', 'danger')">
+                    <i class="bi bi-trash me-1"></i>Remover
+                  </button>
+                </form>
+              </td>
+              {% endif %}
             </tr>
             {% empty %}
-            <tr><td colspan="4" class="text-center py-4 text-muted small">Nenhum adicional.</td></tr>
+            <tr><td colspan="5" class="text-center py-4 text-muted small">Nenhum adicional.</td></tr>
             {% endfor %}
           </tbody>
         </table>

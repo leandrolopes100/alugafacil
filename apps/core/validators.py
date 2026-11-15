@@ -71,3 +71,18 @@ def validar_cnh_numero(valor):
     numero = _so_digitos(valor)
     if len(numero) != 11:
         raise ValidationError('Numero de CNH invalido. Deve ter exatamente 11 digitos.')
+
+
+def validar_nao_negativo(valor):
+    if valor is not None and valor < 0:
+        raise ValidationError('O valor não pode ser negativo.')
+
+
+def validar_positivo(valor):
+    if valor is not None and valor <= 0:
+        raise ValidationError('O valor deve ser maior que zero.')
+
+
+def validar_quantidade_minima(valor):
+    if valor is not None and valor < 1:
+        raise ValidationError('A quantidade deve ser pelo menos 1.')

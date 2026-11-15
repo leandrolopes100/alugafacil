@@ -36,6 +36,14 @@ class VeiculoForm(forms.ModelForm):
             'valor_fipe': forms.NumberInput(attrs={'class': FC, 'step': '0.01'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            del self.fields['situacao']
+        else:
+            rotulos = dict(Veiculo.SITUACAO)
+            self.fields['situacao'].choices = [(s, rotulos[s]) for s in Veiculo.SITUACOES_MANUAIS]
+
     def clean_placa(self):
         from apps.core.validators import validar_placa
         from django.core.exceptions import ValidationError as DjangoValidationError
@@ -74,6 +82,11 @@ class VeiculoForm(forms.ModelForm):
 
 
 class GrupoVeiculoForm(forms.ModelForm):
+    confirmar_tarifas = forms.BooleanField(
+        label='Confirmo estes valores', required=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+    )
+
     class Meta:
         model = GrupoVeiculo
         fields = ['nome', 'categoria', 'descricao', 'diaria', 'semanal', 'mensal',
@@ -90,6 +103,29 @@ class GrupoVeiculoForm(forms.ModelForm):
             'caucao': forms.NumberInput(attrs={'class': FC, 'step': '0.01'}),
             'ativo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+    def clean(self):
+        from apps.fleet.tarifas import conferir_tarifas
+        cleaned = super().clean()
+        for campo in ('semanal', 'mensal'):
+            valor = cleaned.get(campo)
+            if valor is not None and valor <= 0:
+                cleaned[campo] = None
+        diaria = cleaned.get('diaria')
+        if not diaria or diaria <= 0:
+            if diaria is not None:
+                self.add_error('diaria', 'A diária deve ser maior que zero.')
+            return cleaned
+        conferencia = conferir_tarifas(diaria, cleaned.get('semanal'), cleaned.get('mensal'))
+        for erro in conferencia['erros']:
+            self.add_error(erro['campo'], erro['texto'])
+        if conferencia['avisos'] and not conferencia['erros'] and not cleaned.get('confirmar_tarifas'):
+            self.add_error(
+                'confirmar_tarifas',
+                'Há um desconto muito alto nos valores. Confira e marque "Confirmo estes valores" para salvar.',
+            )
+        self.conferencia_tarifas = conferencia
+        return cleaned
 
 
 class FotoVeiculoForm(forms.ModelForm):

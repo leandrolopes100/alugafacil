@@ -141,4 +141,4 @@ class CobrancaGestao(models.Model):
 
     @property
     def em_atraso(self):
-        return self.situacao == 'pendente' and self.data_vencimento < timezone.now().date()
+        return self.situacao == 'pendente' and self.data_vencimento < timezone.localdate()

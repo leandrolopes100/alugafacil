@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.db import transaction
 from apps.core.mixins import GrupoRequiredMixin
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
@@ -6,25 +7,39 @@ from django.utils import timezone
 from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
-from apps.fleet.models import HistoricoKmVeiculo
 from .forms import AlertaManutencaoForm, OrdemManutencaoForm
 from .models import AlertaManutencao, OrdemManutencao
 
 
-def _registrar_km_manutencao(veiculo, ordem):
-    """Cria HistoricoKmVeiculo para a OS se ainda nao existir registro para ela."""
-    marcador = f'OS #{ordem.pk}'
-    if not HistoricoKmVeiculo.objects.filter(
-        veiculo=veiculo,
-        origem='manutencao',
-        observacao__startswith=marcador,
-    ).exists():
-        HistoricoKmVeiculo.objects.create(
-            veiculo=veiculo,
-            origem='manutencao',
-            km=ordem.km_na_manutencao,
-            data=timezone.now(),
-            observacao=f'{marcador} — {ordem.descricao[:100]}',
+def _avisar_reserva(request, veiculo):
+    from apps.contracts.models import Reserva
+    reserva = Reserva.objects.filter(veiculo=veiculo, situacao='confirmada').first()
+    if reserva:
+        messages.warning(
+            request,
+            f'Atenção: o veículo {veiculo.placa} possui a reserva #{reserva.pk} confirmada para '
+            f'{reserva.data_retirada.strftime("%d/%m/%Y")}. Verifique e cancele a reserva se necessário.'
+        )
+
+
+def _salvar_ordem(request, ordem, situacao_anterior=None, veiculo_anterior_id=None):
+    hoje = timezone.localdate()
+    if ordem.situacao == 'em_andamento' and not ordem.data_entrada:
+        ordem.data_entrada = hoje
+    if ordem.situacao == 'concluida' and not ordem.data_saida:
+        ordem.data_saida = hoje
+    with transaction.atomic():
+        ordem.save()
+        if ordem.situacao == 'concluida' and situacao_anterior != 'concluida':
+            ordem.aplicar_conclusao()
+        OrdemManutencao.sincronizar_situacao_veiculos(ordem.veiculo_id, veiculo_anterior_id)
+    if ordem.situacao == 'em_andamento' and situacao_anterior != 'em_andamento':
+        _avisar_reserva(request, ordem.veiculo)
+    if ordem.situacao == 'concluida' and situacao_anterior != 'concluida' and ordem.custo_total:
+        messages.info(
+            request,
+            f'Despesa de R$ {ordem.custo_total} lançada automaticamente em '
+            f'Financeiro → Despesas Operacionais.'
         )
 
 
@@ -69,23 +84,8 @@ class ManutencaoCreateView(GrupoRequiredMixin, CreateView):
 
     def form_valid(self, form):
         os_obj = form.save(commit=False)
-        if os_obj.situacao in ('agendada', 'em_andamento'):
-            from apps.contracts.models import Reserva
-            reserva_ativa = Reserva.objects.filter(
-                veiculo=os_obj.veiculo,
-                situacao='confirmada',
-            ).first()
-            if reserva_ativa:
-                messages.warning(
-                    self.request,
-                    f'Atenção: o veículo {os_obj.veiculo.placa} possui a reserva '
-                    f'#{reserva_ativa.pk} confirmada para '
-                    f'{reserva_ativa.data_retirada.strftime("%d/%m/%Y")}. '
-                    f'Verifique e cancele a reserva se necessário.'
-                )
-            os_obj.veiculo.situacao = 'manutencao'
-            os_obj.veiculo.save()
-        os_obj.save()
+        _salvar_ordem(self.request, os_obj)
+        self.object = os_obj
         messages.success(self.request, f'OS criada para {os_obj.veiculo.placa}.')
         return redirect(self.get_success_url())
 
@@ -112,26 +112,9 @@ class ManutencaoUpdateView(GrupoRequiredMixin, UpdateView):
         return contexto
 
     def form_valid(self, form):
+        anterior = OrdemManutencao.objects.values('situacao', 'veiculo_id').get(pk=self.object.pk)
         os_obj = form.save(commit=False)
-        if os_obj.situacao == 'concluida' and os_obj.veiculo.situacao == 'manutencao':
-            os_obj.veiculo.situacao = 'disponivel'
-            if os_obj.km_na_manutencao:
-                os_obj.veiculo.km_atual = os_obj.km_na_manutencao
-            os_obj.veiculo.save()
-            if os_obj.km_na_manutencao:
-                for alerta in os_obj.veiculo.alertas_manutencao.filter(tipo_alerta='km', ativo=True):
-                    if alerta.vencido and alerta.km_intervalo:
-                        alerta.km_proximo_servico = os_obj.km_na_manutencao + alerta.km_intervalo
-                        alerta.save()
-        os_obj.save()
-        if os_obj.situacao == 'concluida' and os_obj.km_na_manutencao:
-            _registrar_km_manutencao(os_obj.veiculo, os_obj)
-        if os_obj.situacao == 'concluida' and os_obj.custo_total:
-            messages.info(
-                self.request,
-                f'Despesa de R$ {os_obj.custo_total} lançada automaticamente em '
-                f'Financeiro → Despesas Operacionais.'
-            )
+        _salvar_ordem(self.request, os_obj, anterior['situacao'], anterior['veiculo_id'])
         messages.success(self.request, 'OS atualizada.')
         return redirect(self.get_success_url())
 
@@ -154,57 +137,13 @@ class ManutencaoAlterarStatusView(GrupoRequiredMixin, View):
             messages.error(request, 'Transição de status inválida.')
             return redirect(reverse('manutencao:detalhe', kwargs={'pk': pk}))
 
-        veiculo = ordem.veiculo
+        situacao_anterior = ordem.situacao
         ordem.situacao = novo_status
-
-        if novo_status == 'em_andamento':
-            if not ordem.data_entrada:
-                ordem.data_entrada = timezone.now().date()
-            if veiculo.situacao != 'manutencao':
-                from apps.contracts.models import Reserva
-                reserva_ativa = Reserva.objects.filter(
-                    veiculo=veiculo,
-                    situacao='confirmada',
-                ).first()
-                if reserva_ativa:
-                    messages.warning(
-                        request,
-                        f'Atenção: o veículo {veiculo.placa} possui a reserva '
-                        f'#{reserva_ativa.pk} confirmada para '
-                        f'{reserva_ativa.data_retirada.strftime("%d/%m/%Y")}. '
-                        f'Verifique e cancele a reserva se necessário.'
-                    )
-                veiculo.situacao = 'manutencao'
-                veiculo.save()
-
-        elif novo_status == 'concluida':
-            if not ordem.data_saida:
-                ordem.data_saida = timezone.now().date()
-            if veiculo.situacao == 'manutencao':
-                veiculo.situacao = 'disponivel'
-                if ordem.km_na_manutencao:
-                    veiculo.km_atual = ordem.km_na_manutencao
-                veiculo.save()
-            if ordem.km_na_manutencao:
-                for alerta in veiculo.alertas_manutencao.filter(tipo_alerta='km', ativo=True):
-                    if alerta.vencido and alerta.km_intervalo:
-                        alerta.km_proximo_servico = ordem.km_na_manutencao + alerta.km_intervalo
-                        alerta.save()
-            if ordem.km_na_manutencao:
-                _registrar_km_manutencao(veiculo, ordem)
-            if ordem.custo_total:
-                messages.info(
-                    request,
-                    f'Despesa de R$ {ordem.custo_total} lançada automaticamente em '
-                    f'Financeiro → Despesas Operacionais.'
-                )
-
-        elif novo_status == 'cancelada':
-            if veiculo.situacao == 'manutencao':
-                veiculo.situacao = 'disponivel'
-                veiculo.save()
-
-        ordem.save()
+        erro = ordem.erro_ao_iniciar()
+        if erro:
+            messages.error(request, erro)
+            return redirect(reverse('manutencao:detalhe', kwargs={'pk': pk}))
+        _salvar_ordem(request, ordem, situacao_anterior, ordem.veiculo_id)
         labels = dict(OrdemManutencao.SITUACAO)
         messages.success(request, f'Status alterado para "{labels[novo_status]}".')
         return redirect(reverse('manutencao:detalhe', kwargs={'pk': pk}))

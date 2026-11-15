@@ -2,14 +2,14 @@ from django.contrib.postgres.indexes import GinIndex
 from django.db import models
 from django.utils import timezone
 
-from apps.core.utils import comprime_imagem
+from apps.core.utils import comprime_imagem, numero_whatsapp
 from apps.core.validators import validar_cpf, validar_cnpj
 
 
 class Cliente(models.Model):
     TIPO = [
-        ('pf', 'Pessoa Fisica'),
-        ('pj', 'Pessoa Juridica'),
+        ('pf', 'Pessoa Física'),
+        ('pj', 'Pessoa Jurídica'),
     ]
     SITUACAO = [
         ('ativo', 'Ativo'),
@@ -75,6 +75,10 @@ class Cliente(models.Model):
         return self.cnpj if self.tipo == 'pj' else self.cpf
 
     @property
+    def whatsapp(self):
+        return numero_whatsapp(self.celular) or numero_whatsapp(self.telefone)
+
+    @property
     def bloqueado(self):
         return self.situacao == 'bloqueado'
 
@@ -121,4 +125,4 @@ class CNHCliente(models.Model):
 
     @property
     def vencida(self):
-        return self.validade < timezone.now().date()
+        return self.validade < timezone.localdate()

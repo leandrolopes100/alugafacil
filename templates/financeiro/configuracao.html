@@ -60,7 +60,41 @@
             <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.custo_reposicao_combustivel.errors.0 }}</div>
             {% endif %}
           </div>
+
+          <div class="col-md-6 {% if form.tolerancia_devolucao_minutos.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small">Tolerância na devolução (minutos)</label>
+            {{ form.tolerancia_devolucao_minutos }}
+            <div class="form-text">{{ form.tolerancia_devolucao_minutos.help_text }}</div>
+            {% if form.tolerancia_devolucao_minutos.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.tolerancia_devolucao_minutos.errors.0 }}</div>
+            {% endif %}
+          </div>
         </div>
+
+        <hr class="my-4">
+        <h6 class="fw-bold mb-1"><i class="bi bi-qr-code me-2 text-primary"></i>Pix para cobranças</h6>
+        <p class="small text-secondary mb-3">Usado para gerar o código Pix copia-e-cola e o QR Code de cada parcela.</p>
+
+        <div class="row g-3">
+          {% for campo in form.campos_pix %}
+          <div class="{% if campo.name == 'pix_chave' %}col-md-8{% elif campo.name == 'pix_tipo_chave' %}col-md-4{% else %}col-md-6{% endif %} {% if campo.errors %}field-has-error{% endif %}">
+            <label class="form-label fw-semibold small" for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+            {{ campo }}
+            {% if campo.help_text %}<div class="form-text">{{ campo.help_text }}</div>{% endif %}
+            {% if campo.errors %}
+            <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ campo.errors.0 }}</div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+
+        <hr class="my-4">
+        <h6 class="fw-bold mb-1"><i class="bi bi-person-badge me-2 text-primary"></i>Módulos</h6>
+        <div class="form-check form-switch mt-2">
+          {{ form.usar_modulo_investidores }}
+          <label class="form-check-label fw-semibold small" for="{{ form.usar_modulo_investidores.id_for_label }}">{{ form.usar_modulo_investidores.label }}</label>
+        </div>
+        <div class="form-text">{{ form.usar_modulo_investidores.help_text }}</div>
       </div>
       <div class="card-footer bg-transparent d-flex gap-2 justify-content-end">
         <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Salvar configurações</button>
@@ -87,6 +121,7 @@
             <tr><td class="text-secondary small">Multa</td><td class="fw-semibold">{{ object.percentual_multa_atraso }}%</td></tr>
             <tr><td class="text-secondary small">Juros diário</td><td class="fw-semibold">{{ object.percentual_juros_diario }}%</td></tr>
             <tr><td class="text-secondary small">Carência</td><td class="fw-semibold">{{ object.dias_carencia }} dia(s)</td></tr>
+            <tr><td class="text-secondary small">Tolerância devolução</td><td class="fw-semibold">{{ object.tolerancia_devolucao_minutos }} min</td></tr>
             <tr><td class="text-secondary small">Combustível</td>
               <td class="fw-semibold">
                 {% if object.custo_reposicao_combustivel %}
@@ -98,6 +133,32 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header"><i class="bi bi-qr-code-scan me-2 text-secondary"></i>Teste do Pix</div>
+      <div class="card-body">
+        {% if pix_teste %}
+        <p class="small text-secondary">
+          Pague este Pix de <strong>R$ 0,01</strong> pelo app do seu banco e confira se o nome do recebedor
+          e a conta de destino estão corretos antes de enviar cobranças aos motoristas.
+        </p>
+        <div class="text-center mb-3">{{ pix_teste_qr|safe }}</div>
+        <div x-data="{ copiado: false }">
+          <label class="form-label fw-semibold small" for="pix-teste">Pix copia-e-cola</label>
+          <textarea id="pix-teste" class="form-control font-monospace small" rows="3" readonly x-ref="codigo">{{ pix_teste }}</textarea>
+          <button type="button" class="btn btn-outline-primary btn-sm mt-2"
+                  @click="navigator.clipboard.writeText($refs.codigo.value).then(() => { copiado = true; setTimeout(() => copiado = false, 2000) })">
+            <i class="bi" :class="copiado ? 'bi-check-lg' : 'bi-clipboard'"></i>
+            <span x-text="copiado ? 'Copiado' : 'Copiar código'"></span>
+          </button>
+        </div>
+        {% else %}
+        <p class="small text-secondary mb-0">
+          Preencha e salve os dados do Pix ao lado para gerar um QR Code de teste.
+        </p>
+        {% endif %}
       </div>
     </div>
   </div>

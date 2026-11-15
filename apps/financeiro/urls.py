@@ -7,6 +7,7 @@ urlpatterns = [
     # Dashboard financeiro
     path('', views.IndexFinanceiroView.as_view(), name='index'),
     path('agenda/', views.AgendaCobrancasView.as_view(), name='agenda'),
+    path('agenda/parcelas/<int:pk>/cobrar-whatsapp/', views.RegistrarCobrancaWhatsappView.as_view(), name='cobrar-whatsapp'),
     path('agenda-pagamentos/', views.AgendaPagamentosView.as_view(), name='agenda-pagamentos'),
     path('configuracao/', views.ConfiguracaoLocadoraView.as_view(), name='configuracao'),
 
@@ -14,7 +15,6 @@ urlpatterns = [
     path('contas-receber/', views.ContaReceberListView.as_view(), name='contas-receber'),
     path('contas-receber/<int:pk>/', views.ContaReceberDetailView.as_view(), name='conta-receber-detalhe'),
     path('contas-receber/<int:pk>/receber/', views.ReceberPagamentoView.as_view(), name='receber'),
-    path('contas-receber/<int:pk>/cancelar/', views.ContaReceberCancelarView.as_view(), name='conta-receber-cancelar'),
 
     # Despesas
     path('despesas/', views.DespesaListView.as_view(), name='despesas'),
@@ -40,4 +40,5 @@ urlpatterns = [
     path('multas/nova/', views.MultaCreateView.as_view(), name='multa-nova'),
     path('multas/<int:pk>/', views.MultaDetailView.as_view(), name='multa-detalhe'),
     path('multas/<int:pk>/editar/', views.MultaUpdateView.as_view(), name='multa-editar'),
+    path('multas/<int:pk>/situacao/', views.MultaAlterarSituacaoView.as_view(), name='multa-situacao'),
 ]

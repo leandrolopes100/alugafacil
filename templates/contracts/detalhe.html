@@ -82,14 +82,22 @@
 </div>
 
 <!-- ── Alerta de atraso ───────────────────────────────────────────────────── -->
-{% if contrato.situacao == 'ativo' and contrato.em_atraso %}
+{% if contrato.devolucao_vencida %}
 <div class="alert alert-danger d-flex align-items-start gap-2 mb-4" style="border-left:4px solid #b3261e">
   <i class="bi bi-clock-history flex-shrink-0 mt-1"></i>
-  <div>
-    <strong>Veículo em atraso!</strong> Devolução prevista era
-    <strong>{{ contrato.data_devolucao_prevista|date:"d/m/Y H:i" }}</strong>.
-    Cada dia adicional é cobrado à diária de {{ contrato.diaria|brl }}.
-    Os dias extras e km excedente serão calculados automaticamente no check-in.
+  <div class="flex-grow-1">
+    <strong>Devolução vencida há {{ contrato.dias_devolucao_vencida }} dia{{ contrato.dias_devolucao_vencida|pluralize }}.</strong>
+    A devolução prevista era <strong>{{ contrato.data_devolucao_prevista|date:"d/m/Y H:i" }}</strong> e,
+    desde então, <strong>nenhuma parcela foi gerada</strong>: são cerca de
+    <strong>{{ contrato.valor_sem_cobranca_estimado|brl }}</strong> sem cobrança na agenda e em Contas a Receber.
+    <div class="mt-2 d-flex flex-wrap gap-2">
+      <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalProrrogar">
+        <i class="bi bi-calendar-plus me-1"></i>Prorrogar e gerar as parcelas
+      </button>
+      <a href="{% url 'contratos:checkin' contrato.pk %}" class="btn btn-sm btn-outline-danger">
+        <i class="bi bi-box-arrow-in-left me-1"></i>O carro já voltou — fazer check-in
+      </a>
+    </div>
   </div>
 </div>
 {% endif %}
@@ -280,10 +288,10 @@
           </thead>
           <tbody>
             {% for p in parcelas %}
-            <tr {% if p.situacao == 'em_atraso' %}style="background:#fceceb"{% elif p.situacao == 'pago' %}style="background:#eafaf0"{% elif p.tipo == 'acerto' and p.situacao == 'pendente' %}style="background:#fdf6e0"{% endif %}>
+            <tr {% if p.em_atraso %}style="background:#fceceb"{% elif p.situacao == 'pago' %}style="background:#eafaf0"{% elif p.tipo == 'acerto' and p.situacao == 'pendente' %}style="background:#fdf6e0"{% endif %}>
               <td class="text-muted small">{{ p.numero }}</td>
               <td class="small">
-                {% if p.tipo == 'acerto' %}
+                {% if p.tipo == 'acerto' or p.tipo == 'multa' %}
                 <span class="fw-semibold" style="color:#6b4f08">{{ p.get_tipo_display }}</span>
                 {% if p.observacoes %}
                 <div class="text-muted" style="font-size:10.5px; line-height:1.3; margin-top:2px">{{ p.observacoes }}</div>
@@ -309,7 +317,7 @@
               <td>
                 {% if p.situacao == 'pago' %}
                 <span class="badge bg-success">Pago</span>
-                {% elif p.situacao == 'em_atraso' %}
+                {% elif p.em_atraso %}
                 <span class="badge bg-danger">Em Atraso</span>
                 {% elif p.situacao == 'cancelada' %}
                 <span class="badge bg-secondary">Cancelada</span>
@@ -319,14 +327,43 @@
               </td>
               <td class="text-end">
                 {% if p.situacao == 'pendente' or p.situacao == 'em_atraso' %}
+                {% include 'financeiro/partials/acoes_pix_parcela.html' with parcela=p %}
                 <button class="btn btn-sm btn-outline-success"
-                  onclick="abrirPagamentoParcela({{ p.pk }}, '{{ p.valor|floatformat:2 }}', '{% if p.tipo == "caucao" %}Caução{% elif p.tipo == "acerto" %}Acerto Final{% else %}Parcela {{ p.numero }}{% endif %}', '{{ p.valor_corrigido|floatformat:2 }}')">
+                  onclick="abrirPagamentoParcela({{ p.pk }}, '{{ p.valor|floatformat:2 }}', '{{ p.rotulo }}', '{{ p.valor_corrigido|floatformat:2 }}')">
                   <i class="bi bi-cash"></i>
                 </button>
                 {% elif p.situacao == 'pago' %}
                 <span class="small text-muted">{{ p.data_pagamento|date:"d/m/Y" }}</span>
                 {% endif %}
               </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if notificacoes_cobranca %}
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-whatsapp me-2 text-success"></i>Cobranças Enviadas</span>
+        <span class="badge bg-light text-dark border">{{ notificacoes_cobranca|length }}</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead>
+            <tr><th>Enviado em</th><th>Parcela</th><th>Etapa</th><th>Canal</th><th class="text-end">Valor cobrado</th><th>Por</th></tr>
+          </thead>
+          <tbody>
+            {% for n in notificacoes_cobranca %}
+            <tr>
+              <td class="small">{{ n.enviado_em|date:"d/m/Y H:i" }}</td>
+              <td class="small">{{ n.parcela.rotulo }}</td>
+              <td class="small">{{ n.get_etapa_display }}</td>
+              <td class="small">{{ n.get_canal_display }}</td>
+              <td class="text-end small">{{ n.valor|brl }}</td>
+              <td class="small text-muted">{{ n.enviado_por.get_full_name|default:n.enviado_por.username|default:"Automático" }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -445,49 +482,14 @@
         </button>
       </div>
       <ul class="list-group list-group-flush">
-        {% if contrato.total_dias and contrato.valor_km_excedente_total or contrato.total_dias and contrato.valor_dias_extras or contrato.total_dias and contrato.valor_diferenca_combustivel %}
-        <!-- Post-checkin com acréscimos: breakdown explícito -->
+        {% if contrato.situacao == 'aberto' %}
         <li class="list-group-item d-flex justify-content-between small px-3 py-2">
-          <span class="text-muted">Diária ({{ contrato.total_dias }} dia{{ contrato.total_dias|pluralize:"s" }} × {{ contrato.diaria|brl }})</span>
-          <span>{{ contrato.valor_locacao_base|brl }}</span>
-        </li>
-        {% if contrato.valor_km_excedente_total %}
-        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
-          <span class="text-muted">KM excedente ({{ contrato.km_excedente }} km × {{ contrato.valor_km_excedente|brl }})</span>
-          <span class="text-warning-emphasis">{{ contrato.valor_km_excedente_total|brl }}</span>
-        </li>
-        {% endif %}
-        {% if contrato.valor_dias_extras %}
-        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
-          <span class="text-muted">{{ contrato.dias_extras }} dia{{ contrato.dias_extras|pluralize:"s" }} extra{{ contrato.dias_extras|pluralize:"s" }} × {{ contrato.diaria|brl }}</span>
-          <span class="text-warning-emphasis">{{ contrato.valor_dias_extras|brl }}</span>
-        </li>
-        {% endif %}
-        {% if contrato.valor_diferenca_combustivel %}
-        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
-          <span class="text-muted">Diferença combustível</span>
-          <span class="text-warning-emphasis">{{ contrato.valor_diferenca_combustivel|brl }}</span>
-        </li>
-        {% endif %}
-        <li class="list-group-item d-flex justify-content-between small px-3 py-2" style="border-top:1px dashed #dee2e6">
-          <span class="text-muted fw-semibold">Subtotal locação</span>
-          <span class="fw-semibold">{{ contrato.total_locacao|brl }}</span>
-        </li>
-        {% else %}
-        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
-          <span class="text-muted">
-            Locação
-            {% if not contrato.total_dias %}<span class="badge bg-secondary ms-1" style="font-size:10px" title="Calculado sobre dias previstos — confirmado no check-in">est.</span>{% endif %}
-          </span>
+          <span class="text-muted">Locação <span class="badge bg-secondary ms-1" style="font-size:10px" title="Previsto no contrato — as parcelas são geradas no check-out">est.</span></span>
           <span>{{ contrato.total_locacao|brl }}</span>
         </li>
-        {% endif %}
         {% if contrato.total_adicionais %}
         <li class="list-group-item d-flex justify-content-between small px-3 py-2">
-          <span class="text-muted">
-            Adicionais
-            {% if not contrato.total_dias %}<span class="badge bg-secondary ms-1" style="font-size:10px">est.</span>{% endif %}
-          </span>
+          <span class="text-muted">Adicionais <span class="badge bg-secondary ms-1" style="font-size:10px">est.</span></span>
           <span>{{ contrato.total_adicionais|brl }}</span>
         </li>
         {% endif %}
@@ -497,10 +499,26 @@
           <span class="text-danger">{{ contrato.total_avarias|brl }}</span>
         </li>
         {% endif %}
+        {% else %}
+        {% for rotulo, valor in contrato.composicao_financeira %}
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">{{ rotulo }}</span>
+          <span>{{ valor|brl }}</span>
+        </li>
+        {% endfor %}
+        {% if contrato.valor_km_excedente_total or contrato.valor_dias_extras or contrato.valor_diferenca_combustivel %}
+        <li class="list-group-item small px-3 py-2 text-muted" style="font-size:11.5px; background:#f8fafc">
+          Acerto:
+          {% if contrato.valor_km_excedente_total %}{{ contrato.km_excedente }} km × {{ contrato.valor_km_excedente|brl }} = {{ contrato.valor_km_excedente_total|brl }}{% endif %}
+          {% if contrato.valor_dias_extras %} · {{ contrato.dias_extras }} dia{{ contrato.dias_extras|pluralize:"s" }} extra{{ contrato.dias_extras|pluralize:"s" }} = {{ contrato.valor_dias_extras|brl }}{% endif %}
+          {% if contrato.valor_diferenca_combustivel %} · combustível = {{ contrato.valor_diferenca_combustivel|brl }}{% endif %}
+        </li>
+        {% endif %}
+        {% endif %}
         <li class="list-group-item d-flex justify-content-between small px-3 py-2 fw-semibold" style="border-top:2px solid var(--border)">
           <span>
             Total a receber
-            {% if not contrato.total_dias %}<span class="badge bg-secondary ms-1" style="font-size:10px">est.</span>{% endif %}
+            {% if contrato.situacao == 'aberto' %}<span class="badge bg-secondary ms-1" style="font-size:10px">est.</span>{% endif %}
           </span>
           <span>{{ contrato.total_geral|brl }}</span>
         </li>
@@ -536,10 +554,10 @@
         {% if contrato.total_caucao_coletado %}
         <li class="list-group-item d-flex justify-content-between small px-3 py-2"
             style="background:#eef5fa; border-top:2px dashed #b9d3e3"
-            title="Caução é depósito de garantia — não abate o saldo devedor da locação">
+            title="Caução é depósito de garantia — no encerramento abate as dívidas do contrato e o restante é devolvido">
           <span class="text-muted">
             <i class="bi bi-shield-check me-1" style="color:#2f6690"></i>
-            Caução retido
+            Caução — {{ contrato.get_caucao_situacao_display }}
             <span style="font-size:11px; color:#2f6690">(depósito)</span>
           </span>
           <span style="color:#2f6690">{{ contrato.total_caucao_coletado|brl }}</span>
@@ -555,6 +573,10 @@
         <li class="list-group-item d-flex justify-content-between small px-3 py-2">
           <span class="text-muted">Diária</span>
           <span class="fw-semibold">{{ contrato.diaria|brl }}</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between small px-3 py-2">
+          <span class="text-muted">Forma de cobrança</span>
+          <span class="fw-semibold">{{ contrato.get_forma_cobranca_display }}{% if contrato.usa_pacote %} — pacote {{ contrato.valor_pacote|brl }}{% else %} — pela diária{% endif %}</span>
         </li>
         <li class="list-group-item d-flex justify-content-between small px-3 py-2">
           <span class="text-muted">Franquia km/dia</span>
@@ -779,6 +801,36 @@
             Devolução atual: <strong>{{ contrato.data_devolucao_prevista|date:"d/m/Y H:i" }}</strong><br>
             As parcelas para o período prorrogado serão geradas automaticamente.
           </p>
+          {% if simulacao_prorrogacao %}
+          <div class="alert alert-warning small py-2 mb-3">
+            <div class="fw-semibold mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>A devolução prevista já venceu</div>
+            Serão geradas <strong>{{ simulacao_prorrogacao.quantidade }} parcela{{ simulacao_prorrogacao.quantidade|pluralize }}</strong>
+            com vencimento já passado (desde {{ simulacao_prorrogacao.primeiro_vencimento|date:"d/m/Y" }}),
+            somando até <strong>{{ simulacao_prorrogacao.valor|brl }}</strong>.
+            {% if simulacao_prorrogacao.encargos %}
+            Com multa e juros de atraso, hoje isso daria mais <strong>{{ simulacao_prorrogacao.encargos|brl }}</strong>.
+            {% else %}
+            Pela configuração atual (carência/percentuais), ainda não há multa nem juros sobre elas hoje.
+            {% endif %}
+            A sugestão de data abaixo cobre até a próxima semana completa depois de hoje.
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Cobrar multa e juros do período vencido? *</label>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="encargos_retroativos" value="sim" id="encargosSim" required>
+              <label class="form-check-label small" for="encargosSim">
+                <strong>Sim</strong> — mantém os vencimentos originais; as parcelas já entram em atraso, com multa e juros.
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="encargos_retroativos" value="nao" id="encargosNao" required>
+              <label class="form-check-label small" for="encargosNao">
+                <strong>Não</strong> — as parcelas do período vencido passam a vencer hoje, sem multa e juros.
+              </label>
+            </div>
+            <div class="form-text">A escolha fica registrada no histórico do contrato.</div>
+          </div>
+          {% endif %}
           <div class="mb-3">
             <label class="form-label fw-semibold small">Prorrogar por</label>
             <div class="d-flex gap-2 align-items-center">
@@ -795,6 +847,7 @@
           <div class="mb-0">
             <label class="form-label fw-semibold small">Nova data de devolução *</label>
             <input type="datetime-local" name="nova_data_devolucao" id="novaDataDevolucao" class="form-control" required>
+            <div id="avisoHoraProrrogacao" class="alert alert-warning d-none small mt-2 mb-0"></div>
           </div>
         </div>
         <div class="modal-footer border-0 pt-0 pb-4 px-4 gap-2">
@@ -822,7 +875,55 @@
           somando <strong>{{ parcelas_cancelaveis_valor|brl }}</strong>
           serão <strong>canceladas</strong> ao encerrar.
         </div>
-        {% else %}
+        {% endif %}
+        {% if acertos_abertos_valor %}
+        <div class="alert alert-info py-2 mb-3">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          A parcela de acerto de <strong>{{ acertos_abertos_valor|brl }}</strong>
+          continua <strong>em aberto</strong> na Agenda de Cobranças depois do encerramento.
+        </div>
+        {% endif %}
+        {% if vencidas_mantidas_qtd %}
+        <div class="alert alert-danger py-2 mb-3">
+          <i class="bi bi-exclamation-octagon-fill me-2"></i>
+          <strong>{{ vencidas_mantidas_qtd }} parcela(s) vencida(s)</strong> somando
+          <strong>{{ vencidas_mantidas_valor|brl }}</strong> continuam <strong>em cobrança</strong> depois do encerramento.
+        </div>
+        {% endif %}
+        {% if plano_caucao %}
+        <div class="border rounded-3 p-2 mb-3 small" style="background:#eef5fa; border-color:#b9d3e3 !important">
+          <div class="fw-semibold mb-1" style="color:#2f6690">
+            <i class="bi bi-shield-check me-1"></i>Caução de {{ plano_caucao.caucao|brl }}
+          </div>
+          {% for item in plano_caucao.itens %}{% if item.abatido %}
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">Abate {{ item.descricao }}</span>
+            <span>− {{ item.abatido|brl }}</span>
+          </div>
+          {% endif %}{% endfor %}
+          <div class="d-flex justify-content-between fw-semibold border-top mt-1 pt-1">
+            <span>Devolver ao cliente agora</span>
+            <span>{{ plano_caucao.devolver|brl }}</span>
+          </div>
+          {% if plano_caucao.restante %}
+          <div class="text-danger mt-1">
+            O caução não cobre tudo: {{ plano_caucao.restante|brl }} continuam a cobrar.
+          </div>
+          {% endif %}
+          {% if plano_caucao.multas_sem_condutor %}
+          <div class="text-warning-emphasis border-top mt-1 pt-1">
+            <i class="bi bi-exclamation-triangle me-1"></i>Não abatidas (condutor ainda não identificado):
+            {% for multa in plano_caucao.multas_sem_condutor %}
+            <div class="d-flex justify-content-between">
+              <span>Multa de {{ multa.data_infracao|date:"d/m/Y" }}</span>
+              <span>{{ multa.valor|brl }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+        {% if not parcelas_cancelaveis_qtd and not acertos_abertos_valor and not vencidas_mantidas_qtd %}
         <div class="alert alert-success py-2 mb-3">
           <i class="bi bi-check-circle-fill me-2"></i>
           Todas as parcelas da agenda já foram quitadas.
@@ -873,6 +974,13 @@
             <input type="number" name="valor" id="parcelaValorInput" class="form-control form-control-lg"
               step="0.01" min="0.01" required>
             <div id="parcelaValorInfo" class="form-text"></div>
+            <div class="form-text">Valor menor que o devido registra um <strong>pagamento parcial</strong>: o restante continua em cobrança. Valor maior quita a parcela e o excedente vai para as próximas dívidas.</div>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="desconto" value="1" id="parcelaDesconto">
+            <label class="form-check-label small" for="parcelaDesconto">
+              Conceder desconto — quitar a parcela pelo valor informado (exige o motivo em Observações)
+            </label>
           </div>
           <div class="mb-3">
             <label class="form-label">Forma de Pagamento *</label>
@@ -917,6 +1025,7 @@ function abrirPagamentoParcela(parcelaPk, valor, label, valorCorrigido) {
     infoEl.textContent = 'Valor original da parcela.';
     infoEl.className = 'form-text text-muted';
   }
+  document.getElementById('parcelaDesconto').checked = false;
   document.getElementById('formPagarParcela').action = _pagarUrl.replace('/0/', '/' + parcelaPk + '/');
   const modalEl = document.getElementById('modalPagarParcela');
   modalEl.addEventListener('shown.bs.modal', () => { input.focus(); input.select(); }, { once: true });
@@ -936,11 +1045,42 @@ function calcularNovaData() {
   document.getElementById('novaDataDevolucao').value =
     d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
     'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  if (typeof avisarHoraProrrogacao === 'function') avisarHoraProrrogacao();
 }
 
+function avisarHoraProrrogacao() {
+  const el = document.getElementById('regra-prorrogacao');
+  const aviso = document.getElementById('avisoHoraProrrogacao');
+  if (!el || !aviso) return;
+  const regra = JSON.parse(el.textContent);
+  const nova = new Date(document.getElementById('novaDataDevolucao').value);
+  const saida = new Date(regra.saida);
+  if (isNaN(nova.getTime())) { aviso.classList.add('d-none'); return; }
+  const soData = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const hora = d => d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const dias = Math.max(Math.round((soData(nova) - soData(saida)) / 86400000), 1);
+  const fim = new Date(saida.getTime() + dias * 86400000);
+  const limite = new Date(fim.getTime() + regra.tolerancia_minutos * 60000);
+  if (nova <= limite) { aviso.classList.add('d-none'); return; }
+  aviso.textContent = 'O período cobrado termina às ' + hora(fim) + ' (hora da saída) + ' + regra.tolerancia_minutos
+    + ' min de tolerância. Se o veículo voltar às ' + hora(nova) + ', será cobrada 1 diária extra de '
+    + regra.diaria.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    + ' no acerto. Para não cobrar, use um horário até ' + hora(limite) + '.';
+  aviso.classList.remove('d-none');
+}
+document.getElementById('novaDataDevolucao').addEventListener('input', avisarHoraProrrogacao);
+document.getElementById('novaDataDevolucao').addEventListener('change', avisarHoraProrrogacao);
+
 document.getElementById('modalProrrogar').addEventListener('show.bs.modal', function () {
+  {% if contrato.devolucao_vencida %}
+  document.getElementById('diasExtras').value = '{{ contrato.semanas_para_regularizar }}';
+  document.getElementById('unidadeProrrogacao').value = 'semanas';
+  {% else %}
   document.getElementById('diasExtras').value = '7';
+  {% endif %}
   calcularNovaData();
+  avisarHoraProrrogacao();
 });
 </script>
+{% if regra_prorrogacao %}{{ regra_prorrogacao|json_script:"regra-prorrogacao" }}{% endif %}
 {% endblock %}

@@ -6,7 +6,7 @@ from django.utils import timezone
 def marcar_parcelas_atrasadas():
     """Marca como em_atraso todas as parcelas pendentes vencidas."""
     from apps.contracts.models import ParcelaContrato
-    hoje = timezone.now().date()
+    hoje = timezone.localdate()
     return ParcelaContrato.objects.filter(
         situacao='pendente',
         data_vencimento__lt=hoje,
@@ -17,7 +17,7 @@ def marcar_parcelas_atrasadas():
 def marcar_contas_vencidas():
     """Marca como vencido as ContaReceber pendentes com vencimento ultrapassado."""
     from apps.financeiro.models import ContaReceber
-    hoje = timezone.now().date()
+    hoje = timezone.localdate()
     ContaReceber.objects.filter(
         situacao__in=['pendente', 'pago_parcial'],
         data_vencimento__lt=hoje,
@@ -35,7 +35,7 @@ def sincronizar_despesas_auto():
 def marcar_parcelas_despesa_atrasadas():
     """Marca como em_atraso todas as parcelas de despesa pendentes vencidas."""
     from apps.financeiro.models import ParcelaDespesa
-    hoje = timezone.now().date()
+    hoje = timezone.localdate()
     ParcelaDespesa.objects.filter(
         situacao='pendente',
         data_vencimento__lt=hoje,
@@ -48,7 +48,7 @@ def alertar_documentos_vencendo():
     import logging
     logger = logging.getLogger(__name__)
     from apps.fleet.models import DocumentoVeiculo
-    hoje = timezone.now().date()
+    hoje = timezone.localdate()
     docs = DocumentoVeiculo.objects.select_related('veiculo').filter(
         data_validade__isnull=False
     )

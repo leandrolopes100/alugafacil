@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib import messages
@@ -11,11 +12,12 @@ from django.views.generic import CreateView, DeleteView, DetailView, ListView, T
 
 from .forms import (ReservaForm, ContratoForm, CheckoutForm, CheckinForm,
                     EncerramentoAntecipadoForm, AdicionalContratoForm,
-                    AvariaContratoForm, PagamentoContratoForm)
+                    AvariaContratoForm, AjusteAvariaForm, PagamentoContratoForm)
 from .models import (AdicionalContrato, AvariaContrato, Contrato, FotoContrato,
                      HistoricoContrato, PagamentoContrato, ParcelaContrato,
                      Reserva, gerar_parcelas, proximo_vencimento_contratual)
 from apps.fleet.models import Veiculo
+from apps.financeiro.models import NotificacaoCobranca
 
 
 def _brl(v):
@@ -26,7 +28,7 @@ def _brl(v):
 def _checklist_saida(contrato):
     """Retorna lista de (ok: bool|None, mensagem: str) com o checklist de saída
     do veículo — usado tanto no check-out normal quanto na criação retroativa."""
-    hoje = timezone.now().date()
+    hoje = timezone.localdate()
     itens = []
 
     # 1. Cliente bloqueado
@@ -73,9 +75,12 @@ def _checklist_saida(contrato):
         itens.append((True, 'Sem caução exigido'))
 
     # 6. Primeira semana — aviso, não bloqueia; parcela pendente gerada ao confirmar checkout
-    dias_contrato = max(contrato._dias_previstos(), 1)
-    dias_cobranca = min(7, dias_contrato)
-    valor_primeira_semana = contrato.diaria * dias_cobranca
+    from .models import ciclos_de_cobranca
+    inicio = timezone.localdate(contrato.data_saida or timezone.now())
+    primeiro_ciclo = ciclos_de_cobranca(
+        inicio, inicio + timedelta(days=max(contrato._dias_previstos(), 1)), contrato.forma_cobranca,
+    )[0]
+    valor_primeira_semana = contrato.valor_ciclo(primeiro_ciclo[1], primeiro_ciclo[2])
     total_locacao_pago = PagamentoContrato.objects.filter(
         contrato=contrato, tipo='locacao'
     ).aggregate(s=Sum('valor'))['s'] or Decimal('0')
@@ -139,9 +144,13 @@ def _gerar_parcela_acerto_se_necessario(contrato):
             f'× {_brl(contrato.valor_km_excedente)} = {_brl(contrato.valor_km_excedente_total)}'
         )
     if contrato.valor_dias_extras > 0:
+        adicionais = contrato.diaria_adicionais
+        composicao = (
+            f' ({_brl(contrato.diaria)} do veículo + {_brl(adicionais)} de adicionais)' if adicionais else ''
+        )
         partes_obs.append(
             f'{contrato.dias_extras} dia(s) extra(s) '
-            f'× {_brl(contrato.diaria)} = {_brl(contrato.valor_dias_extras)}'
+            f'× {_brl(contrato.diaria_com_adicionais)}{composicao} = {_brl(contrato.valor_dias_extras)}'
         )
     if contrato.valor_diferenca_combustivel > 0:
         partes_obs.append(
@@ -154,7 +163,7 @@ def _gerar_parcela_acerto_se_necessario(contrato):
         contrato=contrato,
         numero=proximo_num,
         tipo='acerto',
-        data_vencimento=contrato.data_devolucao_real.date(),
+        data_vencimento=timezone.localdate(contrato.data_devolucao_real),
         valor=total_acerto,
         origem='original',
         situacao='pendente',
@@ -163,57 +172,43 @@ def _gerar_parcela_acerto_se_necessario(contrato):
     return total_acerto
 
 
-def _avaliar_caucao_no_encerramento(contrato, usuario):
-    """Avalia retenção/devolução do caução ao encerrar o contrato (normal ou
-    antecipado). Sem avaria cobrada, devolve o caução inteiro automaticamente;
-    com avaria cobrada, retém só o valor efetivo do dano (nunca mais que o
-    caução) e devolve o excedente. Muda contrato.caucao_situacao em memória
-    (quem chama ainda precisa salvar) e retorna uma mensagem descritiva, ou
-    None se não havia caução retido a avaliar.
-    """
-    if not (contrato.caucao_valor and contrato.caucao_situacao == 'retido'):
+def _regra_devolucao(contrato, tolerancia=None):
+    tolerancia = contrato.tolerancia_devolucao() if tolerancia is None else tolerancia
+    saida = timezone.localdate(contrato.data_saida)
+    return {
+        'saida': timezone.localtime(contrato.data_saida).isoformat(),
+        'dias_contratados': contrato.dias_contratados_no_fechamento(),
+        'tolerancia_minutos': int(tolerancia.total_seconds() // 60),
+        'diaria': float(contrato.diaria_com_adicionais),
+        'parcelas_futuras': [
+            {
+                'numero': p.numero, 'valor': float(p.valor),
+                'dia_inicio': ((p.inicio_periodo or p.data_vencimento) - saida).days,
+            }
+            for p in contrato.parcelas_abertas().filter(tipo__in=['semanal', 'mensal'])
+        ],
+    }
+
+
+def _mensagem_caucao(plano):
+    if not plano:
         return None
-
-    valor_avarias_cobradas = contrato.avarias.filter(
-        situacao='cobrada'
-    ).aggregate(s=Sum('valor_cobrado'))['s'] or Decimal('0')
-
-    if valor_avarias_cobradas <= 0:
-        # Sem avaria cobrada (ou só identificada, sem valor definido):
-        # devolve o caução inteiro automaticamente.
-        # O signal contrato_caucao_post_save cria a DespesaOperacional.
-        contrato.caucao_situacao = 'devolvido'
-        return (
-            f'Caução de R$ {contrato.caucao_valor:.2f} devolvido automaticamente '
-            f'— nenhuma avaria cobrada registrada.'
+    partes = [f'Caução de {_brl(plano["caucao"])}:']
+    if plano['total_abatido']:
+        partes.append(f'{_brl(plano["total_abatido"])} abatido de dívidas do contrato;')
+    if plano['devolver']:
+        partes.append(f'{_brl(plano["devolver"])} devolvido ao cliente.')
+    else:
+        partes.append('nada a devolver.')
+    if plano['restante']:
+        partes.append(f'Ainda faltam {_brl(plano["restante"])} a cobrar do cliente.')
+    multas = plano['multas_sem_condutor']
+    if multas:
+        partes.append(
+            f'{len(multas)} multa(s) sem condutor identificado ({_brl(sum(m.valor for m in multas))}) '
+            'não foram abatidas: identifique o condutor para cobrar.'
         )
-
-    # Com avaria cobrada: retém só o valor efetivo do dano (nunca mais
-    # que o caução) e devolve o excedente automaticamente, se houver.
-    valor_retido = min(contrato.caucao_valor, valor_avarias_cobradas)
-    valor_devolvido = contrato.caucao_valor - valor_retido
-    marker = f'[caucao_retido:{contrato.numero}]'
-    if not PagamentoContrato.objects.filter(observacoes__contains=marker).exists():
-        PagamentoContrato.objects.create(
-            contrato=contrato,
-            tipo='avaria',
-            forma_pagamento='dinheiro',
-            valor=valor_retido,
-            data_pagamento=timezone.now(),
-            registrado_por=usuario,
-            observacoes=f'{marker} Caucao retido — aplicado na cobertura de avarias',
-        )
-    if valor_devolvido > 0:
-        contrato.caucao_situacao = 'devolvido_parcial'
-        contrato._caucao_valor_devolvido = valor_devolvido
-        return (
-            f'Caução: R$ {valor_retido:.2f} retido para cobertura de avarias, '
-            f'R$ {valor_devolvido:.2f} devolvido automaticamente.'
-        )
-    return (
-        f'Caução de R$ {contrato.caucao_valor:.2f} retido integralmente '
-        f'— avarias cobradas somam R$ {valor_avarias_cobradas:.2f} ou mais.'
-    )
+    return ' '.join(partes)
 
 
 # ─── Reservas ────────────────────────────────────────────────────────────────
@@ -395,11 +390,16 @@ class ReservaConverterView(GrupoRequiredMixin, View):
             messages.error(request, f'O veículo {reserva.veiculo} está {reserva.veiculo.get_situacao_display()} e não pode ser alocado.')
             return redirect('contratos:reserva-detalhe', pk=pk)
 
+        from apps.fleet.tarifas import forma_cobranca_sugerida
+        grupo_tarifa = reserva.grupo_veiculo
         with transaction.atomic():
             contrato = Contrato.objects.create(
                 reserva=reserva,
                 cliente=reserva.cliente,
                 veiculo=reserva.veiculo,
+                forma_cobranca=forma_cobranca_sugerida(grupo_tarifa),
+                valor_semanal=None if reserva.diaria_cotada else grupo_tarifa.semanal,
+                valor_mensal=None if reserva.diaria_cotada else grupo_tarifa.mensal,
                 diaria=reserva.diaria_cotada or reserva.grupo_veiculo.diaria,
                 km_franquia_diaria=reserva.grupo_veiculo.km_franquia_diaria,
                 valor_km_excedente=reserva.grupo_veiculo.valor_km_excedente,
@@ -508,8 +508,27 @@ class ContratoCreateView(GrupoRequiredMixin, CreateView):
 
         km_atual_veiculo = form.cleaned_data.get('km_atual_veiculo')
         valor_ja_recebido = form.cleaned_data.get('valor_ja_recebido') or Decimal('0')
+        dias_correntes_pagos = form.cleaned_data.get('dias_correntes_pagos')
+        forma_regularizacao = form.cleaned_data.get('forma_pagamento_regularizacao') or 'dinheiro'
         agora = timezone.now()
-        hoje = agora.date()
+        hoje = timezone.localdate(agora)
+
+        tipo_cobranca = contrato.forma_cobranca
+        data_inicio_cobranca = proximo_vencimento_contratual(
+            timezone.localdate(contrato.data_saida), hoje, tipo_cobranca,
+        )
+        fim_parcial = min(data_inicio_cobranca, contrato.fim_periodo_coberto())
+        dias_parciais = max((fim_parcial - hoje).days, 0)
+        valor_parcial = contrato.valor_base_ciclo(dias_parciais, False) if dias_parciais else Decimal('0.00')
+        if dias_correntes_pagos and dias_parciais and valor_ja_recebido < valor_parcial:
+            form.add_error(
+                'valor_ja_recebido',
+                f'Os {dias_parciais} dia(s) de hoje até {fim_parcial:%d/%m/%Y} custam {_brl(valor_parcial)}; '
+                f'o valor já recebido precisa cobrir pelo menos isso.',
+            )
+            return self.form_invalid(form)
+        pago_na_parcial = valor_parcial if dias_correntes_pagos and dias_parciais else Decimal('0.00')
+        valor_regularizacao = valor_ja_recebido - pago_na_parcial
 
         with db_transaction.atomic():
             contrato.save()
@@ -524,60 +543,57 @@ class ContratoCreateView(GrupoRequiredMixin, CreateView):
             # Relatório de Frota agregam PagamentoContrato por mês de data_pagamento —
             # usar a data histórica reescreveria silenciosamente a receita de um mês
             # já fechado. O período real fica registrado na observação.
-            if valor_ja_recebido > 0:
+            if valor_regularizacao > 0:
+                ultimo_dia = max(hoje - timedelta(days=1), timezone.localdate(contrato.data_saida))
                 PagamentoContrato.objects.create(
                     contrato=contrato,
-                    tipo='locacao',
-                    forma_pagamento='dinheiro',
-                    valor=valor_ja_recebido,
+                    tipo='regularizacao',
+                    forma_pagamento=forma_regularizacao,
+                    valor=valor_regularizacao,
                     data_pagamento=agora,
                     registrado_por=self.request.user,
                     observacoes=(
                         f'Regularização de saldo pré-sistema — período de '
-                        f'{contrato.data_saida.strftime("%d/%m/%Y")} a {hoje.strftime("%d/%m/%Y")}. '
+                        f'{contrato.data_saida.strftime("%d/%m/%Y")} a {ultimo_dia.strftime("%d/%m/%Y")}. '
                         f'Justificativa: {contrato.obs_saida}'
                     ),
                 )
 
             if contrato.caucao_valor > 0:
-                ja_pago = contrato.caucao_situacao == 'pago'
-                if ja_pago:
-                    PagamentoContrato.objects.create(
-                        contrato=contrato,
-                        tipo='caucao',
-                        forma_pagamento='dinheiro',
-                        valor=contrato.caucao_valor,
-                        data_pagamento=agora,
-                        registrado_por=self.request.user,
-                        observacoes=(
-                            f'Caução coletado no registro retroativo/migração '
-                            f'(referente à saída em {contrato.data_saida.strftime("%d/%m/%Y")})'
-                        ),
-                    )
-                ParcelaContrato.objects.create(
+                parcela_caucao = ParcelaContrato.objects.create(
                     contrato=contrato,
                     numero=1,
                     tipo='caucao',
-                    data_vencimento=contrato.data_saida.date(),
+                    data_vencimento=timezone.localdate(contrato.data_saida),
                     valor=contrato.caucao_valor,
                     origem='original',
-                    situacao='pago' if ja_pago else 'pendente',
-                    data_pagamento=contrato.data_saida if ja_pago else None,
                 )
+                if contrato.caucao_situacao == 'pago':
+                    parcela_caucao.quitar(
+                        contrato.caucao_valor, 'dinheiro', agora, self.request.user,
+                        f'Caução coletado no registro retroativo/migração '
+                        f'(referente à saída em {contrato.data_saida.strftime("%d/%m/%Y")})',
+                    )
 
             # Parcelas de locação: primeira parcela em aberto é o próximo
             # vencimento do cronograma real do contrato (ancorado em data_saida),
             # não a data de hoje — o período já vencido continua resolvido pelo
             # pagamento de regularização acima, não deve virar parcela retroativa.
-            grupo = contrato.veiculo.grupo
-            tipo_cobranca = 'mensal' if (grupo and grupo.mensal) else 'semanal'
-            data_inicio_cobranca = proximo_vencimento_contratual(
-                contrato.data_saida.date(), hoje, tipo_cobranca,
-            )
+            if dias_parciais:
+                gerar_parcelas(
+                    contrato=contrato, data_inicio=hoje, data_fim=fim_parcial,
+                    origem='original', tipo_cobranca=tipo_cobranca,
+                )
+                if pago_na_parcial:
+                    parcela_parcial = contrato.parcelas.get(tipo__in=['semanal', 'mensal'], inicio_periodo=hoje)
+                    parcela_parcial.quitar(
+                        parcela_parcial.valor, forma_regularizacao, agora, self.request.user,
+                        'Paga fora do sistema, junto com a regularização da migração.',
+                    )
             gerar_parcelas(
                 contrato=contrato,
                 data_inicio=data_inicio_cobranca,
-                data_fim=contrato.data_devolucao_prevista.date(),
+                data_fim=contrato.fim_periodo_coberto(),
                 origem='original',
                 tipo_cobranca=tipo_cobranca,
             )
@@ -585,10 +601,13 @@ class ContratoCreateView(GrupoRequiredMixin, CreateView):
         for ok, msg in _checklist_saida(contrato):
             if ok is False:
                 messages.warning(self.request, msg)
-        messages.success(
-            self.request,
-            f'Contrato {contrato.numero} criado e ativado (registro retroativo/migração).'
-        )
+        mensagem = f'Contrato {contrato.numero} criado e ativado (registro retroativo/migração).'
+        if dias_parciais:
+            mensagem += (
+                f' Parcela proporcional de {dias_parciais} dia(s) até {fim_parcial:%d/%m/%Y} '
+                f'({_brl(valor_parcial)}) {"registrada como paga" if pago_na_parcial else "vencendo hoje"}.'
+            )
+        messages.success(self.request, mensagem)
 
         self.object = contrato
         return redirect(self.get_success_url())
@@ -617,24 +636,52 @@ class ContratoDetailView(GrupoRequiredMixin, DetailView):
         contexto['pagamentos'] = list(self.object.pagamentos.all())
         todas_parcelas = list(self.object.parcelas.all())
         contexto['parcelas'] = todas_parcelas
-        contexto['formas_pagamento'] = ParcelaContrato.FORMA
+        contexto['notificacoes_cobranca'] = list(
+            NotificacaoCobranca.objects.filter(parcela__contrato=self.object)
+            .select_related('parcela', 'enviado_por')
+        )
+        contexto['formas_pagamento'] = ParcelaContrato.FORMAS_RECEBIMENTO
         contexto['form_adicional'] = AdicionalContratoForm()
         contexto['form_avaria'] = AvariaContratoForm()
         # Form de recebimento avulso (caução, avaria, multa, outros — NÃO locação)
-        for attr in ('total_geral', 'total_pago', 'saldo_devedor'):
-            self.object.__dict__.pop(attr, None)
+        self.object.limpar_cache_financeiro()
         initial_pag = {'data_pagamento': timezone.now().strftime('%Y-%m-%dT%H:%M'), 'tipo': 'caucao'}
         form_pagamento = PagamentoContratoForm(initial=initial_pag)
         from apps.contracts.models import PagamentoContrato as _PC
         # 'locacao' → pago via PagarParcelaView (agenda)
         # 'avaria'  → pago via ContratoAvariaMarcarPagaView (sincroniza AvariaContrato.situacao)
         form_pagamento.fields['tipo'].choices = [
-            c for c in _PC.TIPO if c[0] not in ('locacao', 'avaria')
+            c for c in _PC.TIPO if c[0] not in ('locacao', 'avaria', 'regularizacao')
         ]
         contexto['form_pagamento'] = form_pagamento
-        cancelaveis = [p for p in todas_parcelas if p.situacao in ('pendente', 'em_atraso')]
+        momento = self.object.data_devolucao_real or timezone.now()
+        cancelaveis = list(self.object.parcelas_futuras_abertas(momento))
+        mantidas = [
+            (p, p.valor) for p in self.object.parcelas_devidas_ate(momento) if p.tipo != 'caucao'
+        ]
+        plano_caucao = None
+        if self.object.situacao == 'aguardando_devolucao':
+            plano_caucao = self.object.plano_abatimento_caucao(momento)
+        if plano_caucao:
+            restantes = {
+                i['objeto'].pk: i['restante'] for i in plano_caucao['itens']
+                if isinstance(i['objeto'], ParcelaContrato)
+            }
+            mantidas = [(p, restantes.get(p.pk, v)) for p, v in mantidas if restantes.get(p.pk, v) > 0]
+        vencidas_mantidas = [v for p, v in mantidas if p.tipo != 'acerto']
+        contexto['plano_caucao'] = plano_caucao
+        contexto['simulacao_prorrogacao'] = self.object.simular_prorrogacao_retroativa()
+        if self.object.data_saida:
+            contexto['regra_prorrogacao'] = {
+                'saida': timezone.localtime(self.object.data_saida).isoformat(),
+                'tolerancia_minutos': int(self.object.tolerancia_devolucao().total_seconds() // 60),
+                'diaria': float(self.object.diaria_com_adicionais),
+            }
         contexto['parcelas_cancelaveis_qtd'] = len(cancelaveis)
         contexto['parcelas_cancelaveis_valor'] = sum(p.valor for p in cancelaveis)
+        contexto['acertos_abertos_valor'] = sum(v for p, v in mantidas if p.tipo == 'acerto')
+        contexto['vencidas_mantidas_qtd'] = len(vencidas_mantidas)
+        contexto['vencidas_mantidas_valor'] = sum(vencidas_mantidas)
         # Usa cache de grupos setado pelo GrupoRequiredMixin.dispatch()
         grupos = getattr(self.request.user, '_grupos_nomes_cache', None)
         if grupos is None:
@@ -690,44 +737,41 @@ class ContratoCheckoutView(GrupoRequiredMixin, View):
                 contrato.veiculo.save()
                 for arquivo in request.FILES.getlist('fotos_saida'):
                     FotoContrato.objects.create(contrato=contrato, momento='saida', imagem=arquivo)
-                # Caução: cria PagamentoContrato se foi coletado agora no checkout
-                if (contrato.caucao_valor > 0 and contrato.caucao_situacao == 'pago'
-                        and not contrato.pagamentos.filter(tipo='caucao').exists()):
-                    forma_caucao = form.cleaned_data.get('caucao_forma_pagamento') or 'dinheiro'
-                    PagamentoContrato.objects.create(
-                        contrato=contrato,
-                        tipo='caucao',
-                        forma_pagamento=forma_caucao,
-                        valor=contrato.caucao_valor,
-                        data_pagamento=contrato.caucao_pago_em,
-                        registrado_por=request.user,
-                        observacoes='Caução coletado no check-out',
-                    )
-                # Parcela de caução: cria se ainda não existe (evita duplicata em re-submit)
-                if contrato.caucao_valor > 0 and not contrato.parcelas.filter(tipo='caucao').exists():
-                    ja_pago = contrato.caucao_situacao == 'pago'
-                    ParcelaContrato.objects.create(
-                        contrato=contrato,
-                        numero=1,
-                        tipo='caucao',
-                        data_vencimento=contrato.data_saida.date(),
-                        valor=contrato.caucao_valor,
-                        origem='original',
-                        situacao='pago' if ja_pago else 'pendente',
-                        data_pagamento=contrato.caucao_pago_em or (timezone.now() if ja_pago else None),
-                    )
-                grupo = contrato.veiculo.grupo
-                tipo_cobranca = 'mensal' if (grupo and grupo.mensal) else 'semanal'
+                self._registrar_caucao_no_checkout(contrato, form, request.user)
                 qtd = gerar_parcelas(
                     contrato=contrato,
-                    data_inicio=contrato.data_saida.date(),
-                    data_fim=contrato.data_devolucao_prevista.date(),
+                    data_inicio=timezone.localdate(contrato.data_saida),
+                    data_fim=contrato.fim_periodo_coberto(),
                     origem='original',
-                    tipo_cobranca=tipo_cobranca,
+                    tipo_cobranca=contrato.forma_cobranca,
                 )
             messages.success(request, f'Check-out realizado. Contrato {contrato.numero} ativo com {qtd} parcela(s) gerada(s).')
             return redirect('contratos:detalhe', pk=pk)
         return self._render(request, contrato, form)
+
+    @staticmethod
+    def _registrar_caucao_no_checkout(contrato, form, usuario):
+        if contrato.caucao_valor <= 0 or contrato.parcelas.filter(tipo='caucao').exists():
+            return
+        contrato.limpar_cache_financeiro()
+        falta = contrato.caucao_valor - contrato.total_caucao_coletado
+        if falta <= 0:
+            return
+        parcela = ParcelaContrato.objects.create(
+            contrato=contrato,
+            numero=(contrato.parcelas.aggregate(m=Max('numero'))['m'] or 0) + 1,
+            tipo='caucao',
+            data_vencimento=timezone.localdate(contrato.data_saida),
+            valor=falta,
+            origem='original',
+        )
+        if contrato.caucao_situacao == 'pago':
+            forma = form.cleaned_data.get('caucao_forma_pagamento') or 'dinheiro'
+            parcela.quitar(
+                falta, forma, contrato.caucao_pago_em or timezone.now(), usuario,
+                'Caução coletado no check-out',
+            )
+        contrato.limpar_cache_financeiro()
 
     def _render(self, request, contrato, form, checklist=None):
         from django.shortcuts import render
@@ -739,6 +783,10 @@ class ContratoCheckoutView(GrupoRequiredMixin, View):
             'checklist': checklist,
             'tem_bloqueios': any(ok is False for ok, _ in checklist),
             'tem_avisos': any(ok is None for ok, _ in checklist),
+            'regra_saida': {
+                'tolerancia_minutos': int(contrato.tolerancia_devolucao().total_seconds() // 60),
+                'diaria': float(contrato.diaria_com_adicionais),
+            },
         })
 
 
@@ -754,47 +802,97 @@ class ContratoCheckinView(GrupoRequiredMixin, View):
     def post(self, request, pk):
         from django.db import transaction as db_transaction
         contrato = get_object_or_404(Contrato, pk=pk, situacao='ativo')
-        parcelas_abertas = contrato.parcelas.filter(
-            situacao__in=['pendente', 'em_atraso']
-        ).order_by('data_vencimento')
-        if parcelas_abertas.exists():
-            form = CheckinForm(instance=contrato)
-            messages.error(request, 'Quite as parcelas em aberto antes de realizar o check-in.')
-            return self._render(request, contrato, form, parcelas_abertas)
         form = CheckinForm(request.POST, request.FILES, instance=contrato)
-        if form.is_valid():
-            with db_transaction.atomic():
-                contrato = form.save(commit=False)
-                contrato.situacao = 'aguardando_devolucao'
-                contrato.calcular_fechamento()
-                contrato.save()
-                # Atualiza KM mas mantém veículo em 'em_uso' até o contrato ser encerrado
-                # (liberado em ContratoEncerrarView, após avarias e fechamento avaliados)
-                if contrato.km_devolucao is not None:
-                    contrato.veiculo.km_atual = contrato.km_devolucao
-                    contrato.veiculo.save()
-                # Salva fotos de devolução
-                for arquivo in request.FILES.getlist('fotos_devolucao'):
-                    FotoContrato.objects.create(contrato=contrato, momento='devolucao', imagem=arquivo)
-                # Gera parcela de acerto final se houver km excedente, dias extras ou diferença de combustível
-                total_acerto = _gerar_parcela_acerto_se_necessario(contrato)
-            msg = 'Check-in realizado. Veículo aguardando vistoria e encerramento.'
-            if total_acerto > 0:
-                msg += f' Parcela de acerto gerada: {_brl(total_acerto)}.'
-            messages.success(request, msg)
-            return redirect('contratos:detalhe', pk=pk)
-        return self._render(request, contrato, form)
+        if not form.is_valid():
+            return self._render(request, contrato, form)
+        momento = form.cleaned_data['data_devolucao_real']
+        with db_transaction.atomic():
+            contrato = form.save(commit=False)
+            contrato.situacao = 'aguardando_devolucao'
+            contrato.calcular_fechamento()
+            contrato.save()
+            if contrato.km_devolucao is not None:
+                contrato.veiculo.km_atual = contrato.km_devolucao
+                contrato.veiculo.save()
+            for arquivo in request.FILES.getlist('fotos_devolucao'):
+                FotoContrato.objects.create(contrato=contrato, momento='devolucao', imagem=arquivo)
+            canceladas = contrato.cancelar_parcelas_futuras(
+                momento, ParcelaContrato.MARCA_CANCELADA_CHECKIN,
+            )
+            if canceladas:
+                self._registrar_devolucao_antecipada(contrato, canceladas, request.user)
+            total_acerto = _gerar_parcela_acerto_se_necessario(contrato)
+            devidas = [
+                p for p in contrato.parcelas_devidas_ate(momento)
+                if p.tipo not in ('caucao', 'acerto')
+            ]
+        msg = 'Check-in realizado. Veículo aguardando vistoria e encerramento.'
+        msg += self._aviso_tolerancia(contrato)
+        if devidas:
+            msg += (
+                f' {len(devidas)} parcela(s) em aberto ({_brl(sum(p.valor_corrigido for p in devidas))}) '
+                f'continuam em cobrança — o caução, se houver, abate no encerramento.'
+            )
+        if canceladas:
+            valor_cancelado = sum(p.valor for p in canceladas)
+            msg += (
+                f' {len(canceladas)} parcela(s) futura(s) cancelada(s) pela devolução antecipada '
+                f'({_brl(valor_cancelado)}).'
+            )
+        if total_acerto > 0:
+            msg += f' Parcela de acerto gerada: {_brl(total_acerto)}.'
+        (messages.warning if devidas or contrato.dias_extras else messages.success)(request, msg)
+        return redirect('contratos:detalhe', pk=pk)
 
-    def _render(self, request, contrato, form, parcelas_abertas=None):
+    @staticmethod
+    def _registrar_devolucao_antecipada(contrato, canceladas, usuario):
+        motivo = contrato.get_motivo_encerramento_display()
+        if contrato.motivo_encerramento_detalhe:
+            motivo += f' — {contrato.motivo_encerramento_detalhe}'
+        HistoricoContrato.objects.create(
+            contrato=contrato, usuario=usuario, acao='devolucao_antecipada',
+            situacao_anterior='ativo', situacao_nova='aguardando_devolucao', motivo=motivo,
+            dados={
+                'devolucao_real': timezone.localtime(contrato.data_devolucao_real).isoformat(),
+                'devolucao_prevista': timezone.localtime(contrato.data_devolucao_prevista).isoformat(),
+                'parcelas_canceladas': [p.numero for p in canceladas],
+                'valor_cancelado': str(sum((p.valor for p in canceladas), Decimal('0.00'))),
+            },
+        )
+
+    @staticmethod
+    def _aviso_tolerancia(contrato):
+        tolerancia = contrato.tolerancia_devolucao()
+        minutos = int(tolerancia.total_seconds() // 60)
+        prazo = contrato.fim_periodo_contratado()
+        if contrato.data_devolucao_real <= prazo:
+            return ''
+        atraso = int((contrato.data_devolucao_real - prazo).total_seconds() // 60)
+        if not contrato.dias_extras:
+            return (
+                f' Devolução {atraso} min após o fim do período contratado, dentro da tolerância de '
+                f'{minutos} min — nenhuma diária extra cobrada.'
+            )
+        limite = timezone.localtime(prazo + tolerancia)
+        return (
+            f' Devolução passou da tolerância de {minutos} min (limite {limite:%d/%m %H:%M}): '
+            f'{contrato.dias_extras} diária(s) extra(s) de {_brl(contrato.diaria_com_adicionais)} '
+            f'= {_brl(contrato.valor_dias_extras)} incluída(s) no acerto.'
+        )
+
+    def _render(self, request, contrato, form):
         from django.shortcuts import render
-        if parcelas_abertas is None:
-            parcelas_abertas = contrato.parcelas.filter(
-                situacao__in=['pendente', 'em_atraso']
-            ).order_by('data_vencimento')
+        momento = (getattr(form, 'cleaned_data', None) or {}).get('data_devolucao_real') or timezone.now()
+        tolerancia = contrato.tolerancia_devolucao()
         return render(request, self.template_name, {
             'contrato': contrato,
             'form': form,
-            'parcelas_abertas': parcelas_abertas,
+            'parcelas_abertas': contrato.parcelas_devidas_ate(momento),
+            'parcelas_futuras': contrato.parcelas_futuras_abertas(momento),
+            'data_corte': timezone.localdate(momento),
+            'tolerancia_minutos': int(tolerancia.total_seconds() // 60),
+            'limite_sem_extra': contrato.limite_devolucao_sem_extra(tolerancia),
+            'regra_devolucao': _regra_devolucao(contrato, tolerancia),
         })
 
 
@@ -803,27 +901,28 @@ class ContratoEncerrarView(GrupoRequiredMixin, View):
     def post(self, request, pk):
         from django.db import transaction as db_transaction
         contrato = get_object_or_404(Contrato, pk=pk, situacao='aguardando_devolucao')
-        # Garante cálculo fresco antes de verificar saldo devedor
-        for attr in ('total_geral', 'total_adicionais', 'total_avarias',
-                     'total_locacao', 'total_pago', 'total_caucao_coletado', 'saldo_devedor'):
-            contrato.__dict__.pop(attr, None)
-        saldo = contrato.saldo_devedor
 
         with db_transaction.atomic():
-            # ── Avaliação do caução retido no encerramento ───────────────────
-            caucao_msg = _avaliar_caucao_no_encerramento(contrato, request.user)
+            canceladas = contrato.cancelar_parcelas_futuras(
+                contrato.data_devolucao_real or timezone.now(),
+                f'[cancelada no encerramento do contrato {contrato.numero}]',
+            )
+            plano_caucao = contrato.aplicar_caucao_no_encerramento(request.user)
+            caucao_msg = _mensagem_caucao(plano_caucao)
 
             contrato.situacao = 'encerrado'
             contrato.save()
             # Libera o veículo — caminho normal após vistoria em 'aguardando_devolucao'
             contrato.veiculo.situacao = 'disponivel'
             contrato.veiculo.save()
-            # Cancela parcelas pendentes e registra o impacto para a mensagem
-            parcelas_qs = contrato.parcelas.filter(situacao__in=['pendente', 'em_atraso'])
-            qtd_canceladas = parcelas_qs.count()
-            from django.db.models import Sum as _Sum
-            valor_cancelado = parcelas_qs.aggregate(s=_Sum('valor'))['s'] or Decimal('0')
-            parcelas_qs.update(situacao='cancelada')
+            qtd_canceladas = len(canceladas)
+            valor_cancelado = sum((p.valor for p in canceladas), Decimal('0'))
+            mantidas = list(contrato.parcelas_abertas())
+            valor_acerto_aberto = sum((p.valor for p in mantidas if p.tipo == 'acerto'), Decimal('0'))
+            vencidas_mantidas = [p for p in mantidas if p.tipo != 'acerto']
+            valor_vencidas_mantidas = sum((p.valor for p in vencidas_mantidas), Decimal('0'))
+            contrato.limpar_cache_financeiro()
+            saldo = contrato.saldo_devedor
 
         partes = [f'Contrato {contrato.numero} encerrado.']
         if caucao_msg:
@@ -832,8 +931,17 @@ class ContratoEncerrarView(GrupoRequiredMixin, View):
             partes.append(f'Saldo pendente: R$ {saldo:.2f} — acompanhe em Financeiro → Contas a Receber.')
         if qtd_canceladas > 0:
             partes.append(f'{qtd_canceladas} parcela(s) cancelada(s) da agenda — R$ {valor_cancelado:.2f}.')
+        if valor_acerto_aberto > 0:
+            partes.append(
+                f'Parcela de acerto de {_brl(valor_acerto_aberto)} continua em aberto na Agenda de Cobranças.'
+            )
+        if vencidas_mantidas:
+            partes.append(
+                f'{len(vencidas_mantidas)} parcela(s) vencida(s) de {_brl(valor_vencidas_mantidas)} '
+                f'continua(m) em cobrança.'
+            )
         msg = ' '.join(partes)
-        if saldo > 0 or qtd_canceladas > 0 or (caucao_msg and 'retido' in caucao_msg):
+        if saldo > 0 or qtd_canceladas > 0 or valor_acerto_aberto > 0 or vencidas_mantidas or (plano_caucao and plano_caucao['total_abatido']):
             messages.warning(request, msg)
         else:
             messages.success(request, msg)
@@ -876,13 +984,12 @@ class ContratoEncerramentoAntecipadoView(GrupoRequiredMixin, View):
                 return self._render(request, contrato, form)
 
             contrato = form.save(commit=False)
-            data_corte = contrato.data_devolucao_real.date()
+            momento = contrato.data_devolucao_real
 
             contrato.encerramento_antecipado = True
             contrato.encerrado_por = request.user
             contrato.encerrado_em = timezone.now()
             contrato.calcular_fechamento()
-            caucao_msg = _avaliar_caucao_no_encerramento(contrato, request.user)
             contrato.situacao = 'encerrado'
             contrato.save()
 
@@ -900,32 +1007,23 @@ class ContratoEncerramentoAntecipadoView(GrupoRequiredMixin, View):
             if contrato.motivo_encerramento_detalhe:
                 motivo_texto += f' — {contrato.motivo_encerramento_detalhe}'
 
-            # Só as parcelas futuras (vencimento após a devolução real) deixam de valer —
-            # parcelas vencidas em aberto continuam em cobrança normalmente.
-            parcelas_abertas = contrato.parcelas.filter(situacao__in=['pendente', 'em_atraso'])
-            parcelas_futuras = parcelas_abertas.filter(data_vencimento__gt=data_corte)
-            parcelas_mantidas = parcelas_abertas.filter(data_vencimento__lte=data_corte)
+            obs_cancelamento = (
+                f'[Cancelada — encerramento antecipado do contrato {contrato.numero} '
+                f'em {contrato.encerrado_em:%d/%m/%Y}. Motivo: {motivo_texto}]'
+            )
+            canceladas = contrato.cancelar_parcelas_futuras(momento, obs_cancelamento)
+            qtd_canceladas = len(canceladas)
+            valor_cancelado = sum((p.valor for p in canceladas), Decimal('0'))
 
+            plano_caucao = contrato.aplicar_caucao_no_encerramento(request.user)
+            caucao_msg = _mensagem_caucao(plano_caucao)
+            if plano_caucao:
+                contrato.save(update_fields=['caucao_situacao'])
+            parcelas_mantidas = contrato.parcelas_abertas().exclude(tipo='caucao')
             qtd_mantidas = parcelas_mantidas.count()
             valor_mantido = parcelas_mantidas.aggregate(s=Sum('valor'))['s'] or Decimal('0')
 
-            qtd_canceladas = parcelas_futuras.count()
-            valor_cancelado = parcelas_futuras.aggregate(s=Sum('valor'))['s'] or Decimal('0')
-            obs_cancelamento = (
-                f'Cancelada — encerramento antecipado do contrato {contrato.numero} '
-                f'em {contrato.encerrado_em:%d/%m/%Y}. Motivo: {motivo_texto}'
-            )
-            for parcela in parcelas_futuras:
-                parcela.situacao = 'cancelada'
-                parcela.observacoes = (
-                    f'{parcela.observacoes} | {obs_cancelamento}' if parcela.observacoes
-                    else obs_cancelamento
-                )
-                parcela.save(update_fields=['situacao', 'observacoes'])
-
-            for attr in ('total_geral', 'total_adicionais', 'total_avarias',
-                         'total_locacao', 'total_pago', 'total_caucao_coletado', 'saldo_devedor'):
-                contrato.__dict__.pop(attr, None)
+            contrato.limpar_cache_financeiro()
             saldo = contrato.saldo_devedor
 
             HistoricoContrato.objects.create(
@@ -943,6 +1041,8 @@ class ContratoEncerramentoAntecipadoView(GrupoRequiredMixin, View):
                     'total_acerto_gerado': str(total_acerto),
                     'saldo_devedor': str(saldo),
                     'caucao_situacao': contrato.caucao_situacao,
+                    'caucao_abatido': str(plano_caucao['total_abatido']) if plano_caucao else '0',
+                    'caucao_devolvido': str(plano_caucao['devolver']) if plano_caucao else '0',
                 },
             )
 
@@ -955,13 +1055,13 @@ class ContratoEncerramentoAntecipadoView(GrupoRequiredMixin, View):
             partes.append(f'{qtd_canceladas} parcela(s) futura(s) cancelada(s) — R$ {valor_cancelado:.2f}.')
         if qtd_mantidas > 0:
             partes.append(
-                f'{qtd_mantidas} parcela(s) vencida(s) mantida(s) em aberto para cobrança — '
+                f'{qtd_mantidas} cobrança(s) em aberto mantida(s) — '
                 f'R$ {valor_mantido:.2f}.'
             )
         if saldo > 0:
             partes.append(f'Saldo devedor: R$ {saldo:.2f} — acompanhe em Financeiro → Contas a Receber.')
         msg = ' '.join(partes)
-        if saldo > 0 or qtd_mantidas > 0 or (caucao_msg and 'retido' in caucao_msg):
+        if saldo > 0 or qtd_mantidas > 0 or (plano_caucao and plano_caucao['total_abatido']):
             messages.warning(request, msg)
         else:
             messages.success(request, msg)
@@ -972,11 +1072,14 @@ class ContratoEncerramentoAntecipadoView(GrupoRequiredMixin, View):
         # Dados enxutos das parcelas para o resumo de impacto (recalculado no
         # cliente via Alpine conforme a data de devolução digitada) — evita um
         # endpoint auxiliar só para reagir à mudança de data antes de confirmar.
+        saida = timezone.localdate(contrato.data_saida)
         parcelas_resumo = [
             {
                 'situacao': p.situacao,
+                'tipo': p.tipo,
                 'valor': float(p.valor),
                 'data_vencimento': p.data_vencimento.isoformat(),
+                'dia_inicio': ((p.inicio_periodo or p.data_vencimento) - saida).days,
             }
             for p in contrato.parcelas.all()
         ]
@@ -984,7 +1087,7 @@ class ContratoEncerramentoAntecipadoView(GrupoRequiredMixin, View):
             'contrato': contrato,
             'form': form,
             'parcelas_resumo': parcelas_resumo,
-            'data_corte_inicial': timezone.localtime(timezone.now()).date().isoformat(),
+            'regra_devolucao': _regra_devolucao(contrato),
         })
 
 
@@ -1015,11 +1118,29 @@ class ContratoReverterCheckinView(GrupoRequiredMixin, View):
             contrato.valor_diferenca_combustivel = Decimal('0')
             contrato.save()
             contrato.fotos.filter(momento='devolucao').delete()
+            from apps.fleet.models import HistoricoKmVeiculo
+            HistoricoKmVeiculo.objects.filter(contrato=contrato, origem='contrato_devolucao').delete()
+            km_registrado = HistoricoKmVeiculo.objects.filter(
+                veiculo=contrato.veiculo
+            ).aggregate(m=Max('km'))['m']
+            kms_validos = [km for km in (contrato.km_saida, km_registrado) if km is not None]
+            if kms_validos:
+                contrato.veiculo.km_atual = max(kms_validos)
+                contrato.veiculo.save(update_fields=['km_atual'])
             # Só cancela o acerto se ainda não foi pago -- dinheiro já recebido
             # exige revisão humana, não some silenciosamente num revert.
-            contrato.parcelas.filter(
+            for parcela in contrato.parcelas.filter(
                 tipo='acerto', situacao__in=['pendente', 'em_atraso']
-            ).update(situacao='cancelada')
+            ):
+                parcela.situacao = 'cancelada'
+                parcela.save(update_fields=['situacao'])
+            marca = ParcelaContrato.MARCA_CANCELADA_CHECKIN
+            for parcela in contrato.parcelas.filter(
+                situacao='cancelada', observacoes__contains=marca,
+            ):
+                parcela.situacao = 'pendente'
+                parcela.observacoes = parcela.observacoes.replace(marca, '').strip()
+                parcela.save(update_fields=['situacao', 'observacoes'])
         messages.warning(
             request,
             f'Check-in do contrato {contrato.numero} revertido. Contrato voltou para Ativo.'
@@ -1031,12 +1152,22 @@ class ContratoCancelarView(GrupoRequiredMixin, View):
     grupos_permitidos = ['admin_locadora', 'atendente']
     def post(self, request, pk):
         from django.db import transaction as db_transaction
-        contrato = get_object_or_404(Contrato, pk=pk, situacao__in=['aberto', 'ativo'])
+        contrato = get_object_or_404(Contrato, pk=pk)
+        if contrato.situacao != 'aberto':
+            messages.error(
+                request,
+                'Só é possível cancelar contratos que ainda não tiveram saída do veículo. '
+                'Para contrato ativo, use o Check-in ou a Quebra de Contrato.'
+            )
+            return redirect('contratos:detalhe', pk=pk)
+        if contrato.pagamentos.exists():
+            messages.error(
+                request,
+                'Este contrato já tem pagamentos registrados. Estorne-os antes de cancelar.'
+            )
+            return redirect('contratos:detalhe', pk=pk)
         with db_transaction.atomic():
-            if contrato.situacao == 'ativo':
-                contrato.veiculo.situacao = 'disponivel'
-                contrato.veiculo.save()
-            elif contrato.situacao == 'aberto' and contrato.veiculo.situacao == 'reservado':
+            if contrato.veiculo.situacao == 'reservado':
                 # Restaura veículo para disponivel se não há outras reservas confirmadas
                 outras_reservas = Reserva.objects.filter(veiculo=contrato.veiculo, situacao='confirmada')
                 if contrato.reserva_id:
@@ -1047,6 +1178,10 @@ class ContratoCancelarView(GrupoRequiredMixin, View):
             contrato.situacao = 'cancelado'
             contrato.save()
             contrato.parcelas.filter(situacao__in=['pendente', 'em_atraso']).update(situacao='cancelada')
+            HistoricoContrato.objects.create(
+                contrato=contrato, usuario=request.user, acao='cancelamento',
+                situacao_anterior='aberto', situacao_nova='cancelado',
+            )
         messages.success(request, f'Contrato {contrato.numero} cancelado.')
         return redirect('contratos:lista')
 
@@ -1101,104 +1236,131 @@ class ContratoProrrogarView(GrupoRequiredMixin, View):
                 )
                 return redirect('contratos:detalhe', pk=pk)
 
+            hoje = timezone.localdate()
+            retroativa = contrato.prorrogacao_gera_atraso()
+            escolha = request.POST.get('encargos_retroativos')
+            if retroativa and escolha not in ('sim', 'nao'):
+                messages.error(
+                    request,
+                    'A devolução prevista já venceu: escolha se as parcelas do período vencido '
+                    'terão multa e juros de atraso antes de prorrogar.'
+                )
+                return redirect('contratos:detalhe', pk=pk)
+
+            simulacao = contrato.simular_prorrogacao_retroativa() if retroativa else None
             data_antiga = contrato.data_devolucao_prevista
-            grupo = contrato.veiculo.grupo if contrato.veiculo_id else None
-            tipo_cobranca = 'mensal' if (grupo and grupo.mensal) else 'semanal'
+            inicio_novo_periodo = contrato.fim_periodo_coberto()
             contrato.data_devolucao_prevista = nova_data
             contrato.save()
             qtd = gerar_parcelas(
                 contrato=contrato,
-                data_inicio=data_antiga.date(),
-                data_fim=nova_data.date(),
+                data_inicio=inicio_novo_periodo,
+                data_fim=contrato.fim_periodo_coberto(),
                 origem='prorrogacao',
-                tipo_cobranca=tipo_cobranca,
+                tipo_cobranca=contrato.tipo_cobranca,
+                vencimento_minimo=hoje if escolha == 'nao' else None,
             )
-        messages.success(
-            request,
-            f'Contrato prorrogado até {nova_data.strftime("%d/%m/%Y")}. '
-            f'{qtd} parcela(s) adicional(is) gerada(s).'
-        )
+            HistoricoContrato.objects.create(
+                contrato=contrato, usuario=request.user, acao='prorrogacao',
+                situacao_anterior=contrato.situacao, situacao_nova=contrato.situacao,
+                motivo=(
+                    '' if not retroativa
+                    else 'Período vencido cobrado COM multa e juros desde os vencimentos originais.'
+                    if escolha == 'sim'
+                    else 'Período vencido cobrado SEM multa e juros — parcelas vencidas passaram a vencer na data da prorrogação.'
+                ),
+                dados={
+                    'devolucao_anterior': timezone.localtime(data_antiga).isoformat(),
+                    'devolucao_nova': timezone.localtime(nova_data).isoformat(),
+                    'parcelas_geradas': qtd,
+                    'retroativa': retroativa,
+                    'encargos_retroativos': escolha if retroativa else None,
+                    'encargos_estimados': str(simulacao['encargos']) if simulacao else '0',
+                },
+            )
+        msg = f'Contrato prorrogado até {nova_data.strftime("%d/%m/%Y")}. {qtd} parcela(s) adicional(is) gerada(s).'
+        if retroativa and escolha == 'sim':
+            msg += ' As parcelas do período vencido já entram em atraso, com multa e juros.'
+        elif retroativa:
+            msg += ' As parcelas do período vencido vencem hoje, sem multa e juros.'
+        messages.success(request, msg)
         return redirect('contratos:detalhe', pk=pk)
 
 
 class PagarParcelaView(GrupoRequiredMixin, View):
-    """Registra o pagamento de uma parcela e cria o PagamentoContrato correspondente.
+    """Registra o recebimento de uma parcela.
 
-    Aplica valor_corrigido (com multa/juros) quando a parcela está em atraso.
-    O operador pode informar um valor customizado via POST; se ausente, usa valor_corrigido.
+    Valor igual ao devido (valor_corrigido) quita a parcela. Valor menor é
+    pagamento parcial: a parcela é dividida e o restante continua em cobrança,
+    a menos que o operador marque "conceder desconto" e justifique. Valor maior
+    quita a parcela e o excedente vai para as próximas dívidas (ou vira crédito).
     """
     grupos_permitidos = ['admin_locadora', 'atendente', 'financeiro']
+
     def post(self, request, pk, parcela_pk):
         from decimal import InvalidOperation
-        from django.db import transaction as db_transaction
+        from django.db import IntegrityError, transaction as db_transaction
 
-        contrato = get_object_or_404(Contrato, pk=pk)
-        parcela = get_object_or_404(
-            ParcelaContrato, pk=parcela_pk,
-            contrato=contrato, situacao__in=['pendente', 'em_atraso']
-        )
         forma = request.POST.get('forma_pagamento')
-        obs = request.POST.get('observacoes', '')
+        obs = request.POST.get('observacoes', '').strip()
+        desconto = request.POST.get('desconto') == '1'
 
-        if not forma:
+        if forma not in dict(ParcelaContrato.FORMAS_RECEBIMENTO):
             messages.error(request, 'Informe a forma de pagamento.')
             return redirect('contratos:detalhe', pk=pk)
 
-        # Usa valor informado pelo operador ou cai no valor_corrigido (inclui multa/juros)
         valor_post = request.POST.get('valor', '').strip()
-        try:
-            from decimal import Decimal as _D
-            valor = _D(valor_post).quantize(_D('0.01'))
-            if valor <= 0:
-                raise ValueError
-        except (ValueError, TypeError, InvalidOperation):
-            valor = parcela.valor_corrigido
+        valor = None
+        if valor_post:
+            try:
+                valor = Decimal(valor_post).quantize(Decimal('0.01'))
+            except (InvalidOperation, ValueError):
+                valor = None
+            if valor is None or valor <= 0:
+                messages.error(request, 'Valor inválido.')
+                return redirect('contratos:detalhe', pk=pk)
 
-        # Valor diferente do devido nunca é aceito silenciosamente — exige que o
-        # operador justifique a divergência em Observações antes de confirmar.
-        if valor != parcela.valor_corrigido and not obs.strip():
-            messages.error(
-                request,
-                f'O valor informado (R$ {valor:.2f}) diverge do valor devido '
-                f'(R$ {parcela.valor_corrigido:.2f}). Informe uma observação '
-                f'justificando a diferença para confirmar o pagamento.'
-            )
-            return redirect('contratos:detalhe', pk=pk)
-
-        # Observação automática que registra multa/juros aplicados para rastreabilidade
-        if not obs:
-            if valor > parcela.valor:
-                multa_aplicada = valor - parcela.valor
-                obs = (f'Parcela {parcela.numero} — {parcela.get_tipo_display()} '
-                       f'(R$ {parcela.valor:.2f} original + R$ {multa_aplicada:.2f} multa/juros)')
-            else:
-                obs = f'Parcela {parcela.numero} — {parcela.get_tipo_display()}'
-
-        from django.db import IntegrityError
         try:
             with db_transaction.atomic():
-                parcela.situacao = 'pago'
-                parcela.data_pagamento = timezone.now()
-                parcela.forma_pagamento = forma
-                parcela.observacoes = obs
-                parcela.save()
-
-                PagamentoContrato.objects.create(
-                    contrato=contrato,
-                    parcela=parcela,
-                    forma_pagamento=forma,
-                    tipo='caucao' if parcela.tipo == 'caucao' else 'locacao',
-                    valor=valor,
-                    data_pagamento=parcela.data_pagamento,
-                    observacoes=obs,
-                    registrado_por=request.user,
+                contrato = get_object_or_404(Contrato.objects.select_for_update(), pk=pk)
+                parcela = get_object_or_404(
+                    ParcelaContrato.objects.select_for_update(), pk=parcela_pk,
+                    contrato=contrato, situacao__in=['pendente', 'em_atraso'],
                 )
+                devido = parcela.valor_corrigido
+                valor = valor if valor is not None else devido
+                agora = timezone.now()
+                rotulo = parcela.rotulo
 
-                # Sincroniza caucao_situacao quando a parcela de caução é paga pela agenda
-                if parcela.tipo == 'caucao' and contrato.caucao_situacao == 'pendente':
-                    contrato.caucao_situacao = 'pago'
-                    contrato.caucao_pago_em = parcela.data_pagamento
-                    contrato.save(update_fields=['caucao_situacao', 'caucao_pago_em'])
+                if valor < devido and desconto:
+                    if not obs:
+                        messages.error(
+                            request,
+                            f'Para conceder desconto (receber {_brl(valor)} de {_brl(devido)}), '
+                            f'informe o motivo em Observações.'
+                        )
+                        return redirect('contratos:detalhe', pk=pk)
+                    parcela.quitar_com_desconto(valor, forma, agora, request.user, obs)
+                    msg = f'{rotulo} quitada com desconto de {_brl(devido - valor)} — recebido {_brl(valor)}.'
+                elif valor < devido:
+                    parcela.quitar(valor, forma, agora, request.user, obs)
+                    msg = (
+                        f'Pagamento parcial de {_brl(valor)} registrado na {rotulo.lower()}. '
+                        f'O restante ({_brl(devido - valor)}) continua em cobrança.'
+                    )
+                else:
+                    parcela.quitar(devido, forma, agora, request.user, obs)
+                    msg = f'{rotulo} registrada como paga — {_brl(devido)}.'
+                    excedente = valor - devido
+                    if excedente > 0:
+                        contrato.receber_em_ordem(
+                            excedente, forma, agora, request.user,
+                            f'Excedente do pagamento da {rotulo.lower()}. {obs}'.strip(),
+                        )
+                        msg += f' Excedente de {_brl(excedente)} aplicado nas próximas dívidas (ou mantido como crédito).'
+
+                if parcela.tipo == 'caucao':
+                    contrato.atualizar_situacao_caucao(agora)
         except IntegrityError:
             messages.error(
                 request,
@@ -1206,7 +1368,7 @@ class PagarParcelaView(GrupoRequiredMixin, View):
             )
             return redirect('contratos:detalhe', pk=pk)
 
-        messages.success(request, f'Parcela {parcela.numero} registrada como paga — R$ {valor:.2f}.')
+        messages.success(request, msg)
         return redirect('contratos:detalhe', pk=pk)
 
 
@@ -1220,13 +1382,26 @@ class ContratoAdicionaisView(GrupoRequiredMixin, View):
         return self._render(request, contrato, form)
 
     def post(self, request, pk):
+        from django.db import transaction as db_transaction
         contrato = get_object_or_404(Contrato, pk=pk)
+        if contrato.situacao not in ('aberto', 'ativo'):
+            messages.error(
+                request,
+                'Adicionais só podem ser incluídos antes do check-in — '
+                'depois disso não há parcelas futuras para cobrá-los.'
+            )
+            return redirect('contratos:detalhe', pk=pk)
         form = AdicionalContratoForm(request.POST)
         if form.is_valid():
-            adicional = form.save(commit=False)
-            adicional.contrato = contrato
-            adicional.save()
-            messages.success(request, 'Adicional incluído.')
+            with db_transaction.atomic():
+                adicional = form.save(commit=False)
+                adicional.contrato = contrato
+                adicional.save()
+                alteradas = contrato.reprecificar_parcelas_futuras() if contrato.situacao == 'ativo' else 0
+            msg = 'Adicional incluído.'
+            if alteradas:
+                msg += f' {alteradas} parcela(s) futura(s) em aberto atualizada(s) com o novo valor diário.'
+            messages.success(request, msg)
             return redirect('contratos:detalhe', pk=pk)
         return self._render(request, contrato, form)
 
@@ -1236,6 +1411,7 @@ class ContratoAdicionaisView(GrupoRequiredMixin, View):
             'contrato': contrato,
             'adicionais': contrato.adicionais.all(),
             'form': form,
+            'pode_remover': contrato.situacao in Contrato.SITUACOES_COM_ADICIONAIS_EDITAVEIS,
         })
 
 
@@ -1265,7 +1441,8 @@ class ContratoAvariasView(GrupoRequiredMixin, View):
             'contrato': contrato,
             'avarias': contrato.avarias.all(),
             'form': form,
-            'formas_pagamento': PagamentoContrato.FORMA,
+            'formas_pagamento': PagamentoContrato.FORMAS_RECEBIMENTO,
+            'situacoes_ajuste': [c for c in AvariaContrato.SITUACAO if c[0] in AvariaContrato.SITUACOES_AJUSTAVEIS],
         })
 
 
@@ -1283,7 +1460,7 @@ class ContratoAvariaMarcarPagaView(GrupoRequiredMixin, View):
             return redirect('contratos:avarias', pk=pk)
 
         forma = request.POST.get('forma_pagamento')
-        if not forma:
+        if forma not in dict(PagamentoContrato.FORMAS_RECEBIMENTO):
             messages.error(request, 'Informe a forma de pagamento.')
             return redirect('contratos:avarias', pk=pk)
 
@@ -1310,6 +1487,55 @@ class ContratoAvariaMarcarPagaView(GrupoRequiredMixin, View):
 
         messages.success(request, f'Avaria registrada como paga — R$ {avaria.valor_cobrado:.2f}.')
         return redirect('contratos:avarias', pk=pk)
+
+
+class ContratoAvariaAjustarView(GrupoRequiredMixin, View):
+    grupos_permitidos = ['admin_locadora', 'atendente', 'financeiro']
+
+    def post(self, request, pk, avaria_pk):
+        from django.db import transaction as db_transaction
+        with db_transaction.atomic():
+            avaria = get_object_or_404(
+                AvariaContrato.objects.select_for_update().select_related('contrato'),
+                pk=avaria_pk, contrato_id=pk,
+            )
+            if not avaria.pode_ajustar:
+                messages.error(request, 'Avaria já paga não pode ser alterada.')
+                return redirect('contratos:avarias', pk=pk)
+            form = AjusteAvariaForm(request.POST)
+            if not form.is_valid():
+                erros = '; '.join(e for lista in form.errors.values() for e in lista)
+                messages.error(request, f'Não foi possível alterar a avaria: {erros}')
+                return redirect('contratos:avarias', pk=pk)
+            alterou = avaria.ajustar(form.cleaned_data['valor_cobrado'], form.cleaned_data['situacao'], request.user)
+        if alterou:
+            messages.success(
+                request,
+                f'Avaria atualizada: {_brl(avaria.valor_cobrado)}, {avaria.get_situacao_display().lower()}.',
+            )
+        else:
+            messages.info(request, 'Nada foi alterado na avaria.')
+        return redirect('contratos:avarias', pk=pk)
+
+
+class ContratoAdicionalRemoverView(GrupoRequiredMixin, View):
+    grupos_permitidos = ['admin_locadora', 'atendente']
+
+    def post(self, request, pk, adicional_pk):
+        from django.db import transaction as db_transaction
+        with db_transaction.atomic():
+            contrato = get_object_or_404(Contrato.objects.select_for_update(), pk=pk)
+            adicional = get_object_or_404(AdicionalContrato, pk=adicional_pk, contrato=contrato)
+            try:
+                alteradas = contrato.remover_adicional(adicional, request.user)
+            except ValueError as erro:
+                messages.error(request, str(erro))
+                return redirect('contratos:adicionais', pk=pk)
+        msg = f'Adicional {adicional.get_tipo_display()} removido.'
+        if alteradas:
+            msg += f' {alteradas} parcela(s) futura(s) em aberto recalculada(s).'
+        messages.success(request, msg)
+        return redirect('contratos:adicionais', pk=pk)
 
 
 class ContratoPDFView(GrupoRequiredMixin, View):
@@ -1378,46 +1604,16 @@ class ContratoPagamentosView(GrupoRequiredMixin, View):
         contrato = get_object_or_404(Contrato, pk=pk)
         form = PagamentoContratoForm(request.POST)
         if form.is_valid():
-            parcelas_baixadas = 0
+            dados = form.cleaned_data
             with db_transaction.atomic():
-                pagamento = form.save(commit=False)
-                pagamento.contrato = contrato
-                pagamento.registrado_por = request.user
-                pagamento.save()
-                # Sincroniza caucao_situacao para liberar o checklist de checkout
-                if pagamento.tipo == 'caucao' and contrato.caucao_situacao == 'pendente':
-                    contrato.caucao_situacao = 'pago'
-                    contrato.caucao_pago_em = pagamento.data_pagamento
-                    contrato.save(update_fields=['caucao_situacao', 'caucao_pago_em'])
-                # Auto-baixa parcelas de locação FIFO (mais antigas primeiro)
-                if pagamento.tipo == 'locacao':
-                    saldo_restante = pagamento.valor
-                    for parcela in contrato.parcelas.filter(
-                        situacao__in=['pendente', 'em_atraso']
-                    ).order_by('data_vencimento'):
-                        if saldo_restante >= parcela.valor:
-                            parcela.situacao = 'pago'
-                            parcela.data_pagamento = pagamento.data_pagamento
-                            parcela.forma_pagamento = pagamento.forma_pagamento
-                            parcela.observacoes = (
-                                f'Baixado automaticamente via pagamento de '
-                                f'R$ {pagamento.valor:.2f} em '
-                                f'{pagamento.data_pagamento.strftime("%d/%m/%Y %H:%M")}'
-                            )
-                            parcela.save(update_fields=[
-                                'situacao', 'data_pagamento', 'forma_pagamento', 'observacoes'
-                            ])
-                            saldo_restante -= parcela.valor
-                            parcelas_baixadas += 1
-                        else:
-                            break
-            msg = f'Pagamento de R$ {pagamento.valor:.2f} registrado com sucesso.'
+                contrato = get_object_or_404(Contrato.objects.select_for_update(), pk=pk)
+                parcelas_baixadas = contrato.registrar_recebimento(
+                    dados['tipo'], dados['valor'], dados['forma_pagamento'], dados['data_pagamento'],
+                    request.user, dados.get('observacoes', ''),
+                )
+            msg = f'Pagamento de {_brl(dados["valor"])} registrado com sucesso.'
             if parcelas_baixadas:
-                msg += f' {parcelas_baixadas} parcela(s) baixada(s) automaticamente.'
-            elif pagamento.tipo == 'locacao':
-                restantes = contrato.parcelas.filter(situacao__in=['pendente', 'em_atraso']).count()
-                if restantes:
-                    msg += ' Valor insuficiente para cobrir a próxima parcela — baixe manualmente na aba de parcelas se necessário.'
+                msg += f' Aplicado em {parcelas_baixadas} parcela(s), da mais antiga para a mais nova.'
             messages.success(request, msg)
             return redirect('contratos:detalhe', pk=pk)
         for field, erros in form.errors.items():
@@ -1430,5 +1626,31 @@ class ContratoPagamentosView(GrupoRequiredMixin, View):
         from django.shortcuts import render
         return render(request, self.template_name, {
             'contrato': contrato,
-            'pagamentos': contrato.pagamentos.all(),
+            'pagamentos': contrato.pagamentos.select_related('registrado_por'),
+            'pode_estornar': _pode_criar_retroativo(request.user),
         })
+
+
+class ContratoPagamentoEstornarView(GrupoRequiredMixin, View):
+    grupos_permitidos = ['admin_locadora']
+
+    def post(self, request, pk, pagamento_pk):
+        from django.db import transaction as db_transaction
+        motivo = request.POST.get('motivo', '').strip()
+        if not motivo:
+            messages.error(request, 'Informe o motivo do estorno.')
+            return redirect('contratos:pagamentos', pk=pk)
+        with db_transaction.atomic():
+            contrato = get_object_or_404(Contrato.objects.select_for_update(), pk=pk)
+            pagamento = get_object_or_404(PagamentoContrato, pk=pagamento_pk, contrato=contrato)
+            erro = pagamento.erro_ao_estornar()
+            if erro:
+                messages.error(request, erro)
+                return redirect('contratos:pagamentos', pk=pk)
+            valor = pagamento.valor
+            pagamento.estornar(request.user, motivo)
+        messages.warning(
+            request,
+            f'Pagamento de {_brl(valor)} estornado. A cobrança correspondente voltou a ficar em aberto.'
+        )
+        return redirect('contratos:pagamentos', pk=pk)

@@ -10,8 +10,18 @@
 <div class="page-header">
   <div>
     <h1 class="page-title">Contas a Receber</h1>
-    <p class="page-subtitle">{{ page_obj.paginator.count }} conta{{ page_obj.paginator.count|pluralize:"s" }}</p>
+    <p class="page-subtitle mb-0">
+      Saldo de cada contrato, do início ao fim · {{ page_obj.paginator.count }} contrato{{ page_obj.paginator.count|pluralize:"s" }}
+    </p>
   </div>
+</div>
+
+<div class="alert alert-light border d-flex align-items-center gap-2 mb-4" style="font-size:13px">
+  <i class="bi bi-info-circle text-primary"></i>
+  <span>
+    Cada linha é um contrato inteiro. Para cobrar as parcelas semanais de hoje e da semana, use a
+    <a href="{% url 'financeiro:agenda' %}" class="fw-semibold">Agenda de Cobranças</a>.
+  </span>
 </div>
 
 <!-- KPIs -->
@@ -48,8 +58,9 @@
       <div class="kpi-icon" style="background:var(--danger-bg); color:var(--danger)">
         <i class="bi bi-exclamation-triangle-fill"></i>
       </div>
-      <div class="kpi-value" style="font-size:20px; color:var(--danger)">R$ {{ kpi_vencido|floatformat:2 }}</div>
+      <div class="kpi-value" style="font-size:20px; color:var(--danger)">R$ {{ kpi_vencido_atualizado|floatformat:2 }}</div>
       <div class="kpi-label">Vencido</div>
+      <div class="kpi-sub">parcelas atrasadas de {{ qtd_contas_em_atraso }} contrato{{ qtd_contas_em_atraso|pluralize:"s" }} · com multa/juros{% if kpi_vencido_atualizado != kpi_vencido %} (sem: R$ {{ kpi_vencido|floatformat:2 }}){% endif %}</div>
     </div>
   </div>
 </div>
@@ -60,6 +71,7 @@
     {{ form.busca }}
     {{ form.situacao }}
     <div style="display:flex; gap:4px; align-items:center">
+      <span style="font-size:12px; color:#94a3b8; padding:0 4px">Fim do contrato</span>
       {{ form.vencimento_de }}
       <span style="font-size:12px; color:#94a3b8; padding:0 4px">até</span>
       {{ form.vencimento_ate }}
@@ -77,7 +89,8 @@
           <th>Contrato</th>
           <th>Cliente</th>
           <th>Veículo</th>
-          <th>Vencimento</th>
+          <th>Fim do contrato</th>
+          <th>Parcelas atrasadas</th>
           <th class="text-end">Total</th>
           <th class="text-end">Pago</th>
           <th class="text-end">Saldo</th>
@@ -87,7 +100,7 @@
       </thead>
       <tbody>
         {% for conta in contas %}
-        <tr {% if conta.vencida %}class="table-warning"{% endif %}>
+        <tr {% if conta.tem_atraso %}class="table-warning"{% endif %}>
           <td>
             <a href="{% url 'financeiro:conta-receber-detalhe' conta.pk %}" class="table-link text-mono">{{ conta.contrato.numero }}</a>
           </td>
@@ -111,16 +124,31 @@
             </span>
             {% endif %}
           </td>
+          <td>
+            {% if conta.tem_atraso and conta.qtd_parcelas_atrasadas %}
+            <a href="{% url 'financeiro:agenda' %}" class="text-decoration-none" title="Cobrar na Agenda de Cobranças">
+              <span style="font-size:12.5px; color:var(--danger); font-weight:600">
+                {{ conta.qtd_parcelas_atrasadas }} parcela{{ conta.qtd_parcelas_atrasadas|pluralize }}
+              </span>
+              <span class="d-block" style="font-size:11.5px; color:#64748b">R$ {{ conta.valor_parcelas_atrasadas|floatformat:2 }}</span>
+            </a>
+            {% else %}
+            <span style="color:#cbd5e1">—</span>
+            {% endif %}
+          </td>
           <td class="text-end" style="font-size:13px; color:#0f172a">R$ {{ conta.valor_total|floatformat:2 }}</td>
           <td class="text-end" style="font-size:13px; color:var(--success); font-weight:600">
             {% if conta.valor_pago %}R$ {{ conta.valor_pago|floatformat:2 }}{% else %}<span style="color:#cbd5e1">—</span>{% endif %}
           </td>
           <td class="text-end" style="font-size:13.5px; font-weight:700; {% if conta.valor_saldo > 0 %}color:var(--danger){% else %}color:var(--success){% endif %}">
             R$ {{ conta.valor_saldo|floatformat:2 }}
+            {% if conta.encargos_atraso %}<div style="font-size:11px; font-weight:600">atualizado R$ {{ conta.valor_atualizado|floatformat:2 }}</div>{% endif %}
           </td>
           <td>
             {% if conta.vencida %}
               <span class="status-badge status-danger">Vencido</span>
+            {% elif conta.tem_atraso %}
+              <span class="status-badge status-danger">Em atraso</span>
             {% elif conta.situacao == 'pago_parcial' %}
               <span class="status-badge status-primary">Pago Parcialmente</span>
             {% elif conta.situacao == 'pago' %}
@@ -139,7 +167,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="9">
+          <td colspan="10">
             <div class="empty-state">
               <div class="empty-state-icon"><i class="bi bi-receipt"></i></div>
               <div class="empty-state-title">Nenhuma conta encontrada</div>

@@ -1,0 +1,12 @@
+{% with caminho=parcela.caminho_cobranca %}
+<button type="button" class="btn btn-sm btn-outline-primary"
+  x-data="{ copiado: false }"
+  @click="copiarLinkCobranca('{{ caminho }}').then(() => { copiado = true; setTimeout(() => copiado = false, 2000) })"
+  :title="copiado ? 'Link copiado' : 'Copiar link de pagamento (Pix)'">
+  <i class="bi" :class="copiado ? 'bi-check-lg' : 'bi-link-45deg'"></i>
+</button>
+<a href="{{ caminho }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary"
+   title="Abrir página do Pix (QR Code)">
+  <i class="bi bi-qr-code"></i>
+</a>
+{% endwith %}

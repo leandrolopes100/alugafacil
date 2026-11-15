@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     ConfiguracaoLocadora, DespesaOperacional, ParcelaDespesa,
-    MultaTransito, ContaReceber,
+    MultaTransito, ContaReceber, NotificacaoCobranca,
 )
 
 
@@ -55,3 +55,11 @@ class ContaReceberAdmin(admin.ModelAdmin):
     search_fields = ('contrato__numero', 'cliente__nome')
     date_hierarchy = 'data_vencimento'
     readonly_fields = ('valor_saldo', 'vencida', 'dias_em_atraso', 'criado_em', 'atualizado_em')
+
+
+@admin.register(NotificacaoCobranca)
+class NotificacaoCobrancaAdmin(admin.ModelAdmin):
+    list_display = ('parcela', 'canal', 'etapa', 'valor', 'enviado_em', 'enviado_por')
+    list_filter = ('canal', 'etapa')
+    search_fields = ('parcela__contrato__numero', 'parcela__contrato__cliente__nome')
+    list_select_related = ('parcela__contrato', 'enviado_por')

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+{% load core_tags %}<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -255,7 +255,7 @@
         {{ contrato.total_dias|default:"&mdash;" }}<span class="cond-sub">dia{{ contrato.total_dias|pluralize:"s" }}</span>
       </td>
       <td class="cond-td">
-        R$&nbsp;{{ contrato.diaria }}<span class="cond-sub">por dia</span>
+        R$&nbsp;{{ contrato.diaria }}<span class="cond-sub">por dia</span>{% if contrato.usa_pacote %}<span class="cond-sub">Cobran&ccedil;a {{ contrato.get_forma_cobranca_display|lower }}: R$&nbsp;{{ contrato.valor_pacote }} por {% if contrato.forma_cobranca == 'mensal' %}m&ecirc;s{% else %}semana{% endif %} fechado(a)</span>{% else %}<span class="cond-sub">Cobran&ccedil;a {{ contrato.get_forma_cobranca_display|lower }}</span>{% endif %}
       </td>
     </tr>
   </tbody>
@@ -342,9 +342,10 @@
 <div class="sec-label">Resumo Financeiro</div>
 
 <table class="fin-tbl">
+  {% if contrato.situacao == 'aberto' %}
   <tr>
-    <td class="fin-k">Loca&ccedil;&atilde;o &mdash; {{ contrato.total_dias|default:"&mdash;" }} dias &times; R$&nbsp;{{ contrato.diaria }}</td>
-    <td class="fin-v">R$&nbsp;{{ contrato.total_locacao|floatformat:2 }}</td>
+    <td class="fin-k">Loca&ccedil;&atilde;o &mdash; {{ contrato.dias_contratados }} dia{{ contrato.dias_contratados|pluralize:"s" }}{% if contrato.usa_pacote %} (pacote {{ contrato.get_forma_cobranca_display|lower }} de R$&nbsp;{{ contrato.valor_pacote }}; dias soltos a R$&nbsp;{{ contrato.diaria }}){% else %} &times; R$&nbsp;{{ contrato.diaria }}{% endif %}</td>
+    <td class="fin-v">R$&nbsp;{{ contrato.valor_locacao_base|floatformat:2 }}</td>
   </tr>
   {% if contrato.total_adicionais %}
   <tr>
@@ -352,29 +353,37 @@
     <td class="fin-v">R$&nbsp;{{ contrato.total_adicionais|floatformat:2 }}</td>
   </tr>
   {% endif %}
-  {% if contrato.km_excedente > 0 %}
+  {% if contrato.total_avarias %}
   <tr>
-    <td class="fin-k">KM excedente ({{ contrato.km_excedente }} km)</td>
-    <td class="fin-v">R$&nbsp;{{ contrato.valor_km_excedente_total|floatformat:2 }}</td>
+    <td class="fin-k">Avarias cobradas</td>
+    <td class="fin-v">R$&nbsp;{{ contrato.total_avarias|floatformat:2 }}</td>
   </tr>
   {% endif %}
-  {% if contrato.valor_dias_extras %}
+  {% else %}
+  {% for rotulo, valor in contrato.composicao_financeira %}
   <tr>
-    <td class="fin-k">Dias extras ({{ contrato.dias_extras }} dia{{ contrato.dias_extras|pluralize:"s" }})</td>
-    <td class="fin-v">R$&nbsp;{{ contrato.valor_dias_extras|floatformat:2 }}</td>
+    <td class="fin-k">{{ rotulo }}</td>
+    <td class="fin-v">{{ valor|brl }}</td>
   </tr>
+  {% endfor %}
   {% endif %}
   <tr>
     <td class="fin-sep" colspan="2"><div style="border-top:1pt solid #e5e7eb; margin:6pt 0 0 0; height:0">&nbsp;</div></td>
   </tr>
   <tr>
-    <td class="fin-big-k">Total da Loca&ccedil;&atilde;o</td>
+    <td class="fin-big-k">Total da Loca&ccedil;&atilde;o{% if contrato.situacao == 'aberto' %} (estimado){% endif %}</td>
     <td class="fin-big-v">R$&nbsp;{{ contrato.total_geral|floatformat:2 }}</td>
   </tr>
   {% if contrato.total_pago %}
   <tr>
     <td class="fin-paid-k">Valor j&aacute; pago</td>
     <td class="fin-paid-v">R$&nbsp;{{ contrato.total_pago|floatformat:2 }}</td>
+  </tr>
+  {% endif %}
+  {% if contrato.situacao != 'aberto' and contrato.total_pago %}
+  <tr>
+    <td class="fin-paid-k">Saldo a pagar</td>
+    <td class="fin-paid-v">R$&nbsp;{{ contrato.saldo_devedor|floatformat:2 }}</td>
   </tr>
   {% endif %}
 </table>

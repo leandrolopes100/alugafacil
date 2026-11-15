@@ -35,6 +35,39 @@
       <i class="bi bi-file-earmark-plus me-1"></i>Novo Contrato
     </a>
     {% endif %}
+    {% if veiculo.proximas_situacoes %}
+    <div class="dropdown">
+      <button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-arrow-repeat me-1"></i>Mudar situação
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        {% for situacao, rotulo in veiculo.proximas_situacoes %}
+        <li>
+          <form method="post" action="{% url 'frota:situacao' veiculo.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="situacao" value="{{ situacao }}">
+            {% if situacao == 'disponivel' %}
+            <button type="button" class="dropdown-item"
+                    onclick="confirmarAcao(this, 'Marcar {{ veiculo.placa }} como disponível?', 'O veículo volta a aparecer para novos contratos e reservas.', 'success')">
+              <i class="bi bi-check-circle me-2 text-success"></i>Disponível
+            </button>
+            {% elif situacao == 'manutencao' %}
+            <button type="button" class="dropdown-item"
+                    onclick="confirmarAcao(this, 'Colocar {{ veiculo.placa }} em manutenção?', 'O veículo fica indisponível para contratos. Para registrar o serviço e o custo, prefira abrir uma OS em Manutenção.', 'warning')">
+              <i class="bi bi-tools me-2 text-danger"></i>Em manutenção
+            </button>
+            {% else %}
+            <button type="button" class="dropdown-item"
+                    onclick="confirmarAcao(this, 'Inativar {{ veiculo.placa }}?', 'O veículo sai da frota ativa: não aparece para contratos nem entra na taxa de ocupação. Pode ser reativado depois.', 'danger')">
+              <i class="bi bi-slash-circle me-2 text-secondary"></i>{{ rotulo }}
+            </button>
+            {% endif %}
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
     <a href="{% url 'frota:editar' veiculo.pk %}" class="btn btn-primary btn-sm">
       <i class="bi bi-pencil me-1"></i>Editar
     </a>
@@ -48,6 +81,13 @@
     {% endif %}
   </div>
 </div>
+
+{% if bloqueio_situacao %}
+<div class="alert alert-info small d-flex gap-2 align-items-start">
+  <i class="bi bi-info-circle flex-shrink-0 mt-1"></i>
+  <div>{{ bloqueio_situacao }}</div>
+</div>
+{% endif %}
 
 <div class="row g-4">
 

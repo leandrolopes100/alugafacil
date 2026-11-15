@@ -1,0 +1,49 @@
+===== MENSAGEM 1 — PRIMEIRO CONTATO (curta) =====
+
+Olá, [NOME]! Tudo bem? 👋
+
+Sou o Leandro, da *Lopes | Sistemas*. Desenvolvi o *Aluga Fácil*, um sistema para locadoras que alugam carro por semana para motoristas de aplicativo e entregadores.
+
+Ele resolve o que mais dá dor de cabeça no dia a dia:
+✅ Cobrança semanal organizada, sem caderno nem planilha
+✅ Link de Pix por parcela, já com multa e juros calculados
+✅ Caução abatendo a dívida na devolução
+✅ Multas ligadas ao contrato pela data da infração
+
+Posso te mandar uma apresentação rápida de como funciona?
+
+
+===== MENSAGEM 2 — APRESENTAÇÃO (enviar junto com o PDF) =====
+
+Aqui está a apresentação do *Aluga Fácil* 📄
+
+Em resumo, o que muda na rotina da locadora:
+
+📅 *Cobrança que não esquece ninguém*
+As parcelas semanais são geradas no check-out. A agenda mostra quem cobrar hoje e a mensagem de cobrança já sai pronta no WhatsApp, com o link de pagamento.
+
+💳 *Pix na mão do motorista*
+Cada parcela tem um link com QR Code e Pix copia e cola. Se atrasou, o valor já vem com multa e juros.
+
+🚗 *Devolução sem discussão*
+Km excedente, combustível e dias extras são calculados na hora, com tolerância de atraso que você define.
+
+🛡️ *Caução que trabalha por você*
+Na devolução, o caução abate parcelas vencidas, avarias e multas. O que sobra é devolvido e fica registrado no caixa.
+
+📊 *Financeiro em dia*
+Contas a receber e a pagar, fluxo de caixa, DRE e relatórios de inadimplência.
+
+🔒 *Controle*
+Cada funcionário com o seu acesso. Estorno e desconto só com motivo registrado.
+
+Os contratos que você já tem rodando entram no sistema com o que já foi pago, sem parar a operação.
+
+Quer agendar uma demonstração de 20 minutos com os carros e os preços da sua locadora? 📲
+
+
+===== MENSAGEM 3 — LEMBRETE (se não responder em 2 ou 3 dias) =====
+
+Oi, [NOME]! Conseguiu dar uma olhada na apresentação do *Aluga Fácil*?
+
+Se ajudar, te mostro em 20 minutos como ficaria a cobrança semanal da sua frota no sistema. Qual dia é melhor para você?

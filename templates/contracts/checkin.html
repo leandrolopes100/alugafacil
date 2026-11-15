@@ -39,11 +39,33 @@
 <div class="row">
   <div class="col-lg-7">
 
+    <div class="alert alert-secondary d-flex gap-2 mb-4" style="font-size:13px">
+      <i class="bi bi-hourglass-split"></i>
+      <span>
+        <strong>Tolerância de devolução: {{ tolerancia_minutos }} min.</strong>
+        Devolução prevista em {{ contrato.data_devolucao_prevista|date:"d/m/Y H:i" }}.
+        {% if limite_sem_extra %}Sem diária extra até <strong>{{ limite_sem_extra|date:"d/m/Y H:i" }}</strong>;{% endif %}
+        depois disso, cada dia iniciado além da tolerância cobra 1 diária extra de {{ contrato.diaria_com_adicionais|brl }}.
+      </span>
+    </div>
+    <div id="avisoDiariaExtra" class="alert alert-warning d-none gap-2 mb-4" style="font-size:13px">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <span id="avisoDiariaExtraTexto"></span>
+    </div>
+
+    <div id="avisoFuturas" class="alert alert-info {% if parcelas_futuras %}d-flex{% else %}d-none{% endif %} gap-2 mb-4" style="font-size:13px">
+      <i class="bi bi-info-circle-fill"></i>
+      <span id="avisoFuturasTexto">
+        {{ parcelas_futuras|length }} parcela(s) de períodos ainda não usados serão cancelada(s) no check-in.
+        Semanas já começadas continuam devidas.
+      </span>
+    </div>
+
     {% if parcelas_abertas %}
     <div class="card mb-4" style="border-left:4px solid #b3261e">
       <div class="card-header" style="background:#fceceb; color:#6b1712">
         <i class="bi bi-exclamation-circle-fill me-2"></i>
-        Parcelas em aberto — check-in bloqueado
+        Parcelas em aberto até {{ data_corte|date:"d/m/Y" }} — continuam em cobrança após a devolução
       </div>
       <div class="card-body p-0">
         <table class="table table-sm mb-0">
@@ -61,12 +83,12 @@
             <tr>
               <td class="ps-3 text-mono fw-bold" style="font-size:13px">{{ p.numero }}</td>
               <td style="font-size:13px">{{ p.get_tipo_display }}</td>
-              <td style="font-size:13px; {% if p.situacao == 'em_atraso' %}color:#b3261e; font-weight:600{% else %}color:#64748b{% endif %}">
+              <td style="font-size:13px; {% if p.em_atraso %}color:#b3261e; font-weight:600{% else %}color:#64748b{% endif %}">
                 {{ p.data_vencimento|date:"d/m/Y" }}
               </td>
               <td class="text-end pe-3 fw-bold" style="font-size:13px">{{ p.valor|brl }}</td>
               <td>
-                {% if p.situacao == 'em_atraso' %}
+                {% if p.em_atraso %}
                 <span class="status-badge status-danger">Em atraso</span>
                 {% else %}
                 <span class="status-badge status-warning">Pendente</span>
@@ -78,8 +100,9 @@
         </table>
       </div>
       <div class="card-footer" style="background:#fceceb; font-size:13px; color:#7f1d1d">
-        <i class="bi bi-lock-fill me-1"></i>
-        Quite todas as parcelas acima antes de realizar o check-in.
+        <i class="bi bi-info-circle-fill me-1"></i>
+        O check-in pode ser feito. Estas parcelas seguem na agenda de cobrança e, se houver caução,
+        ele abate a dívida no encerramento.
         <a href="{% url 'contratos:detalhe' contrato.pk %}" class="ms-2 fw-semibold" style="color:#8a1f18">
           Ir para o contrato <i class="bi bi-arrow-right ms-1"></i>
         </a>
@@ -126,6 +149,30 @@
               <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.combustivel_devolucao.errors.0 }}</div>
               {% endif %}
             </div>
+            <div id="blocoMotivo" class="col-12 {% if not parcelas_futuras and not form.motivo_encerramento.errors %}d-none{% endif %}">
+              <div class="p-3 rounded" style="background:#fff4e0; border:1px solid #f0c987">
+                <div class="fw-semibold small mb-2" style="color:#7a4b00">
+                  <i class="bi bi-calendar-x me-1"></i>Devolução antes do prazo — informe o motivo
+                </div>
+                <div class="row g-2">
+                  <div class="col-md-5 {% if form.motivo_encerramento.errors %}field-has-error{% endif %}">
+                    <label class="form-label small mb-1" for="id_motivo_encerramento">Motivo *</label>
+                    {{ form.motivo_encerramento }}
+                    {% if form.motivo_encerramento.errors %}
+                    <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.motivo_encerramento.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                  <div class="col-md-7 {% if form.motivo_encerramento_detalhe.errors %}field-has-error{% endif %}">
+                    <label class="form-label small mb-1" for="id_motivo_encerramento_detalhe">Detalhe</label>
+                    {{ form.motivo_encerramento_detalhe }}
+                    {% if form.motivo_encerramento_detalhe.errors %}
+                    <div class="field-err-msg"><i class="bi bi-exclamation-circle-fill"></i>{{ form.motivo_encerramento_detalhe.errors.0 }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="small mt-2" style="color:#7a4b00">Fica registrado no histórico do contrato, com o valor cancelado.</div>
+              </div>
+            </div>
             <div class="col-12">
               <label class="form-label fw-semibold small">Observações de Devolução</label>
               {{ form.obs_devolucao }}
@@ -146,18 +193,59 @@
 
       <div class="d-flex gap-2 justify-content-end">
         <a href="{% url 'contratos:detalhe' contrato.pk %}" class="btn btn-outline-secondary">Cancelar</a>
-        {% if parcelas_abertas %}
-        <button type="submit" class="btn btn-success" disabled title="Quite as parcelas em aberto para liberar o check-in">
-          <i class="bi bi-lock-fill me-1"></i>Check-in Bloqueado
-        </button>
-        {% else %}
         <button type="submit" class="btn btn-success">
           <i class="bi bi-box-arrow-in-left me-1"></i>Confirmar Devolução
         </button>
-        {% endif %}
       </div>
     </form>
   </div>
 </div>
 
+{% endblock %}
+
+{% block extra_scripts %}
+{{ regra_devolucao|json_script:"regra-devolucao" }}
+<script>
+(function () {
+  const regra = JSON.parse(document.getElementById('regra-devolucao').textContent);
+  const campo = document.getElementById('id_data_devolucao_real');
+  const aviso = document.getElementById('avisoDiariaExtra');
+  const texto = document.getElementById('avisoDiariaExtraTexto');
+  if (!campo || !aviso) return;
+  const saida = new Date(regra.saida);
+  const brl = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const avisoFuturas = document.getElementById('avisoFuturas');
+  const textoFuturas = document.getElementById('avisoFuturasTexto');
+  const blocoMotivo = document.getElementById('blocoMotivo');
+  function exibir(el, sim, classe) { el.classList.toggle('d-none', !sim); if (classe) el.classList.toggle(classe, sim); }
+  function atualizarFuturas(dias) {
+    const futuras = regra.parcelas_futuras.filter(p => p.dia_inicio >= dias);
+    const valor = futuras.reduce((s, p) => s + p.valor, 0);
+    if (futuras.length) {
+      textoFuturas.textContent = futuras.length + ' parcela(s) de períodos ainda não usados ('
+        + futuras.map(p => p.numero).join(', ') + ') = ' + brl(valor)
+        + ' serão cancelada(s) no check-in. Semanas já começadas continuam devidas.';
+    }
+    exibir(avisoFuturas, futuras.length > 0, 'd-flex');
+    exibir(blocoMotivo, futuras.length > 0 || blocoMotivo.querySelector('.field-err-msg') !== null);
+  }
+  function atualizar() {
+    const devolucao = new Date(campo.value);
+    if (isNaN(devolucao.getTime())) { aviso.classList.add('d-none'); aviso.classList.remove('d-flex'); return; }
+    const segundos = Math.max((devolucao - saida) / 1000, 0);
+    let dias = Math.floor(segundos / 86400);
+    if (segundos - dias * 86400 > regra.tolerancia_minutos * 60) dias += 1;
+    dias = Math.max(dias, 1);
+    atualizarFuturas(dias);
+    const extras = Math.max(dias - regra.dias_contratados, 0);
+    if (!extras) { aviso.classList.add('d-none'); aviso.classList.remove('d-flex'); return; }
+    texto.textContent = 'Esta devolução passa da tolerância de ' + regra.tolerancia_minutos + ' min: '
+      + extras + ' diária(s) extra(s) = ' + brl(extras * regra.diaria) + ' entrarão no acerto final.';
+    aviso.classList.remove('d-none'); aviso.classList.add('d-flex');
+  }
+  campo.addEventListener('input', atualizar);
+  campo.addEventListener('change', atualizar);
+  atualizar();
+})();
+</script>
 {% endblock %}

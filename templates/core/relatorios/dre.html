@@ -3,7 +3,7 @@
 {% block titulo %}DRE Financeiro{% endblock %}
 {% block titulo_breadcrumb %}DRE{% endblock %}
 {% block titulo_relatorio %}DRE — Demonstração do Resultado{% endblock %}
-{% block descricao %}{{ mes_nome }}{% if mes_sel %} de{% endif %} {{ ano_sel }} · Margem operacional: <strong>{{ margem }}%</strong>{% endblock %}
+{% block descricao %}{{ mes_nome }}{% if mes_sel %} de{% endif %} {{ ano_sel }} · Regime de caixa: o que foi recebido e pago no período, sem caução · Margem operacional: <strong>{{ margem }}%</strong>{% endblock %}
 
 {% block filtro_periodo %}
 <form method="get" class="periodo-form">
@@ -41,12 +41,6 @@
           <span style="font-weight:600">{{ item.total|brl }}</span>
         </div>
         {% endfor %}
-        {% if multas_receita %}
-        <div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:5px">
-          <span style="color:#64748b">Multas cobradas</span>
-          <span style="font-weight:600">{{ multas_receita|brl }}</span>
-        </div>
-        {% endif %}
       </div>
     </div>
   </div>

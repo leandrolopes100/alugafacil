@@ -29,6 +29,12 @@ class OrdemManutencaoForm(forms.ModelForm):
         cleaned = super().clean()
         if cleaned.get('situacao') == 'concluida' and not cleaned.get('km_na_manutencao'):
             self.add_error('km_na_manutencao', 'KM na manutenção é obrigatório ao concluir a OS.')
+        if cleaned.get('veiculo') and cleaned.get('situacao'):
+            erro = OrdemManutencao(
+                veiculo=cleaned['veiculo'], situacao=cleaned['situacao'],
+            ).erro_ao_iniciar()
+            if erro:
+                self.add_error('situacao', erro)
         return cleaned
 
 

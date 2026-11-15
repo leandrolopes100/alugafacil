@@ -36,7 +36,13 @@
                   {{ avaria.get_situacao_display }}
                 </span>
               </td>
-              <td class="text-end">
+              <td class="text-end text-nowrap">
+                {% if avaria.pode_ajustar %}
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                  onclick="abrirAjusteAvaria({{ avaria.pk }}, '{{ avaria.valor_cobrado|stringformat:'.2f' }}', '{{ avaria.situacao }}', '{{ avaria.descricao|truncatechars:40|escapejs }}')">
+                  <i class="bi bi-pencil me-1"></i>Editar
+                </button>
+                {% endif %}
                 {% if avaria.situacao == 'cobrada' and avaria.valor_cobrado %}
                 <button class="btn btn-sm btn-outline-success"
                   onclick="abrirPagamentoAvaria({{ avaria.pk }}, '{{ avaria.valor_cobrado|floatformat:2 }}', '{{ avaria.descricao|truncatechars:40|escapejs }}')">
@@ -51,6 +57,43 @@
       </div>
     </div>
     {% endif %}
+
+<!-- Modal Ajuste de Avaria -->
+<div class="modal fade" id="modalAjustarAvaria" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:400px">
+    <div class="modal-content" style="border-radius:12px; border:none; box-shadow:0 20px 40px rgba(0,0,0,.15)">
+      <div class="modal-header border-0 pt-4 px-4 pb-0">
+        <div>
+          <h5 class="modal-title fw-bold mb-0" style="font-size:16px">Editar Avaria</h5>
+          <p class="text-muted mb-0" style="font-size:12.5px" id="ajusteAvariaLabel">—</p>
+        </div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formAjustarAvaria" method="post">
+        {% csrf_token %}
+        <div class="modal-body px-4 py-3">
+          <div class="mb-3">
+            <label class="form-label">Valor cobrado (R$)</label>
+            <input type="number" name="valor_cobrado" class="form-control" step="0.01" min="0" required>
+          </div>
+          <div>
+            <label class="form-label">Situação</label>
+            <select name="situacao" class="form-select" required>
+              {% for valor, rotulo in situacoes_ajuste %}
+              <option value="{{ valor }}">{{ rotulo }}</option>
+              {% endfor %}
+            </select>
+            <div class="form-text">Para registrar o pagamento, use "Marcar Pago". A mudança fica no histórico do contrato.</div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 pb-4 px-4 gap-2">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
 <!-- Modal Pagamento de Avaria -->
 <div class="modal fade" id="modalPagarAvaria" tabindex="-1" aria-hidden="true">
@@ -143,6 +186,16 @@
 {% block extra_scripts %}
 <script>
 const _avariaUrl = "{% url 'contratos:avaria-pagar' pk=contrato.pk avaria_pk=0 %}";
+const _ajusteUrl = "{% url 'contratos:avaria-ajustar' pk=contrato.pk avaria_pk=0 %}";
+function abrirAjusteAvaria(avariaPk, valor, situacao, desc) {
+  const form = document.getElementById('formAjustarAvaria');
+  document.getElementById('ajusteAvariaLabel').textContent = desc;
+  form.action = _ajusteUrl.replace('/0/', '/' + avariaPk + '/');
+  form.querySelector('input[name="valor_cobrado"]').value = valor;
+  form.querySelector('select[name="situacao"]').value = situacao;
+  new bootstrap.Modal(document.getElementById('modalAjustarAvaria')).show();
+}
+
 function abrirPagamentoAvaria(avariaPk, valor, desc) {
   document.getElementById('avariaLabel').textContent = desc;
   document.getElementById('avariaValor').textContent = 'R$ ' + valor;

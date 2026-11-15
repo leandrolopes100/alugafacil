@@ -101,10 +101,43 @@
       </div>
       <div class="kpi-value" style="font-size:22px; color:#d97706">{{ kpi_total_pendente|brl }}</div>
       <div class="kpi-label">Total pendente</div>
-      <div class="kpi-sub">todas as parcelas abertas</div>
+      <div class="kpi-sub">parcelas, despesas avulsas e repasses</div>
     </div>
   </div>
 </div>
+
+{% if avulsas_pendentes or repasses_pendentes %}
+<div class="card mb-4">
+  <div class="card-header"><i class="bi bi-receipt-cutoff me-2"></i>Despesas avulsas e repasses a investidores em aberto</div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr><th>Tipo</th><th>Descrição</th><th>Vencimento</th><th class="text-end">Valor</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for d in avulsas_pendentes %}
+        <tr>
+          <td><span class="status-badge status-neutral">Despesa avulsa</span></td>
+          <td style="font-size:13px">{{ d.descricao }}{% if d.veiculo %} <span class="text-muted text-mono small">{{ d.veiculo.placa }}</span>{% endif %}</td>
+          <td style="font-size:12.5px; {% if d.data_competencia < hoje %}color:var(--danger); font-weight:600{% else %}color:#64748b{% endif %}">{{ d.data_competencia|date:"d/m/Y" }}</td>
+          <td class="text-end fw-semibold">{{ d.valor|brl }}</td>
+          <td class="text-end"><a href="{% url 'financeiro:despesa-detalhe' d.pk %}" class="btn btn-outline-primary btn-sm">Pagar</a></td>
+        </tr>
+        {% endfor %}
+        {% for r in repasses_pendentes %}
+        <tr>
+          <td><span class="status-badge status-primary">Repasse investidor</span></td>
+          <td style="font-size:13px">{{ r.veiculo_investidor.investidor.nome_exibicao }} <span class="text-muted text-mono small">{{ r.veiculo_investidor.veiculo.placa }}</span> · {{ r.semana_inicio|date:"d/m" }} a {{ r.semana_fim|date:"d/m" }}</td>
+          <td style="font-size:12.5px; {% if r.em_atraso %}color:var(--danger); font-weight:600{% else %}color:#64748b{% endif %}">{{ r.data_vencimento|date:"d/m/Y" }}</td>
+          <td class="text-end fw-semibold">{{ r.valor|brl }}</td>
+          <td class="text-end"><a href="{% url 'investidores:pagar-cobranca' r.pk %}" class="btn btn-outline-primary btn-sm">Pagar</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
 
 <!-- ── Barra flutuante de seleção ─────────────────────────────────────────── -->
 <div x-show="selecionadas > 0" x-cloak

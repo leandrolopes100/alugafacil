@@ -17,6 +17,15 @@
 
 {% block conteudo_relatorio %}
 
+<div class="alert-inline mb-3" style="display:flex; align-items:flex-start; gap:8px; padding:10px 14px; background:var(--info-bg); border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12.5px; color:var(--info-text)">
+  <i class="bi bi-info-circle" style="margin-top:1px"></i>
+  <span>
+    Este relatório considera apenas as despesas lançadas em um veículo específico.
+    Custos fixos da operação — folha, aluguel, seguro e impostos — entram no
+    <a href="{% url 'core:relatorio-dre' %}?ano={{ ano_sel }}&mes={{ mes_sel }}" class="text-decoration-underline">DRE Financeiro</a>.
+  </span>
+</div>
+
 <!-- KPIs -->
 <div class="row g-3 mb-4">
   <div class="col-6 col-lg-3">
@@ -54,19 +63,19 @@
       <div class="kpi-icon" style="background:var(--danger-bg); color:var(--danger)">
         <i class="bi bi-arrow-down-circle-fill"></i>
       </div>
-      <div class="kpi-value" style="font-size:20px; color:var(--danger)">{{ custo_total|brl }}</div>
-      <div class="kpi-label">Custos (por veículo)</div>
-      <div class="kpi-sub">despesas vinculadas</div>
+      <div class="kpi-value" style="font-size:20px; color:var(--danger)">{{ custo_direto_total|brl }}</div>
+      <div class="kpi-label">Custos Diretos</div>
+      <div class="kpi-sub">despesas lançadas no veículo</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
     <div class="kpi-card">
-      <div class="kpi-icon" style="background:{% if lucro_total >= 0 %}var(--success-bg){% else %}var(--danger-bg){% endif %}; color:{% if lucro_total >= 0 %}var(--success){% else %}var(--danger){% endif %}">
-        <i class="bi bi-{% if lucro_total >= 0 %}graph-up-arrow{% else %}graph-down-arrow{% endif %}"></i>
+      <div class="kpi-icon" style="background:{% if resultado_direto_total >= 0 %}var(--success-bg){% else %}var(--danger-bg){% endif %}; color:{% if resultado_direto_total >= 0 %}var(--success){% else %}var(--danger){% endif %}">
+        <i class="bi bi-{% if resultado_direto_total >= 0 %}graph-up-arrow{% else %}graph-down-arrow{% endif %}"></i>
       </div>
-      <div class="kpi-value" style="font-size:20px; color:{% if lucro_total >= 0 %}var(--success){% else %}var(--danger){% endif %}">{{ lucro_total|brl }}</div>
-      <div class="kpi-label">Lucro Líquido</div>
-      <div class="kpi-sub">receita menos custos</div>
+      <div class="kpi-value" style="font-size:20px; color:{% if resultado_direto_total >= 0 %}var(--success){% else %}var(--danger){% endif %}">{{ resultado_direto_total|brl }}</div>
+      <div class="kpi-label">Resultado Direto</div>
+      <div class="kpi-sub">sem os custos fixos da operação</div>
     </div>
   </div>
 </div>
@@ -149,8 +158,8 @@
           <th class="text-center">Ocupação</th>
           <th class="text-end">Ticket Médio</th>
           <th class="text-end">Receita</th>
-          <th class="text-end">Custo</th>
-          <th class="text-end">Lucro</th>
+          <th class="text-end">Custo Direto</th>
+          <th class="text-end">Resultado Direto</th>
         </tr>
       </thead>
       <tbody>
@@ -182,11 +191,11 @@
           <td class="text-end" style="font-weight:600; {% if d.receita > 0 %}color:#1e7a4c{% else %}color:#94a3b8{% endif %}">
             {{ d.receita|brl }}
           </td>
-          <td class="text-end" style="font-size:12.5px; {% if d.custo > 0 %}color:#b3261e{% else %}color:#94a3b8{% endif %}">
-            {{ d.custo|brl }}
+          <td class="text-end" style="font-size:12.5px; {% if d.custo_direto > 0 %}color:#b3261e{% else %}color:#94a3b8{% endif %}">
+            {{ d.custo_direto|brl }}
           </td>
-          <td class="text-end" style="font-weight:600; {% if d.lucro >= 0 %}color:#1e7a4c{% else %}color:#b3261e{% endif %}">
-            {{ d.lucro|brl }}
+          <td class="text-end" style="font-weight:600; {% if d.resultado_direto >= 0 %}color:#1e7a4c{% else %}color:#b3261e{% endif %}">
+            {{ d.resultado_direto|brl }}
           </td>
         </tr>
         {% empty %}

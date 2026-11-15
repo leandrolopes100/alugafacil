@@ -4,12 +4,14 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.db.models import Count, Q, Sum
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DetailView, ListView, UpdateView, View
 
 from apps.core.mixins import GrupoRequiredMixin
+from apps.financeiro.models import ConfiguracaoLocadora
 from .forms import (
     GerarCobrancaForm,
     GerarCobrancaLoteForm,
@@ -20,8 +22,15 @@ from .forms import (
 from .models import CobrancaGestao, Investidor, VeiculoInvestidor
 
 
+class ModuloInvestidoresAtivoMixin:
+    def dispatch(self, request, *args, **kwargs):
+        if not ConfiguracaoLocadora.modulo_investidores_ativo():
+            raise Http404('Módulo de investidores desligado.')
+        return super().dispatch(request, *args, **kwargs)
+
+
 def _semana_anterior():
-    hoje = timezone.now().date()
+    hoje = timezone.localdate()
     # weekday(): Mon=0 ... Sun=6 → início da semana atual sempre na segunda
     inicio_semana_atual = hoje - timedelta(days=hoje.weekday())
     inicio = inicio_semana_atual - timedelta(weeks=1)
@@ -43,7 +52,7 @@ def _data_vencimento_para(vinculo, semana_fim):
 
 # ─── Investidores ─────────────────────────────────────────────────────────────
 
-class InvestidorListView(GrupoRequiredMixin, ListView):
+class InvestidorListView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, ListView):
     grupos_permitidos = ['admin_locadora', 'financeiro']
     model = Investidor
     template_name = 'investidores/lista.html'
@@ -79,7 +88,7 @@ class InvestidorListView(GrupoRequiredMixin, ListView):
         return ctx
 
 
-class InvestidorCreateView(GrupoRequiredMixin, CreateView):
+class InvestidorCreateView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, CreateView):
     grupos_permitidos = ['admin_locadora', 'financeiro']
     model = Investidor
     form_class = InvestidorForm
@@ -99,7 +108,7 @@ class InvestidorCreateView(GrupoRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class InvestidorDetalheView(GrupoRequiredMixin, DetailView):
+class InvestidorDetalheView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, DetailView):
     grupos_permitidos = ['admin_locadora', 'financeiro']
     model = Investidor
     template_name = 'investidores/detalhe.html'
@@ -108,8 +117,7 @@ class InvestidorDetalheView(GrupoRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         investidor = self.object
-        hoje = timezone.now()
-        hoje_date = hoje.date()
+        hoje = timezone.localdate()
 
         vinculos_ativos = list(
             investidor.veiculos.filter(ativo=True)
@@ -122,7 +130,7 @@ class InvestidorDetalheView(GrupoRequiredMixin, DetailView):
         ctx['vinculos_ativos'] = vinculos_ativos
 
         # Calcula quais vínculos não têm cobrança gerada para a semana anterior
-        inicio_semana_atual = hoje_date - timedelta(days=hoje_date.weekday())
+        inicio_semana_atual = hoje - timedelta(days=hoje.weekday())
         semana_anterior_inicio = inicio_semana_atual - timedelta(weeks=1)
         ids_com_cobranca_semana = set(
             CobrancaGestao.objects.filter(
@@ -163,7 +171,7 @@ class InvestidorDetalheView(GrupoRequiredMixin, DetailView):
         return ctx
 
 
-class InvestidorEditarView(GrupoRequiredMixin, UpdateView):
+class InvestidorEditarView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, UpdateView):
     grupos_permitidos = ['admin_locadora', 'financeiro']
     model = Investidor
     form_class = InvestidorForm
@@ -185,7 +193,7 @@ class InvestidorEditarView(GrupoRequiredMixin, UpdateView):
 
 # ─── Vínculos ─────────────────────────────────────────────────────────────────
 
-class VincularVeiculoView(GrupoRequiredMixin, View):
+class VincularVeiculoView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, View):
     grupos_permitidos = ['admin_locadora', 'financeiro']
     template_name = 'investidores/vincular_veiculo.html'
 
@@ -194,7 +202,7 @@ class VincularVeiculoView(GrupoRequiredMixin, View):
 
     def get(self, request, pk):
         investidor = self._investidor(pk)
-        form = VincularVeiculoForm(initial={'data_inicio': timezone.now().date()})
+        form = VincularVeiculoForm(initial={'data_inicio': timezone.localdate()})
         return render(request, self.template_name, {'investidor': investidor, 'form': form})
 
     def post(self, request, pk):
@@ -212,13 +220,13 @@ class VincularVeiculoView(GrupoRequiredMixin, View):
         return render(request, self.template_name, {'investidor': investidor, 'form': form})
 
 
-class DesvincularVeiculoView(GrupoRequiredMixin, View):
+class DesvincularVeiculoView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, View):
     grupos_permitidos = ['admin_locadora', 'financeiro']
 
     def post(self, request, vi_pk):
         vinculo = get_object_or_404(VeiculoInvestidor, pk=vi_pk, ativo=True)
         vinculo.ativo = False
-        vinculo.data_fim = timezone.now().date()
+        vinculo.data_fim = timezone.localdate()
         vinculo.save(update_fields=['ativo', 'data_fim'])
         messages.success(request, f'Vínculo do veículo {vinculo.veiculo.placa} encerrado.')
         return redirect('investidores:detalhe', pk=vinculo.investidor_id)
@@ -226,7 +234,7 @@ class DesvincularVeiculoView(GrupoRequiredMixin, View):
 
 # ─── Cobranças ────────────────────────────────────────────────────────────────
 
-class CobrancaListView(GrupoRequiredMixin, ListView):
+class CobrancaListView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, ListView):
     grupos_permitidos = ['admin_locadora', 'financeiro']
     model = CobrancaGestao
     template_name = 'investidores/cobrancas.html'
@@ -248,7 +256,7 @@ class CobrancaListView(GrupoRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        hoje = timezone.now()
+        hoje = timezone.localdate()
         ctx['situacao_filtro'] = self.request.GET.get('situacao', '')
         ctx['investidor_filtro'] = self.request.GET.get('investidor', '')
         ctx['investidores'] = Investidor.objects.filter(situacao='ativo').order_by('nome')
@@ -267,7 +275,7 @@ class CobrancaListView(GrupoRequiredMixin, ListView):
         return ctx
 
 
-class GerarCobrancaView(GrupoRequiredMixin, View):
+class GerarCobrancaView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, View):
     grupos_permitidos = ['admin_locadora', 'financeiro']
     template_name = 'investidores/gerar_cobranca.html'
 
@@ -297,7 +305,7 @@ class GerarCobrancaView(GrupoRequiredMixin, View):
         return render(request, self.template_name, {'vinculo': vinculo, 'form': form})
 
 
-class GerarCobrancaLoteView(GrupoRequiredMixin, View):
+class GerarCobrancaLoteView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, View):
     grupos_permitidos = ['admin_locadora', 'financeiro']
     template_name = 'investidores/gerar_lote.html'
 
@@ -354,7 +362,7 @@ class GerarCobrancaLoteView(GrupoRequiredMixin, View):
         return redirect('investidores:cobrancas')
 
 
-class PagarCobrancaView(GrupoRequiredMixin, View):
+class PagarCobrancaView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, View):
     grupos_permitidos = ['admin_locadora', 'financeiro']
     template_name = 'investidores/pagar_cobranca.html'
 
@@ -363,7 +371,7 @@ class PagarCobrancaView(GrupoRequiredMixin, View):
 
     def get(self, request, pk):
         cobranca = self._cobranca(pk)
-        form = PagarCobrancaForm(initial={'data_pagamento': timezone.now().date()})
+        form = PagarCobrancaForm(initial={'data_pagamento': timezone.localdate()})
         return render(request, self.template_name, {'cobranca': cobranca, 'form': form})
 
     def post(self, request, pk):
@@ -380,7 +388,7 @@ class PagarCobrancaView(GrupoRequiredMixin, View):
         return render(request, self.template_name, {'cobranca': cobranca, 'form': form})
 
 
-class CancelarCobrancaView(GrupoRequiredMixin, View):
+class CancelarCobrancaView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, View):
     grupos_permitidos = ['admin_locadora', 'financeiro']
 
     def post(self, request, pk):

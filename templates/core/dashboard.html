@@ -129,7 +129,7 @@
       </div>
       <div class="kpi-value" style="font-size:20px; color:var(--danger)">{{ desp_pago|brl }}</div>
       <div class="kpi-label">Despesas Pagas</div>
-      <div class="kpi-sub">competência {% now "F Y" %}</div>
+      <div class="kpi-sub">pagas em {% now "F Y" %}</div>
     </a>
   </div>
   <div class="col-6 col-lg-3">
@@ -142,7 +142,7 @@
         {{ resultado_mes|brl }}
       </div>
       <div class="kpi-label">Resultado</div>
-      <div class="kpi-sub">receita − despesas pagas</div>
+      <div class="kpi-sub">regime de caixa · igual à DRE</div>
     </a>
   </div>
   <div class="col-6 col-lg-3">
@@ -236,6 +236,10 @@
               <div style="font-size:13.5px; font-weight:600; color:var(--text-primary)">{{ contrato.cliente.nome_exibicao }}</div>
               <div style="font-size:11.5px; color:var(--danger)">
                 <i class="bi bi-clock me-1"></i>Previsto: {{ contrato.data_devolucao_prevista|date:"d/m H:i" }}
+                {% if contrato.devolucao_vencida %}
+                &middot; {{ contrato.dias_devolucao_vencida }} dia{{ contrato.dias_devolucao_vencida|pluralize }} sem cobrança
+                (~{{ contrato.valor_sem_cobranca_estimado|brl }}) — prorrogue no contrato
+                {% endif %}
               </div>
             </div>
           </a>

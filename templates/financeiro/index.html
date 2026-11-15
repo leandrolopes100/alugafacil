@@ -159,7 +159,7 @@
           </thead>
           <tbody>
             {% for conta in ultimas_abertas %}
-            <tr {% if conta.vencida %}class="table-warning"{% endif %}>
+            <tr {% if conta.tem_atraso %}class="table-warning"{% endif %}>
               <td>
                 <a href="{% url 'financeiro:conta-receber-detalhe' conta.pk %}"
                    class="table-link text-mono">{{ conta.contrato.numero }}</a>
@@ -185,6 +185,8 @@
               <td>
                 {% if conta.vencida %}
                   <span class="status-badge status-danger">Vencido</span>
+                {% elif conta.tem_atraso %}
+                  <span class="status-badge status-danger">Em atraso</span>
                 {% elif conta.situacao == 'pago_parcial' %}
                   <span class="status-badge status-primary">Pago Parcialmente</span>
                 {% elif conta.situacao == 'pago' %}

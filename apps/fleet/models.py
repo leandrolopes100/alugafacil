@@ -52,19 +52,19 @@ class Veiculo(models.Model):
         ('gasolina', 'Gasolina'),
         ('etanol', 'Etanol'),
         ('diesel', 'Diesel'),
-        ('eletrico', 'Eletrico'),
-        ('hibrido', 'Hibrido'),
+        ('eletrico', 'Elétrico'),
+        ('hibrido', 'Híbrido'),
     ]
     TRANSMISSAO = [
         ('manual', 'Manual'),
-        ('automatico', 'Automatico'),
+        ('automatico', 'Automático'),
         ('cvt', 'CVT'),
     ]
     SITUACAO = [
-        ('disponivel', 'Disponivel'),
+        ('disponivel', 'Disponível'),
         ('reservado', 'Reservado'),
         ('em_uso', 'Em Uso'),
-        ('manutencao', 'Em Manutencao'),
+        ('manutencao', 'Em Manutenção'),
         ('inativo', 'Inativo'),
     ]
     COR_SITUACAO = {
@@ -83,7 +83,7 @@ class Veiculo(models.Model):
     ano_fabricacao = models.PositiveSmallIntegerField('Ano fabricacao')
     ano_modelo = models.PositiveSmallIntegerField('Ano modelo')
     cor = models.CharField('Cor', max_length=50)
-    combustivel = models.CharField('Combustivel', max_length=20, choices=COMBUSTIVEL, default='flex')
+    combustivel = models.CharField('Combustível', max_length=20, choices=COMBUSTIVEL, default='flex')
     transmissao = models.CharField('Transmissao', max_length=20, choices=TRANSMISSAO, default='manual')
     portas = models.PositiveSmallIntegerField('Portas', default=4)
     lugares = models.PositiveSmallIntegerField('Lugares', default=5)
@@ -121,6 +121,49 @@ class Veiculo(models.Model):
     @property
     def cor_situacao(self):
         return self.COR_SITUACAO.get(self.situacao, 'gray')
+
+    SITUACOES_MANUAIS = ('disponivel', 'manutencao', 'inativo')
+
+    def bloqueio_mudanca_situacao(self):
+        contrato = self.contratos.filter(situacao__in=['ativo', 'aguardando_devolucao']).first()
+        if self.situacao == 'em_uso' or contrato:
+            numero = f' no contrato {contrato.numero}' if contrato else ''
+            return (
+                f'O veículo está locado{numero}. A situação muda sozinha no check-in '
+                f'e no encerramento do contrato.'
+            )
+        if self.situacao == 'reservado':
+            return (
+                'O veículo está reservado para uma reserva ou contrato em aberto. '
+                'Cancele a reserva ou o contrato antes de mudar a situação.'
+            )
+        return None
+
+    def erro_ao_mudar_situacao(self, nova):
+        if nova not in self.SITUACOES_MANUAIS or nova == self.situacao:
+            return 'Mudança de situação não permitida.'
+        bloqueio = self.bloqueio_mudanca_situacao()
+        if bloqueio:
+            return bloqueio
+        if nova == 'disponivel':
+            ordem = self.manutencoes.filter(situacao='em_andamento').first()
+            if ordem:
+                return (
+                    f'A OS #{ordem.pk} está em andamento. Conclua ou cancele a OS '
+                    f'para o veículo voltar a ficar disponível.'
+                )
+        if nova == 'inativo':
+            contrato = self.contratos.filter(situacao='aberto').first()
+            if contrato:
+                return f'O contrato {contrato.numero} ainda está aberto para este veículo. Cancele-o antes de inativar.'
+        return None
+
+    @property
+    def proximas_situacoes(self):
+        if self.bloqueio_mudanca_situacao():
+            return []
+        rotulos = dict(self.SITUACAO)
+        return [(s, rotulos[s]) for s in self.SITUACOES_MANUAIS if s != self.situacao]
 
     @property
     def foto_principal(self):
@@ -195,23 +238,23 @@ class DocumentoVeiculo(models.Model):
     @property
     def vencido(self):
         if self.data_validade:
-            return self.data_validade < timezone.now().date()
+            return self.data_validade < timezone.localdate()
         return False
 
     @property
     def proximo_vencimento(self):
         if self.data_validade:
-            delta = self.data_validade - timezone.now().date()
+            delta = self.data_validade - timezone.localdate()
             return 0 <= delta.days <= self.dias_alerta
         return False
 
 
 class HistoricoKmVeiculo(models.Model):
     ORIGEM = [
-        ('contrato_saida', 'Saida de Contrato'),
-        ('contrato_devolucao', 'Devolucao de Contrato'),
-        ('manutencao', 'Manutencao'),
-        ('manual', 'Atualizacao Manual'),
+        ('contrato_saida', 'Saída de Contrato'),
+        ('contrato_devolucao', 'Devolução de Contrato'),
+        ('manutencao', 'Manutenção'),
+        ('manual', 'Atualização Manual'),
     ]
 
     veiculo = models.ForeignKey(

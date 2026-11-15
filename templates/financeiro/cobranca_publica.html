@@ -1,0 +1,140 @@
+{% load core_tags %}<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Pagamento{% if parcela %} — Parcela {{ parcela.numero }}{% endif %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    body { background: linear-gradient(135deg, #f0f2f5 0%, #e9ecef 100%); min-height: 100vh; }
+    .qr-pix svg { width: 100%; max-width: 240px; height: auto; }
+    .codigo-pix { font-size: 12px; word-break: break-all; resize: none; }
+  </style>
+</head>
+<body class="d-flex align-items-start justify-content-center p-3 py-4">
+
+<div class="w-100" style="max-width: 440px">
+
+  <div class="text-center mb-4">
+    <div class="d-inline-flex align-items-center justify-content-center bg-primary text-white rounded-3 mb-2" style="width:48px; height:48px">
+      <i class="bi bi-qr-code fs-4"></i>
+    </div>
+    <h1 class="h5 fw-bold mb-0">{{ config.pix_nome_recebedor|default:"Aluga Fácil" }}</h1>
+    <p class="text-muted small mb-0">Pagamento de locação</p>
+  </div>
+
+  {% if link_invalido %}
+  <div class="card shadow-sm border-0 rounded-3">
+    <div class="card-body text-center py-5">
+      <i class="bi bi-link-45deg text-secondary" style="font-size:42px"></i>
+      <p class="fw-semibold mt-2 mb-1">{{ link_invalido }}</p>
+      <p class="text-muted small mb-0">Peça um novo link de pagamento à locadora.</p>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
+
+    <div class="card-header bg-white border-bottom py-3">
+      <div class="text-muted small">Olá, {{ primeiro_nome }}</div>
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="fw-semibold">
+          {{ parcela.rotulo }}
+          <span class="text-muted fw-normal small">· {{ parcela.contrato.veiculo.placa }}</span>
+        </div>
+        {% if parcela.situacao == 'pago' %}
+        <span class="badge bg-success">Pago</span>
+        {% elif parcela.situacao == 'cancelada' %}
+        <span class="badge bg-secondary">Cancelada</span>
+        {% elif parcela.em_atraso %}
+        <span class="badge bg-danger">{{ parcela.dias_atraso }} dia{{ parcela.dias_atraso|pluralize }} em atraso</span>
+        {% else %}
+        <span class="badge bg-warning text-dark">Em aberto</span>
+        {% endif %}
+      </div>
+      <div class="text-muted small">Contrato {{ parcela.contrato.numero }} · vencimento {{ parcela.data_vencimento|date:"d/m/Y" }}</div>
+    </div>
+
+    <div class="card-body">
+      {% if parcela.situacao == 'pago' %}
+      <div class="text-center py-4">
+        <i class="bi bi-check-circle-fill text-success" style="font-size:48px"></i>
+        <p class="fw-semibold mt-2 mb-1">Parcela quitada</p>
+        <p class="text-muted small mb-0">Pagamento registrado em {{ parcela.data_pagamento|date:"d/m/Y" }}. Obrigado!</p>
+      </div>
+
+      {% elif parcela.situacao == 'cancelada' %}
+      <div class="text-center py-4">
+        <p class="fw-semibold mb-1">Esta cobrança foi cancelada</p>
+        <p class="text-muted small mb-0">Não é necessário pagar. Em caso de dúvida, fale com a locadora.</p>
+      </div>
+
+      {% else %}
+      <div class="text-center mb-3">
+        <div class="text-muted small">Valor a pagar</div>
+        <div class="fw-bold" style="font-size:32px">{{ parcela.valor_corrigido|brl }}</div>
+        {% if parcela.valor_corrigido != parcela.valor %}
+        <div class="small text-danger">Inclui multa e juros por atraso · valor original {{ parcela.valor|brl }}</div>
+        {% endif %}
+      </div>
+
+      {% if pix %}
+      <div class="qr-pix text-center mb-3">{{ pix_qr|safe }}</div>
+
+      <label class="form-label fw-semibold small" for="codigo-pix">Pix copia e cola</label>
+      <textarea id="codigo-pix" class="form-control font-monospace codigo-pix" rows="4" readonly>{{ pix }}</textarea>
+      <button type="button" id="botao-copiar" class="btn btn-primary w-100 mt-2 py-2">
+        <i class="bi bi-clipboard me-1"></i><span>Copiar código Pix</span>
+      </button>
+
+      <ol class="small text-muted mt-3 mb-0 ps-3">
+        <li>Abra o app do seu banco e escolha <strong>Pix → Copia e Cola</strong> (ou leia o QR Code).</li>
+        <li>Cole o código e confira o valor e o recebedor.</li>
+        <li>Depois de pagar, envie o comprovante para a locadora.</li>
+      </ol>
+      {% else %}
+      <div class="alert alert-warning small mb-0">
+        O pagamento por Pix não está disponível no momento. Fale com a locadora para combinar o pagamento.
+      </div>
+      {% endif %}
+      {% endif %}
+    </div>
+
+    {% if whatsapp_locadora and parcela.em_aberto %}
+    <div class="card-footer bg-white border-top py-3">
+      <a class="btn btn-outline-success w-100"
+         href="https://wa.me/{{ whatsapp_locadora }}?text={{ mensagem_comprovante|urlencode }}"
+         target="_blank" rel="noopener">
+        <i class="bi bi-whatsapp me-1"></i>Enviar comprovante pelo WhatsApp
+      </a>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+
+{% if pix %}
+<script>
+  document.getElementById('botao-copiar').addEventListener('click', function () {
+    var campo = document.getElementById('codigo-pix');
+    var botao = this;
+    function confirmar() {
+      botao.classList.replace('btn-primary', 'btn-success');
+      botao.querySelector('span').textContent = 'Código copiado';
+      botao.querySelector('i').className = 'bi bi-check-lg me-1';
+    }
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(campo.value).then(confirmar);
+    } else {
+      campo.select();
+      document.execCommand('copy');
+      confirmar();
+    }
+  });
+</script>
+{% endif %}
+</body>
+</html>
