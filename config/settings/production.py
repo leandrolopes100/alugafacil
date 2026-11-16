@@ -37,12 +37,14 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 STATIC_URL  = '/static/'
 STATIC_ROOT = config('STATIC_ROOT', default='/var/www/alugafacil/staticfiles')
-STATICFILES_DIRS = []   # vazio em produção — collectstatic copia para STATIC_ROOT
 
 MEDIA_URL  = '/media/'
 MEDIA_ROOT = config('MEDIA_ROOT', default='/var/www/alugafacil/media')
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STORAGES = {
+    **STORAGES,
+    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+}
 
 # ─── Redis / Celery ───────────────────────────────────────────────────────────
 

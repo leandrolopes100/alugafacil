@@ -20,6 +20,7 @@ Django==5.2
 django-htmx==1.22.0
 django-storages==1.14
 freetype-py==2.5.1
+gunicorn==23.0.0
 html5lib==1.1
 idna==3.18
 jmespath==1.1.0
