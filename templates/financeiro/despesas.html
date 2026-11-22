@@ -34,36 +34,29 @@
 </div>
 
 <!-- ── KPIs: Em atraso → A pagar → Já pago ───────────────────────────────── -->
-<div class="row g-3 mb-4">
+<div class="card kpi-strip mb-4">
+  <div class="row g-0">
   <div class="col-6 col-sm-4">
-    <a href="?situacao=em_atraso&mes={{ mes_filtro }}" class="kpi-card text-decoration-none">
-      <div class="kpi-icon" style="background:var(--danger-bg); color:var(--danger)">
-        <i class="bi bi-exclamation-triangle-fill"></i>
-      </div>
-      <div class="kpi-value" style="font-size:22px; color:var(--danger)">{{ kpi_em_atraso|brl }}</div>
-      <div class="kpi-label">Em atraso</div>
+    <a href="?situacao=em_atraso&mes={{ mes_filtro }}" class="kpi-col" style="--kpi-cor:var(--danger)">
+      <div class="kpi-value">{{ kpi_em_atraso|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-exclamation-triangle-fill"></i> Em atraso</div>
       <div class="kpi-sub">vencido sem pagamento</div>
     </a>
   </div>
   <div class="col-6 col-sm-4">
-    <a href="?situacao=pendente&mes={{ mes_filtro }}" class="kpi-card text-decoration-none">
-      <div class="kpi-icon" style="background:var(--warning-bg); color:var(--warning)">
-        <i class="bi bi-clock-fill"></i>
-      </div>
-      <div class="kpi-value" style="font-size:22px; color:var(--warning)">{{ kpi_pendente|brl }}</div>
-      <div class="kpi-label">A pagar</div>
+    <a href="?situacao=pendente&mes={{ mes_filtro }}" class="kpi-col" style="--kpi-cor:var(--warning)">
+      <div class="kpi-value">{{ kpi_pendente|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-clock-fill"></i> A pagar</div>
       <div class="kpi-sub">pendente a vencer</div>
     </a>
   </div>
   <div class="col-6 col-sm-4">
-    <a href="?situacao=quitado&mes={{ mes_filtro }}" class="kpi-card text-decoration-none">
-      <div class="kpi-icon" style="background:var(--success-bg); color:var(--success)">
-        <i class="bi bi-check-circle-fill"></i>
-      </div>
-      <div class="kpi-value" style="font-size:22px; color:var(--success)">{{ kpi_pago|brl }}</div>
-      <div class="kpi-label">Já pago</div>
+    <a href="?situacao=quitado&mes={{ mes_filtro }}" class="kpi-col" style="--kpi-cor:var(--success)">
+      <div class="kpi-value">{{ kpi_pago|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-check-circle-fill"></i> Já pago</div>
       <div class="kpi-sub">quitado no período</div>
     </a>
+  </div>
   </div>
 </div>
 

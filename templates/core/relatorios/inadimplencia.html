@@ -23,46 +23,36 @@
 {% block conteudo_relatorio %}
 
 <!-- KPIs -->
-<div class="row g-3 mb-4">
+<div class="card kpi-strip mb-4">
+  <div class="row g-0">
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:#f8fafc; color:var(--text-secondary)">
-        <i class="bi bi-wallet2"></i>
-      </div>
-      <div class="kpi-value" style="font-size:20px">{{ total_em_aberto|brl }}</div>
-      <div class="kpi-label">Total em Aberto</div>
+    <div class="kpi-col" style="--kpi-cor:var(--text-secondary)">
+      <div class="kpi-value">{{ total_em_aberto|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-wallet2"></i> Total em Aberto</div>
       <div class="kpi-sub">{{ todas|length }} conta{{ todas|length|pluralize:"s" }}</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:var(--danger-bg); color:var(--danger)">
-        <i class="bi bi-exclamation-circle-fill"></i>
-      </div>
-      <div class="kpi-value" style="color:var(--danger); font-size:20px">{{ total_vencido_atualizado|brl }}</div>
-      <div class="kpi-label">Vencido com multa e juros</div>
+    <div class="kpi-col" style="--kpi-cor:var(--danger)">
+      <div class="kpi-value">{{ total_vencido_atualizado|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-exclamation-circle-fill"></i> Vencido com multa e juros</div>
       <div class="kpi-sub">{{ vencidas|length }} conta{{ vencidas|length|pluralize:"s" }}</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:var(--warning-bg); color:var(--warning)">
-        <i class="bi bi-hourglass-split"></i>
-      </div>
-      <div class="kpi-value" style="color:var(--warning); font-size:20px">{{ total_a_vencer|brl }}</div>
-      <div class="kpi-label">A Vencer</div>
+    <div class="kpi-col" style="--kpi-cor:var(--warning)">
+      <div class="kpi-value">{{ total_a_vencer|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-hourglass-split"></i> A Vencer</div>
       <div class="kpi-sub">{{ a_vencer|length }} conta{{ a_vencer|length|pluralize:"s" }}</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:{% if inadimplencia_pct > 20 %}var(--danger-bg){% elif inadimplencia_pct > 10 %}var(--warning-bg){% else %}var(--success-bg){% endif %}; color:{% if inadimplencia_pct > 20 %}var(--danger){% elif inadimplencia_pct > 10 %}var(--warning){% else %}var(--success){% endif %}">
-        <i class="bi bi-percent"></i>
-      </div>
-      <div class="kpi-value" style="color:{% if inadimplencia_pct > 20 %}var(--danger){% elif inadimplencia_pct > 10 %}var(--warning){% else %}var(--success){% endif %}">{{ inadimplencia_pct }}%</div>
-      <div class="kpi-label">Taxa Inadimplência</div>
+    <div class="kpi-col" style="--kpi-cor:{% if inadimplencia_pct > 20 %}var(--danger){% elif inadimplencia_pct > 10 %}var(--warning){% else %}var(--success){% endif %}">
+      <div class="kpi-value">{{ inadimplencia_pct }}%</div>
+      <div class="kpi-label"><i class="bi bi-percent"></i> Taxa Inadimplência</div>
       <div class="kpi-sub">do total em aberto</div>
     </div>
+  </div>
   </div>
 </div>
 

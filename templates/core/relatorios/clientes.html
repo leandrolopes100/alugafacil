@@ -14,46 +14,36 @@
 {% block conteudo_relatorio %}
 
 <!-- KPIs -->
-<div class="row g-3 mb-4">
+<div class="card kpi-strip mb-4">
+  <div class="row g-0">
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:#f8fafc; color:var(--text-secondary)">
-        <i class="bi bi-people"></i>
-      </div>
+    <div class="kpi-col" style="--kpi-cor:var(--text-secondary)">
       <div class="kpi-value">{{ total_clientes }}</div>
-      <div class="kpi-label">Total de Clientes</div>
+      <div class="kpi-label"><i class="bi bi-people"></i> Total de Clientes</div>
       <div class="kpi-sub">cadastrados</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:var(--success-bg); color:var(--success)">
-        <i class="bi bi-person-check-fill"></i>
-      </div>
-      <div class="kpi-value" style="color:var(--success)">{{ total_ativos }}</div>
-      <div class="kpi-label">Ativos no Período</div>
+    <div class="kpi-col" style="--kpi-cor:var(--success)">
+      <div class="kpi-value">{{ total_ativos }}</div>
+      <div class="kpi-label"><i class="bi bi-person-check-fill"></i> Ativos no Período</div>
       <div class="kpi-sub">com carro locado no período</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:var(--primary-light); color:var(--primary)">
-        <i class="bi bi-person-plus-fill"></i>
-      </div>
-      <div class="kpi-value" style="color:var(--primary)">{{ novos }}</div>
-      <div class="kpi-label">Novos Clientes</div>
+    <div class="kpi-col" style="--kpi-cor:var(--primary)">
+      <div class="kpi-value">{{ novos }}</div>
+      <div class="kpi-label"><i class="bi bi-person-plus-fill"></i> Novos Clientes</div>
       <div class="kpi-sub">primeira locação</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:var(--info-bg); color:var(--info)">
-        <i class="bi bi-arrow-repeat"></i>
-      </div>
+    <div class="kpi-col" style="--kpi-cor:var(--info)">
       <div class="kpi-value">{{ recorrentes }}</div>
-      <div class="kpi-label">Recorrentes</div>
+      <div class="kpi-label"><i class="bi bi-arrow-repeat"></i> Recorrentes</div>
       <div class="kpi-sub">já tinham locado antes do período</div>
     </div>
+  </div>
   </div>
 </div>
 
@@ -114,7 +104,7 @@ new Chart(document.getElementById('chartClientes'), {
     datasets: [{
       label: 'Receita R$',
       data: dados.receita,
-      backgroundColor: 'rgba(217,119,6,.7)',
+      backgroundColor: 'rgba(13,110,253,.7)',
       borderRadius: 4,
     }]
   },

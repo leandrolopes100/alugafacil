@@ -22,11 +22,11 @@
       <input type="text" name="busca" value="{{ filtro_busca }}"
              style="width:100%; padding:8px 12px 8px 36px; border:1px solid #e2e8f0; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none; transition:border-color .15s; background:#fff"
              placeholder="Nome, CPF, CNPJ ou telefone…"
-             onfocus="this.style.borderColor='#d97706'; this.style.boxShadow='0 0 0 3px rgba(217,119,6,.15)'"
+             onfocus="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(13,110,253,.15)'"
              onblur="this.style.borderColor='#e2e8f0'; this.style.boxShadow='none'">
     </div>
     <select name="tipo" style="padding:8px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13.5px; font-family:inherit; background:#fff; color:#475569; outline:none; cursor:pointer"
-            onfocus="this.style.borderColor='#d97706'" onblur="this.style.borderColor='#e2e8f0'">
+            onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='#e2e8f0'">
       <option value="">Todos os tipos</option>
       <option value="pf" {% if filtro_tipo == 'pf' %}selected{% endif %}>Pessoa Física</option>
       <option value="pj" {% if filtro_tipo == 'pj' %}selected{% endif %}>Pessoa Jurídica</option>
@@ -55,7 +55,7 @@
           <td>
             <div style="display:flex; align-items:center; gap:10px">
               <div style="width:32px; height:32px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#fff;
-                   background:{% if cliente.tipo == 'pj' %}#1e7a4c{% else %}#d97706{% endif %}">
+                   background:{% if cliente.tipo == 'pj' %}#1e7a4c{% else %}var(--primary){% endif %}">
                 {{ cliente.nome_exibicao|first|upper }}
               </div>
               <div>

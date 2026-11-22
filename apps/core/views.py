@@ -733,27 +733,3 @@ class BuscaGlobalView(LoginRequiredMixin, View):
             'contratos': contratos,
             'total': total,
         })
-
-
-# ─── Manual do Usuário em PDF ─────────────────────────────────────────────────
-
-class ManualUsuarioPDFView(LoginRequiredMixin, View):
-    def get(self, request):
-        from io import BytesIO
-        from xhtml2pdf import pisa
-        from django.template.loader import render_to_string
-
-        hoje = timezone.localdate()
-        html = render_to_string('core/manual_pdf.html', {
-            'data_geracao': hoje.strftime('%d/%m/%Y'),
-            'ano': hoje.year,
-        }, request=request)
-
-        buffer = BytesIO()
-        pisa.pisaDocument(BytesIO(html.encode('utf-8')), buffer)
-        pdf = buffer.getvalue()
-        buffer.close()
-
-        resposta = HttpResponse(pdf, content_type='application/pdf')
-        resposta['Content-Disposition'] = 'inline; filename="manual-alugafacil.pdf"'
-        return resposta

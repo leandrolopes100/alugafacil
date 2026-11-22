@@ -25,43 +25,33 @@
 </div>
 
 <!-- KPIs -->
-<div class="row g-3 mb-4">
+<div class="card kpi-strip mb-4">
+  <div class="row g-0">
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:#eef5fa; color:#2f6690">
-        <i class="bi bi-receipt"></i>
-      </div>
-      <div class="kpi-value" style="font-size:20px">R$ {{ kpi_faturado|floatformat:2 }}</div>
-      <div class="kpi-label">Total faturado</div>
+    <div class="kpi-col" style="--kpi-cor:var(--info)">
+      <div class="kpi-value">R$ {{ kpi_faturado|floatformat:2 }}</div>
+      <div class="kpi-label"><i class="bi bi-receipt"></i> Total faturado</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:var(--success-bg); color:var(--success)">
-        <i class="bi bi-check-circle-fill"></i>
-      </div>
-      <div class="kpi-value" style="font-size:20px; color:var(--success)">R$ {{ kpi_recebido|floatformat:2 }}</div>
-      <div class="kpi-label">Recebido</div>
+    <div class="kpi-col" style="--kpi-cor:var(--success)">
+      <div class="kpi-value">R$ {{ kpi_recebido|floatformat:2 }}</div>
+      <div class="kpi-label"><i class="bi bi-check-circle-fill"></i> Recebido</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:var(--warning-bg); color:var(--warning)">
-        <i class="bi bi-clock-fill"></i>
-      </div>
-      <div class="kpi-value" style="font-size:20px; color:var(--warning)">R$ {{ kpi_em_aberto|floatformat:2 }}</div>
-      <div class="kpi-label">Em aberto</div>
+    <div class="kpi-col" style="--kpi-cor:var(--warning)">
+      <div class="kpi-value">R$ {{ kpi_em_aberto|floatformat:2 }}</div>
+      <div class="kpi-label"><i class="bi bi-clock-fill"></i> Em aberto</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:var(--danger-bg); color:var(--danger)">
-        <i class="bi bi-exclamation-triangle-fill"></i>
-      </div>
-      <div class="kpi-value" style="font-size:20px; color:var(--danger)">R$ {{ kpi_vencido_atualizado|floatformat:2 }}</div>
-      <div class="kpi-label">Vencido</div>
+    <div class="kpi-col" style="--kpi-cor:var(--danger)">
+      <div class="kpi-value">R$ {{ kpi_vencido_atualizado|floatformat:2 }}</div>
+      <div class="kpi-label"><i class="bi bi-exclamation-triangle-fill"></i> Vencido</div>
       <div class="kpi-sub">parcelas atrasadas de {{ qtd_contas_em_atraso }} contrato{{ qtd_contas_em_atraso|pluralize:"s" }} · com multa/juros{% if kpi_vencido_atualizado != kpi_vencido %} (sem: R$ {{ kpi_vencido|floatformat:2 }}){% endif %}</div>
     </div>
+  </div>
   </div>
 </div>
 

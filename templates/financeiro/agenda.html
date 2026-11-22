@@ -24,46 +24,36 @@
 </div>
 
 <!-- KPIs -->
-<div class="row g-3 mb-4">
+<div class="card kpi-strip mb-4">
+  <div class="row g-0">
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:var(--danger-bg); color:var(--danger)">
-        <i class="bi bi-exclamation-circle-fill"></i>
-      </div>
-      <div class="kpi-value" style="color:var(--danger)">{{ em_atraso|length }}</div>
-      <div class="kpi-label">Em atraso</div>
+    <div class="kpi-col" style="--kpi-cor:var(--danger)">
+      <div class="kpi-value">{{ em_atraso|length }}</div>
+      <div class="kpi-label"><i class="bi bi-exclamation-circle-fill"></i> Em atraso</div>
       <div class="kpi-sub" style="color:var(--danger); font-weight:600">R$ {{ total_atraso|floatformat:2 }}</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:var(--warning-bg); color:var(--warning)">
-        <i class="bi bi-calendar-week"></i>
-      </div>
-      <div class="kpi-value" style="color:var(--warning)">{{ esta_semana|length }}</div>
-      <div class="kpi-label">Esta semana</div>
+    <div class="kpi-col" style="--kpi-cor:var(--warning)">
+      <div class="kpi-value">{{ esta_semana|length }}</div>
+      <div class="kpi-label"><i class="bi bi-calendar-week"></i> Esta semana</div>
       <div class="kpi-sub" style="color:var(--warning); font-weight:600">R$ {{ total_semana|floatformat:2 }}</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:var(--primary-light); color:var(--primary)">
-        <i class="bi bi-calendar-plus"></i>
-      </div>
-      <div class="kpi-value" style="color:var(--primary)">{{ proximas|length }}</div>
-      <div class="kpi-label">Próximas</div>
+    <div class="kpi-col" style="--kpi-cor:var(--primary)">
+      <div class="kpi-value">{{ proximas|length }}</div>
+      <div class="kpi-label"><i class="bi bi-calendar-plus"></i> Próximas</div>
       <div class="kpi-sub">cobranças futuras</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:var(--success-bg); color:var(--success)">
-        <i class="bi bi-calendar-check"></i>
-      </div>
-      <div class="kpi-value" style="font-size:20px; color:var(--success)">{{ hoje|date:"d/m/Y" }}</div>
-      <div class="kpi-label">Hoje</div>
+    <div class="kpi-col" style="--kpi-cor:var(--success)">
+      <div class="kpi-value">{{ hoje|date:"d/m/Y" }}</div>
+      <div class="kpi-label"><i class="bi bi-calendar-check"></i> Hoje</div>
       <div class="kpi-sub">data de referência</div>
     </div>
+  </div>
   </div>
 </div>
 

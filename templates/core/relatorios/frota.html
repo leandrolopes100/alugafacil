@@ -27,56 +27,43 @@
 </div>
 
 <!-- KPIs -->
-<div class="row g-3 mb-4">
+<div class="card kpi-strip mb-4">
+  <div class="row g-0">
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:#f8fafc; color:var(--text-secondary)">
-        <i class="bi bi-car-front"></i>
-      </div>
+    <div class="kpi-col" style="--kpi-cor:var(--text-secondary)">
       <div class="kpi-value">{{ total_veiculos }}</div>
-      <div class="kpi-label">Total de Veículos</div>
+      <div class="kpi-label"><i class="bi bi-car-front"></i> Total de Veículos</div>
       <div class="kpi-sub">ativos na frota</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:{% if ocupacao_media >= 70 %}var(--success-bg){% elif ocupacao_media >= 40 %}var(--warning-bg){% else %}var(--danger-bg){% endif %}; color:{% if ocupacao_media >= 70 %}var(--success){% elif ocupacao_media >= 40 %}var(--warning){% else %}var(--danger){% endif %}">
-        <i class="bi bi-speedometer2"></i>
-      </div>
-      <div class="kpi-value" style="color:{% if ocupacao_media >= 70 %}var(--success){% elif ocupacao_media >= 40 %}var(--warning){% else %}var(--danger){% endif %}">{{ ocupacao_media }}%</div>
-      <div class="kpi-label">Ocupação Média</div>
+    <div class="kpi-col" style="--kpi-cor:{% if ocupacao_media >= 70 %}var(--success){% elif ocupacao_media >= 40 %}var(--warning){% else %}var(--danger){% endif %}">
+      <div class="kpi-value">{{ ocupacao_media }}%</div>
+      <div class="kpi-label"><i class="bi bi-speedometer2"></i> Ocupação Média</div>
       <div class="kpi-sub">da frota no período</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:var(--success-bg); color:var(--success)">
-        <i class="bi bi-cash-stack"></i>
-      </div>
-      <div class="kpi-value" style="font-size:20px; color:var(--success)">{{ receita_total|brl }}</div>
-      <div class="kpi-label">Receita Total</div>
+    <div class="kpi-col" style="--kpi-cor:var(--success)">
+      <div class="kpi-value">{{ receita_total|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-cash-stack"></i> Receita Total</div>
       <div class="kpi-sub">recebido no período</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:var(--danger-bg); color:var(--danger)">
-        <i class="bi bi-arrow-down-circle-fill"></i>
-      </div>
-      <div class="kpi-value" style="font-size:20px; color:var(--danger)">{{ custo_direto_total|brl }}</div>
-      <div class="kpi-label">Custos Diretos</div>
+    <div class="kpi-col" style="--kpi-cor:var(--danger)">
+      <div class="kpi-value">{{ custo_direto_total|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-arrow-down-circle-fill"></i> Custos Diretos</div>
       <div class="kpi-sub">despesas lançadas no veículo</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:{% if resultado_direto_total >= 0 %}var(--success-bg){% else %}var(--danger-bg){% endif %}; color:{% if resultado_direto_total >= 0 %}var(--success){% else %}var(--danger){% endif %}">
-        <i class="bi bi-{% if resultado_direto_total >= 0 %}graph-up-arrow{% else %}graph-down-arrow{% endif %}"></i>
-      </div>
-      <div class="kpi-value" style="font-size:20px; color:{% if resultado_direto_total >= 0 %}var(--success){% else %}var(--danger){% endif %}">{{ resultado_direto_total|brl }}</div>
-      <div class="kpi-label">Resultado Direto</div>
+    <div class="kpi-col" style="--kpi-cor:{% if resultado_direto_total >= 0 %}var(--success){% else %}var(--danger){% endif %}">
+      <div class="kpi-value">{{ resultado_direto_total|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-{% if resultado_direto_total >= 0 %}graph-up-arrow{% else %}graph-down-arrow{% endif %}"></i> Resultado Direto</div>
       <div class="kpi-sub">sem os custos fixos da operação</div>
     </div>
+  </div>
   </div>
 </div>
 
@@ -242,7 +229,7 @@ new Chart(document.getElementById('chartReceita'), {
     datasets: [{
       label: 'Receita R$',
       data: receita.data,
-      backgroundColor: 'rgba(217,119,6,.7)',
+      backgroundColor: 'rgba(13,110,253,.7)',
       borderRadius: 4,
     }]
   },

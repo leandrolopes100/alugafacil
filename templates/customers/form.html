@@ -149,7 +149,7 @@
             <div class="col-md-3 {% if form.cep.errors %}field-has-error{% endif %}" style="position:relative">
               <label class="form-label fw-semibold small">CEP</label>
               {{ form.cep }}
-              <span id="cep-spinner" style="display:none; position:absolute; right:28px; top:38px; color:#d97706">
+              <span id="cep-spinner" style="display:none; position:absolute; right:28px; top:38px; color:var(--primary)">
                 <span class="spinner-border spinner-border-sm"></span>
               </span>
               {% if form.cep.errors %}

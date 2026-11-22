@@ -277,11 +277,24 @@ h2 { font-size: 38px; line-height: 1.12; font-weight: 800; letter-spacing: -.025
 .fim .contato { margin-top: 44px; display: flex; gap: 56px; align-items: flex-end; }
 .fim .contato small { display: block; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: #94a3b8; font-weight: 600; }
 .fim .contato strong { display: block; margin-top: 6px; font-size: 26px; font-weight: 700; color: #fff; letter-spacing: -.01em; }
+
+.trajeto { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-top: 56px; }
+.etapa { min-height: 330px; }
+.etapa { position: relative; background: var(--papel); border: 1px solid var(--linha); border-radius: 14px; padding: 24px 20px 22px; display: flex; flex-direction: column; }
+.etapa .n { font-size: 13px; font-weight: 800; color: var(--ambar); letter-spacing: .08em; }
+.etapa h3 { font-size: 22px; font-weight: 700; letter-spacing: -.01em; margin-top: 10px; }
+.etapa p { font-size: 16.5px; line-height: 1.5; color: var(--tinta-2); margin-top: 10px; }
+.etapa small { display: block; margin-top: auto; padding-top: 16px; border-top: 2px dashed var(--ambar-claro); font-size: 15px; line-height: 1.45; color: var(--verde); font-weight: 600; }
+.etapa p { margin-bottom: 16px; }
+.etapa:not(:last-child)::after { content: ''; position: absolute; top: 34px; right: -13px; width: 10px; height: 10px; border-top: 3px solid var(--ambar); border-right: 3px solid var(--ambar); transform: rotate(45deg); }
+.grade-escura .cartao { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.1); }
+.grade-escura .cartao h3 { color: #fff; }
+.grade-escura .cartao p { color: #94a3b8; }
+.escuro .rodape .marca span, .rodape .marca span { color: var(--ambar); }
 </style>
 </head>
 <body>
 
-<!-- 1. Capa -->
 <section class="slide escuro">
   <div class="capa">
     <div>
@@ -296,7 +309,6 @@ h2 { font-size: 38px; line-height: 1.12; font-weight: 800; letter-spacing: -.025
   <div class="rodape"><span>Lopes | Sistemas</span><span>lopsystem.com.br</span></div>
 </section>
 
-<!-- 2. Problema -->
 <section class="slide">
   <div class="pagina">
     <div class="sobre">O dia a dia sem sistema</div>
@@ -313,7 +325,6 @@ h2 { font-size: 38px; line-height: 1.12; font-weight: 800; letter-spacing: -.025
   <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>02</span></div>
 </section>
 
-<!-- 3. Visão geral -->
 <section class="slide">
   <div class="pagina">
     <div class="sobre">A solução</div>
@@ -324,13 +335,28 @@ h2 { font-size: 38px; line-height: 1.12; font-weight: 800; letter-spacing: -.025
       <div class="cartao"><div class="icone">3</div><h3>Pix e WhatsApp</h3><p>Link de pagamento por parcela e mensagem pronta para enviar.</p></div>
       <div class="cartao"><div class="icone">4</div><h3>Devolução e caução</h3><p>Acerto automático e caução abatendo a dívida antes de devolver.</p></div>
       <div class="cartao"><div class="icone">5</div><h3>Financeiro</h3><p>Contas a receber e a pagar, fluxo de caixa, DRE e relatórios.</p></div>
-      <div class="cartao"><div class="icone">6</div><h3>Frota, multas e manutenção</h3><p>Disponibilidade, km, documentos, ordens de serviço e infrações.</p></div>
+      <div class="cartao"><div class="icone">6</div><h3>Frota, multas e investidores</h3><p>Disponibilidade, documentos, manutenção, infrações e carros de terceiros.</p></div>
     </div>
   </div>
   <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>03</span></div>
 </section>
 
-<!-- 4. Contratos -->
+<section class="slide">
+  <div class="pagina">
+    <div class="sobre">Na prática</div>
+    <h2>Uma locação do começo ao fim</h2>
+    <p class="lead" style="max-width:880px">O que a equipe faz em cada etapa, e o que o sistema faz sozinho.</p>
+    <div class="trajeto">
+      <div class="etapa"><span class="n">01</span><h3>Contrato</h3><p>Escolhe cliente e carro. O preço vem do grupo.</p><small>Sistema confere CNH, documentos e multas do veículo.</small></div>
+      <div class="etapa"><span class="n">02</span><h3>Saída</h3><p>Registra km, combustível e fotos.</p><small>Gera todas as parcelas semanais e o caução.</small></div>
+      <div class="etapa"><span class="n">03</span><h3>Cobrança</h3><p>Abre a agenda e clica em "Cobrar no WhatsApp".</p><small>Calcula multa e juros e monta o link do Pix.</small></div>
+      <div class="etapa"><span class="n">04</span><h3>Devolução</h3><p>Informa horário, km e combustível.</p><small>Calcula diária extra, km excedente e combustível.</small></div>
+      <div class="etapa"><span class="n">05</span><h3>Encerramento</h3><p>Confere o resumo e confirma.</p><small>Abate a dívida do caução e lança a sobra no caixa.</small></div>
+    </div>
+  </div>
+  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>04</span></div>
+</section>
+
 <section class="slide">
   <div class="dupla">
     <div>
@@ -348,10 +374,9 @@ h2 { font-size: 38px; line-height: 1.12; font-weight: 800; letter-spacing: -.025
       <div class="legenda">Tela real do sistema · tarifas preenchidas a partir do grupo do veículo</div>
     </div>
   </div>
-  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>04</span></div>
+  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>05</span></div>
 </section>
 
-<!-- 5. Cobrança -->
 <section class="slide">
   <div class="dupla">
     <div>
@@ -369,10 +394,9 @@ h2 { font-size: 38px; line-height: 1.12; font-weight: 800; letter-spacing: -.025
       <div class="legenda">Tela real do sistema · Agenda de Cobranças com a régua do dia</div>
     </div>
   </div>
-  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>05</span></div>
+  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>06</span></div>
 </section>
 
-<!-- 6. Pix -->
 <section class="slide">
   <div class="dupla" style="grid-template-columns:520px 1fr">
     <div>
@@ -389,10 +413,9 @@ h2 { font-size: 38px; line-height: 1.12; font-weight: 800; letter-spacing: -.025
       <div class="celular"><div><img src="img/cobranca_publica_celular.png" alt="Página de pagamento no celular"></div></div>
     </div>
   </div>
-  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>06</span></div>
+  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>07</span></div>
 </section>
 
-<!-- 7. Devolução -->
 <section class="slide">
   <div class="dupla">
     <div>
@@ -402,7 +425,7 @@ h2 { font-size: 38px; line-height: 1.12; font-weight: 800; letter-spacing: -.025
         <li><span><strong>Tolerância de atraso configurável</strong>, mostrada para quem faz o check-in.</span></li>
         <li><span>A diária extra aparece <strong>antes de confirmar</strong>, com o valor.</span></li>
         <li><span>Acerto automático de <strong>km excedente, dias extras e combustível</strong>.</span></li>
-        <li><span>Devolveu antes? <strong>As semanas futuras são canceladas</strong>; o que venceu continua em cobrança.</span></li>
+        <li><span>Devolveu antes? <strong>A semana começada é cobrada e as próximas são canceladas</strong>, com o motivo registrado.</span></li>
       </ul>
     </div>
     <div>
@@ -410,10 +433,9 @@ h2 { font-size: 38px; line-height: 1.12; font-weight: 800; letter-spacing: -.025
       <div class="legenda">Tela real do sistema · aviso de diária extra durante o check-in</div>
     </div>
   </div>
-  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>07</span></div>
+  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>08</span></div>
 </section>
 
-<!-- 8. Caução -->
 <section class="slide">
   <div class="dupla" style="grid-template-columns:520px 1fr">
     <div>
@@ -427,14 +449,13 @@ h2 { font-size: 38px; line-height: 1.12; font-weight: 800; letter-spacing: -.025
       </ul>
     </div>
     <div>
-      <div class="tela" style="--f:440;--x:492;--y:196;--w:456;--h:508"><img src="img/encerrar_eva.png" alt="Encerramento com abatimento do caução"></div>
+      <div class="tela" style="--f:430;--x:501;--y:168;--w:438;--h:564"><img src="img/encerrar_eva.png" alt="Encerramento com abatimento do caução"></div>
       <div class="legenda">Tela real do sistema · divisão do caução no encerramento</div>
     </div>
   </div>
-  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>08</span></div>
+  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>09</span></div>
 </section>
 
-<!-- 9. Atrasos -->
 <section class="slide">
   <div class="dupla" style="grid-template-columns:560px 1fr">
     <div>
@@ -451,10 +472,9 @@ h2 { font-size: 38px; line-height: 1.12; font-weight: 800; letter-spacing: -.025
       <div class="tela" style="--f:380;--x:482;--y:100;--w:476;--h:700"><img src="img/prorrogar_bruno.png" alt="Prorrogação de contrato vencido"></div>
     </div>
   </div>
-  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>09</span></div>
+  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>10</span></div>
 </section>
 
-<!-- 10. Tarifas -->
 <section class="slide">
   <div class="dupla">
     <div>
@@ -472,19 +492,18 @@ h2 { font-size: 38px; line-height: 1.12; font-weight: 800; letter-spacing: -.025
       <div class="legenda">Tela real do sistema · simulação de cobrança no cadastro do grupo</div>
     </div>
   </div>
-  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>10</span></div>
+  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>11</span></div>
 </section>
 
-<!-- 11. Financeiro -->
 <section class="slide">
   <div class="dupla">
     <div>
       <div class="sobre">Financeiro</div>
       <h2>O financeiro fecha com o que aconteceu de verdade</h2>
       <ul class="pontos">
-        <li><span><strong>Contas a receber por contrato</strong>, com inadimplência por faixa de atraso.</span></li>
+        <li><span><strong>Contas a receber por contrato</strong>, com multa e juros e inadimplência por faixa de atraso.</span></li>
         <li><span><strong>Contas a pagar</strong>, despesas parceladas e débito automático.</span></li>
-        <li><span><strong>Fluxo de caixa e DRE</strong> do mês e do ano.</span></li>
+        <li><span><strong>Fluxo de caixa e DRE pelo regime de caixa</strong>: o painel e o relatório mostram o mesmo resultado.</span></li>
         <li><span>Relatórios de contratos, frota, clientes e inadimplência, <strong>com exportação em CSV</strong>.</span></li>
       </ul>
     </div>
@@ -493,45 +512,77 @@ h2 { font-size: 38px; line-height: 1.12; font-weight: 800; letter-spacing: -.025
       <div class="legenda">Tela real do sistema · Painel Financeiro</div>
     </div>
   </div>
-  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>11</span></div>
+  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>12</span></div>
 </section>
 
-<!-- 12. Frota, multas, manutenção -->
+<section class="slide">
+  <div class="dupla">
+    <div>
+      <div class="sobre">Frota</div>
+      <h2>Cada carro, onde está e como está</h2>
+      <ul class="pontos">
+        <li><span><strong>Disponibilidade em tempo real</strong> por grupo: livre, em uso, em manutenção ou inativo.</span></li>
+        <li><span><strong>Km atualizado</strong> em cada saída, devolução e manutenção.</span></li>
+        <li><span><strong>Documentos com validade</strong> (CRLV, seguro), conferidos no check-out.</span></li>
+        <li><span>Taxa de ocupação da frota <strong>no painel e no relatório</strong>.</span></li>
+      </ul>
+    </div>
+    <div>
+      <div class="tela" style="--x:255;--y:60;--w:1180;--h:640"><img src="img/disponibilidade.png" alt="Disponibilidade da frota"></div>
+      <div class="legenda">Tela real do sistema · Disponibilidade da Frota</div>
+    </div>
+  </div>
+  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>13</span></div>
+</section>
+
 <section class="slide">
   <div class="pagina">
     <div class="sobre">Operação</div>
-    <h2>A frota sob controle, carro por carro</h2>
+    <h2>Multas, manutenção e relatórios sem planilha</h2>
     <div class="grade grade-lista" style="grid-template-columns:repeat(3,1fr); margin-top:44px">
-      <div class="cartao" style="padding:30px">
-        <h3>Frota</h3>
-        <ul class="pontos" style="margin-top:18px; gap:12px">
-          <li><span>Disponibilidade por veículo e taxa de ocupação.</span></li>
-          <li><span>Km atualizado em cada saída e devolução.</span></li>
-          <li><span>Documentos com validade, conferidos no check-out.</span></li>
-        </ul>
-      </div>
       <div class="cartao" style="padding:30px">
         <h3>Multas de trânsito</h3>
         <ul class="pontos" style="margin-top:18px; gap:12px">
-          <li><span>Ligadas ao contrato pela data da infração.</span></li>
-          <li><span>Cobradas do cliente com prazo, sem multa e juros.</span></li>
-          <li><span>Abatidas do caução no encerramento.</span></li>
+          <li><span>Ligadas ao contrato pela data da infração, inclusive em contrato vencido.</span></li>
+          <li><span>Quando há dúvida, o sistema pede para escolher o contrato.</span></li>
+          <li><span>Cobradas do cliente e abatidas do caução.</span></li>
         </ul>
       </div>
       <div class="cartao" style="padding:30px">
         <h3>Manutenção</h3>
         <ul class="pontos" style="margin-top:18px; gap:12px">
-          <li><span>Ordens de serviço com status e km.</span></li>
+          <li><span>Ordens de serviço preventivas e corretivas, com km.</span></li>
+          <li><span>Alertas por km ou por data.</span></li>
           <li><span>Carro em manutenção sai da lista de locação.</span></li>
-          <li><span>O custo da OS entra nas despesas.</span></li>
+        </ul>
+      </div>
+      <div class="cartao" style="padding:30px">
+        <h3>Relatórios</h3>
+        <ul class="pontos" style="margin-top:18px; gap:12px">
+          <li><span>Contratos, frota e ocupação, clientes e inadimplência.</span></li>
+          <li><span>DRE do mês e do ano, com gráfico mensal.</span></li>
+          <li><span>Exportação em CSV para o contador.</span></li>
         </ul>
       </div>
     </div>
   </div>
-  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>12</span></div>
+  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>14</span></div>
 </section>
 
-<!-- 13. Controle -->
+<section class="slide">
+  <div class="pagina">
+    <div class="sobre">Módulo de investidores</div>
+    <h2>Carros de terceiros na mesma frota</h2>
+    <p class="lead" style="max-width:900px">Para locadoras que administram veículos de investidores. O módulo é opcional e se desliga nas configurações.</p>
+    <div class="grade grade-grande" style="grid-template-columns:repeat(3,1fr)">
+      <div class="cartao"><div class="icone">◆</div><h3>Investidor e veículos</h3><p>Cadastro de pessoa física ou jurídica, com dados bancários e os carros sob gestão.</p></div>
+      <div class="cartao"><div class="icone">◆</div><h3>Taxa de gestão semanal</h3><p>Cobranças por veículo, geradas uma a uma ou para todos de uma vez.</p></div>
+      <div class="cartao"><div class="icone">◆</div><h3>Nada fica para trás</h3><p>Alerta de semana sem cobrança e aviso no menu quando uma cobrança vence.</p></div>
+    </div>
+  </div>
+  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>15</span></div>
+</section>
+
 <section class="slide">
   <div class="pagina">
     <div class="sobre">Controle e segurança</div>
@@ -539,16 +590,31 @@ h2 { font-size: 38px; line-height: 1.12; font-weight: 800; letter-spacing: -.025
     <div class="grade grade-grande" style="grid-template-columns:repeat(3,1fr)">
       <div class="cartao"><h3>Perfis de acesso</h3><p>Administrador, atendente, financeiro e mecânico: cada um vê e faz só o que precisa.</p></div>
       <div class="cartao"><h3>Estorno com motivo</h3><p>Só o administrador estorna, e o motivo fica gravado no contrato.</p></div>
-      <div class="cartao"><h3>Desconto com justificativa</h3><p>Pagamento a menor é parcial por padrão; desconto exige motivo.</p></div>
-      <div class="cartao"><h3>Histórico do contrato</h3><p>Prorrogações, quebras de contrato e cancelamentos ficam registrados.</p></div>
+      <div class="cartao"><h3>Desconto com justificativa</h3><p>Pagamento a menor é parcial por padrão; desconto exige motivo e grava quem deu.</p></div>
+      <div class="cartao"><h3>Histórico do contrato</h3><p>Prorrogações, devoluções antecipadas, descontos e ajustes de avaria ficam registrados.</p></div>
+      <div class="cartao"><h3>Valores validados</h3><p>Avaria, adicional e pagamento não aceitam valor negativo nem data impossível.</p></div>
       <div class="cartao"><h3>Conferência automática</h3><p>Uma checagem aponta lançamentos incoerentes antes que virem prejuízo.</p></div>
-      <div class="cartao"><h3>No computador e no celular</h3><p>Acesso pelo navegador, protegido por usuário e senha.</p></div>
     </div>
   </div>
-  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>13</span></div>
+  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>16</span></div>
 </section>
 
-<!-- 14. Implantação -->
+<section class="slide escuro">
+  <div class="pagina">
+    <div class="sobre">Tecnologia</div>
+    <h2 style="color:#fff">Na nuvem, pronto para usar</h2>
+    <div class="grade grade-grande grade-escura" style="grid-template-columns:repeat(3,1fr)">
+      <div class="cartao"><h3>Sem instalar nada</h3><p>Funciona no navegador do computador, do tablet e do celular.</p></div>
+      <div class="cartao"><h3>Servidor próprio</h3><p>Hospedado em servidor próprio, com conexão segura (HTTPS) e banco de dados PostgreSQL.</p></div>
+      <div class="cartao"><h3>Sempre atualizado</h3><p>Melhorias entram no sistema sem a locadora precisar fazer nada.</p></div>
+      <div class="cartao"><h3>Documentos prontos</h3><p>Contrato em PDF, assinatura por link e manual do usuário em PDF.</p></div>
+      <div class="cartao"><h3>Dados da locadora</h3><p>Relatórios exportáveis em CSV: a informação é sua.</p></div>
+      <div class="cartao"><h3>Cálculos testados</h3><p>Cobrança, caução e financeiro conferidos por mais de 360 testes automáticos.</p></div>
+    </div>
+  </div>
+  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>17</span></div>
+</section>
+
 <section class="slide">
   <div class="pagina">
     <div class="sobre">Implantação</div>
@@ -561,10 +627,9 @@ h2 { font-size: 38px; line-height: 1.12; font-weight: 800; letter-spacing: -.025
       <div class="passo"><span class="n">PASSO 4</span><h3>Acompanhamento</h3><p>Suporte nas primeiras semanas para ajustar a rotina da locadora.</p></div>
     </div>
   </div>
-  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>14</span></div>
+  <div class="rodape"><div class="marca">Aluga <span>Fácil</span></div><span>18</span></div>
 </section>
 
-<!-- 15. Contato -->
 <section class="slide escuro">
   <div class="fim">
     <div class="marca" style="font-size:28px">Aluga <span>Fácil</span></div>
@@ -576,7 +641,7 @@ h2 { font-size: 38px; line-height: 1.12; font-weight: 800; letter-spacing: -.025
     </div>
   </div>
   <div class="estrada" style="bottom:64px"></div>
-  <div class="rodape"><span>Imagens: telas reais do sistema com dados fictícios.</span><span>15</span></div>
+  <div class="rodape"><span>Imagens: telas reais do sistema com dados fictícios.</span><span>19</span></div>
 </section>
 
 </body>

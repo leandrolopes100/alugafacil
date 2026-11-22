@@ -4,430 +4,237 @@
   <meta charset="UTF-8">
   <title>Contrato {{ contrato.numero }}</title>
   <style>
-    @page { size: A4; margin: 20mm 22mm 22mm 22mm; }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: Helvetica, Arial, sans-serif;
-      font-size: 9pt;
-      color: #374151;
-      line-height: 1.55;
-      background: #ffffff;
+    @page {
+      size: A4;
+      margin: 2cm 2cm 2.2cm 2cm;
+      @frame rodape {
+        -pdf-frame-content: rodape;
+        bottom: 0.8cm;
+        height: 0.8cm;
+        left: 2cm;
+        right: 2cm;
+      }
     }
 
-    /* ─── CABEÇALHO ───────────────────────────────── */
-    .top-rule { border-top: 2.5pt solid #d97706; margin-bottom: 14pt; }
+    body { font-family: Helvetica, Arial, sans-serif; font-size: 9pt; color: #000000; line-height: 1.3; }
 
-    .hdr-tbl  { width: 100%; border-collapse: collapse; }
-    .hdr-l    { vertical-align: top; }
-    .hdr-r    { vertical-align: top; text-align: right; width: 48%; }
+    .cab { width: 100%; border-collapse: collapse; margin-bottom: 12pt; }
+    .cab td { vertical-align: middle; padding: 0 0 6pt 0; border-bottom: 2pt solid #1a1a2e; }
+    .marca { font-size: 18pt; font-weight: bold; color: #1a1a2e; }
+    .marca-sub { font-size: 8pt; color: #6c757d; }
+    .titulo { font-size: 14pt; font-weight: bold; text-align: right; }
+    .numero { font-size: 11pt; font-weight: bold; text-align: right; }
 
-    .brand {
-      font-size: 17pt; font-weight: bold;
-      color: #111827; letter-spacing: -0.4pt;
-    }
-    .brand-dot { color: #d97706; }
-    .tagline {
-      font-size: 6.5pt; color: #9ca3af;
-      text-transform: uppercase; letter-spacing: 1.2pt; margin-top: 2pt;
-    }
+    .info { width: 100%; border-collapse: collapse; }
+    .info td { border: 0.5pt solid #808080; padding: 3pt 4pt; font-size: 9pt; vertical-align: top; }
+    .info td.rot { background-color: #d3d3d3; font-weight: bold; width: 17%; }
+    .info td.val { width: 33%; }
+    .placa { font-family: Courier, monospace; font-weight: bold; font-size: 10pt; }
 
-    .cnum {
-      font-size: 22pt; font-weight: bold;
-      color: #d97706; font-family: Courier, monospace;
-      letter-spacing: 1pt;
-    }
-    .status-pill {
-      display: inline-block;
-      font-size: 6.5pt; font-weight: bold; color: #d97706;
-      border: 1pt solid #d97706; padding: 1.5pt 8pt;
-      text-transform: uppercase; letter-spacing: 0.8pt;
-      margin-top: 4pt;
-    }
-    .emitted {
-      font-size: 7.5pt; color: #9ca3af; margin-top: 5pt;
-    }
+    h3 { font-size: 11pt; font-weight: bold; margin-top: 14pt; margin-bottom: 5pt; }
 
-    .hdr-rule { border-top: 1pt solid #e5e7eb; margin-top: 14pt; margin-bottom: 18pt; }
+    .grade { width: 100%; border-collapse: collapse; }
+    .grade th { color: #ffffff; font-weight: bold; font-size: 9pt; padding: 3pt 4pt; border: 0.5pt solid #808080; text-align: left; }
+    .grade td { font-size: 9pt; padding: 3pt 4pt; border: 0.5pt solid #808080; vertical-align: top; }
+    .grade .dir { text-align: right; }
+    .grade .sub { font-size: 7.5pt; color: #555555; }
+    .azul th { background-color: #00008b; }
+    .azul tr.par td { background-color: #ffffe0; }
+    .verde th { background-color: #006400; }
+    .verde tr.par td { background-color: #90ee90; }
 
-    /* ─── SEÇÕES ──────────────────────────────────── */
-    .sec-label {
-      font-size: 6.5pt; font-weight: bold; color: #d97706;
-      text-transform: uppercase; letter-spacing: 1.5pt;
-      margin-bottom: 10pt;
-    }
-    .sec-rule { border-top: 1pt solid #f3f4f6; margin: 16pt 0; }
+    .totais { width: 100%; border-collapse: collapse; }
+    .totais td { font-size: 10pt; padding: 2pt 4pt; }
+    .totais td.v { text-align: right; width: 24%; }
+    .totais tr.total td { font-size: 12pt; font-weight: bold; background-color: #add8e6; border-top: 1pt solid #000000; padding: 4pt; }
+    .totais tr.pago td { color: #1e7a4c; font-weight: bold; }
 
-    /* ─── PARTES ──────────────────────────────────── */
-    .party-tbl { width: 100%; border-collapse: collapse; }
-    .party-a   { width: 48%; vertical-align: top; padding-right: 4%; }
-    .party-b   { width: 48%; vertical-align: top; padding-left: 4%;
-                 border-left: 1pt solid #f3f4f6; }
+    .pequeno { font-size: 8pt; margin-top: 6pt; }
 
-    .fl {
-      font-size: 6.5pt; color: #9ca3af; text-transform: uppercase;
-      letter-spacing: 0.5pt; display: block; margin-bottom: 1.5pt;
-    }
-    .fv       { font-size: 9.5pt; font-weight: 600; color: #111827; }
-    .fv-sm    { font-size: 8.5pt; font-weight: normal; color: #374151; }
-    .fv-plate {
-      font-family: Courier, monospace;
-      font-size: 14pt; font-weight: bold;
-      color: #111827; letter-spacing: 2pt;
-    }
-    .field    { margin-bottom: 8pt; }
-    .field-0  { margin-bottom: 0; }
+    .termos { font-size: 8pt; margin-top: 16pt; padding-top: 8pt; border-top: 0.5pt solid #000000; }
+    .assin { width: 100%; margin-top: 34pt; }
+    .assin td { width: 44%; text-align: center; vertical-align: top; font-size: 8.5pt; padding: 0; }
+    .assin td.vao { width: 12%; }
+    .assin td.linha { border-top: 0.75pt solid #000000; padding-top: 4pt; line-height: 1.4; }
+    .assin .doc { font-size: 7.5pt; color: #555555; }
+    .assinado { border: 1pt solid #1e7a4c; color: #1e7a4c; font-weight: bold; font-size: 8pt; text-align: center; padding: 5pt; margin-top: 14pt; }
 
-    /* ─── CONDIÇÕES ───────────────────────────────── */
-    .cond-tbl { width: 100%; border-collapse: collapse; }
-    .cond-th  {
-      font-size: 6.5pt; color: #9ca3af;
-      text-transform: uppercase; letter-spacing: 0.5pt;
-      font-weight: bold; padding-bottom: 4pt; text-align: left;
-      border-bottom: 1pt solid #f3f4f6; width: 25%;
-    }
-    .cond-td  {
-      font-size: 10pt; font-weight: 600; color: #111827;
-      padding-top: 6pt; padding-bottom: 10pt;
-      vertical-align: top; width: 25%;
-    }
-    .cond-sub {
-      display: block; font-size: 7.5pt;
-      font-weight: normal; color: #6b7280; margin-top: 1pt;
-    }
-
-    /* ─── ADICIONAIS ──────────────────────────────── */
-    .adic-tbl { width: 100%; border-collapse: collapse; }
-    .adic-tbl thead th {
-      font-size: 6.5pt; color: #9ca3af; text-transform: uppercase;
-      letter-spacing: 0.5pt; font-weight: bold; padding-bottom: 5pt;
-      border-bottom: 1pt solid #f3f4f6; text-align: left;
-    }
-    .adic-tbl thead th.r { text-align: right; }
-    .adic-tbl tbody td {
-      font-size: 9pt; color: #374151;
-      padding: 7pt 0; border-bottom: 1pt solid #f9fafb;
-    }
-    .adic-tbl tbody tr:last-child td { border-bottom: none; }
-
-    /* ─── FINANCEIRO ──────────────────────────────── */
-    .fin-tbl { width: 100%; border-collapse: collapse; }
-    .fin-tbl td { padding: 4pt 0; }
-    .fin-k    { font-size: 9pt; color: #6b7280; }
-    .fin-v    { font-size: 9pt; font-weight: 600; color: #374151; text-align: right; }
-    .fin-sep  { border-top: 1pt solid #e5e7eb; height: 0; padding: 0 !important; }
-    .fin-sep-td { padding: 6pt 0 0 0 !important; }
-    .fin-big-k {
-      font-size: 11.5pt; font-weight: bold; color: #111827; padding-top: 0 !important;
-    }
-    .fin-big-v {
-      font-size: 14pt; font-weight: bold; color: #111827;
-      text-align: right; padding-top: 0 !important;
-    }
-    .fin-paid-k { font-size: 8.5pt; color: #1e7a4c; padding-top: 6pt !important; }
-    .fin-paid-v { font-size: 8.5pt; font-weight: bold; color: #1e7a4c; text-align: right; padding-top: 6pt !important; }
-
-    /* ─── ASSINATURA ──────────────────────────────── */
-    .sig-terms {
-      font-size: 7.5pt; color: #9ca3af; line-height: 1.7;
-      margin-bottom: 24pt;
-    }
-    .sig-tbl { width: 100%; border-collapse: collapse; }
-    .sig-a   { width: 44%; text-align: center; vertical-align: bottom; }
-    .sig-gap { width: 12%; }
-    .sig-b   { width: 44%; text-align: center; vertical-align: bottom; }
-    .sig-line { border-top: 1pt solid #374151; margin-top: 38pt; margin-bottom: 6pt; }
-    .sig-name { font-size: 9pt; font-weight: bold; color: #111827; }
-    .sig-role { font-size: 7.5pt; color: #9ca3af; }
-    .sig-doc  { font-size: 7pt; color: #9ca3af; font-family: Courier, monospace; margin-top: 1pt; }
-
-    .signed-ok {
-      border: 1pt solid #1e7a4c; padding: 7pt 10pt;
-      text-align: center; font-size: 7.5pt;
-      font-weight: bold; color: #1e7a4c; margin-top: 16pt;
-    }
-
-    /* ─── RODAPÉ ──────────────────────────────────── */
-    .footer-rule { border-top: 1pt solid #f3f4f6; margin-top: 20pt; }
-    .footer-tbl  { width: 100%; border-collapse: collapse; }
-    .footer-l    { font-size: 6.5pt; color: #d1d5db; padding-top: 7pt; }
-    .footer-r    { font-size: 6.5pt; color: #d1d5db; text-align: right; padding-top: 7pt; }
+    #rodape { font-size: 7.5pt; color: #6c757d; text-align: center; }
+    #rodape a { color: #6c757d; text-decoration: none; }
   </style>
 </head>
 <body>
 
-<!-- ━━━ CABEÇALHO ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-<div class="top-rule"></div>
+<div id="rodape">
+  Aluga F&aacute;cil - Sistema de Gest&atilde;o &middot; <a href="https://lopsystem.com.br">lopsystem.com.br</a>
+  &nbsp;&middot;&nbsp; P&aacute;gina <pdf:pagenumber> de <pdf:pagecount>
+</div>
 
-<table class="hdr-tbl">
+<table class="cab">
   <tr>
-    <td class="hdr-l">
-      <div class="brand">Aluga<span class="brand-dot">.</span>F&aacute;cil</div>
-      <div class="tagline">Gest&atilde;o de Locadoras</div>
+    <td style="width:45%">
+      <div class="marca">Aluga F&aacute;cil</div>
+      <div class="marca-sub">Sistema de Gest&atilde;o</div>
     </td>
-    <td class="hdr-r">
-      <div class="cnum">{{ contrato.numero }}</div>
-      <div><span class="status-pill">{{ contrato.get_situacao_display }}</span></div>
-      <div class="emitted">Emitido em {{ contrato.criado_em|date:"d/m/Y \&agrave;\s H:i" }}</div>
+    <td style="width:55%">
+      <div class="titulo">CONTRATO DE LOCA&Ccedil;&Atilde;O</div>
+      <div class="numero">N&ordm; {{ contrato.numero }}</div>
     </td>
   </tr>
 </table>
 
-<div class="hdr-rule"></div>
-
-<!-- ━━━ PARTES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-<div class="sec-label">Partes do Contrato</div>
-
-<table class="party-tbl">
+<table class="info">
   <tr>
-    <td class="party-a">
-      <div class="field">
-        <span class="fl">Locat&aacute;rio</span>
-        <span class="fv">{{ contrato.cliente.nome_exibicao }}</span>
-      </div>
-      <div class="field">
-        <span class="fl">CPF / CNPJ</span>
-        <span class="fv">{{ contrato.cliente.documento|default:"&mdash;" }}</span>
-      </div>
-      {% if contrato.cliente.celular %}
-      <div class="field">
-        <span class="fl">Celular</span>
-        <span class="fv fv-sm">{{ contrato.cliente.celular }}</span>
-      </div>
-      {% elif contrato.cliente.telefone %}
-      <div class="field">
-        <span class="fl">Telefone</span>
-        <span class="fv fv-sm">{{ contrato.cliente.telefone }}</span>
-      </div>
-      {% endif %}
-      {% if contrato.cliente.email %}
-      <div class="field field-0">
-        <span class="fl">E-mail</span>
-        <span class="fv fv-sm">{{ contrato.cliente.email }}</span>
-      </div>
-      {% endif %}
-    </td>
-    <td class="party-b">
-      <div class="field">
-        <span class="fl">Ve&iacute;culo</span>
-        <span class="fv-plate">{{ contrato.veiculo.placa }}</span>
-      </div>
-      <div class="field">
-        <span class="fl">Marca / Modelo</span>
-        <span class="fv">{{ contrato.veiculo.marca }} {{ contrato.veiculo.modelo }}</span>
-      </div>
-      <div class="field">
-        <span class="fl">Ano / Cor</span>
-        <span class="fv fv-sm">{{ contrato.veiculo.ano_fabricacao }}/{{ contrato.veiculo.ano_modelo }} &mdash; {{ contrato.veiculo.cor }}</span>
-      </div>
-      <div class="field field-0">
-        <span class="fl">Quil&ocirc;metragem na sa&iacute;da</span>
-        <span class="fv fv-sm">{% if contrato.km_saida %}{{ contrato.km_saida|floatformat:0 }} km{% else %}&mdash;{% endif %}</span>
-      </div>
-    </td>
+    <td class="rot">Locat&aacute;rio:</td>
+    <td class="val">{{ contrato.cliente.nome_exibicao }}</td>
+    <td class="rot">CPF / CNPJ:</td>
+    <td class="val">{{ contrato.cliente.documento|default:"&mdash;" }}</td>
+  </tr>
+  <tr>
+    <td class="rot">{% if contrato.cliente.celular %}Celular:{% else %}Telefone:{% endif %}</td>
+    <td class="val">{{ contrato.cliente.celular|default:contrato.cliente.telefone|default:"&mdash;" }}</td>
+    <td class="rot">E-mail:</td>
+    <td class="val">{{ contrato.cliente.email|default:"&mdash;" }}</td>
+  </tr>
+  <tr>
+    <td class="rot">Ve&iacute;culo:</td>
+    <td class="val">{{ contrato.veiculo.marca }} {{ contrato.veiculo.modelo }}</td>
+    <td class="rot">Placa:</td>
+    <td class="val"><span class="placa">{{ contrato.veiculo.placa }}</span></td>
+  </tr>
+  <tr>
+    <td class="rot">Ano / Cor:</td>
+    <td class="val">{{ contrato.veiculo.ano_fabricacao }}/{{ contrato.veiculo.ano_modelo }} &mdash; {{ contrato.veiculo.cor }}</td>
+    <td class="rot">KM sa&iacute;da:</td>
+    <td class="val">{% if contrato.km_saida %}{{ contrato.km_saida|floatformat:0 }} km{% else %}&mdash;{% endif %}</td>
+  </tr>
+  <tr>
+    <td class="rot">Emiss&atilde;o:</td>
+    <td class="val">{{ contrato.criado_em|date:"d/m/Y H:i" }}</td>
+    <td class="rot">Situa&ccedil;&atilde;o:</td>
+    <td class="val">{{ contrato.get_situacao_display }}</td>
   </tr>
 </table>
 
-<div class="sec-rule"></div>
-
-<!-- ━━━ CONDIÇÕES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-<div class="sec-label">Condi&ccedil;&otilde;es da Loca&ccedil;&atilde;o</div>
-
-<table class="cond-tbl">
-  <thead>
-    <tr>
-      <th class="cond-th">Data de Sa&iacute;da</th>
-      <th class="cond-th">Devolu&ccedil;&atilde;o Prevista</th>
-      <th class="cond-th">Per&iacute;odo</th>
-      <th class="cond-th">Di&aacute;ria</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td class="cond-td">
-        {% if contrato.data_saida %}{{ contrato.data_saida|date:"d/m/Y" }}<span class="cond-sub">&agrave;s {{ contrato.data_saida|date:"H:i" }}</span>{% else %}&mdash;{% endif %}
-      </td>
-      <td class="cond-td">
-        {{ contrato.data_devolucao_prevista|date:"d/m/Y" }}<span class="cond-sub">&agrave;s {{ contrato.data_devolucao_prevista|date:"H:i" }}</span>
-      </td>
-      <td class="cond-td">
-        {{ contrato.total_dias|default:"&mdash;" }}<span class="cond-sub">dia{{ contrato.total_dias|pluralize:"s" }}</span>
-      </td>
-      <td class="cond-td">
-        R$&nbsp;{{ contrato.diaria }}<span class="cond-sub">por dia</span>{% if contrato.usa_pacote %}<span class="cond-sub">Cobran&ccedil;a {{ contrato.get_forma_cobranca_display|lower }}: R$&nbsp;{{ contrato.valor_pacote }} por {% if contrato.forma_cobranca == 'mensal' %}m&ecirc;s{% else %}semana{% endif %} fechado(a)</span>{% else %}<span class="cond-sub">Cobran&ccedil;a {{ contrato.get_forma_cobranca_display|lower }}</span>{% endif %}
-      </td>
-    </tr>
-  </tbody>
-</table>
-
-<table class="cond-tbl" style="margin-top:0">
-  <thead>
-    <tr>
-      <th class="cond-th">Fran&ccedil;uia KM / Dia</th>
-      <th class="cond-th">KM Excedente</th>
-      <th class="cond-th">Cau&ccedil;&atilde;o</th>
-      <th class="cond-th">Combust&iacute;vel Sa&iacute;da</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td class="cond-td">
-        {{ contrato.km_franquia_diaria }}<span class="cond-sub">km inclu&iacute;dos</span>
-      </td>
-      <td class="cond-td">
-        R$&nbsp;{{ contrato.valor_km_excedente }}<span class="cond-sub">por km excedente</span>
-      </td>
-      <td class="cond-td">
-        R$&nbsp;{{ contrato.caucao_valor }}<span class="cond-sub">{{ contrato.get_caucao_situacao_display }}</span>
-      </td>
-      <td class="cond-td">
-        {% if contrato.combustivel_saida %}{{ contrato.get_combustivel_saida_display }}{% else %}&mdash;{% endif %}
-      </td>
-    </tr>
-  </tbody>
-</table>
-
-<div class="sec-rule"></div>
-
-<!-- ━━━ OBSERVAÇÕES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-{% if contrato.obs_saida or contrato.obs_devolucao %}
-<div class="sec-rule"></div>
-<div class="sec-label">Observa&ccedil;&otilde;es</div>
-<table style="width:100%; border-collapse:collapse">
-  {% if contrato.obs_saida %}
+<h3>CONDI&Ccedil;&Otilde;ES DA LOCA&Ccedil;&Atilde;O</h3>
+<table class="grade azul">
   <tr>
-    <td style="width:50%; vertical-align:top; padding-right:8pt">
-      <span class="fl">Sa&iacute;da</span>
-      <p style="font-size:8.5pt; color:#374151; margin:0">{{ contrato.obs_saida }}</p>
-    </td>
-  {% endif %}
-  {% if contrato.obs_devolucao %}
-    <td style="width:50%; vertical-align:top; padding-left:8pt; border-left:1pt solid #f3f4f6">
-      <span class="fl">Devolu&ccedil;&atilde;o</span>
-      <p style="font-size:8.5pt; color:#374151; margin:0">{{ contrato.obs_devolucao }}</p>
-    </td>
-  {% endif %}
+    <th>Sa&iacute;da</th>
+    <th>Devolu&ccedil;&atilde;o prevista</th>
+    <th>Per&iacute;odo</th>
+    <th>Di&aacute;ria</th>
+  </tr>
+  <tr>
+    <td>{% if contrato.data_saida %}{{ contrato.data_saida|date:"d/m/Y H:i" }}{% else %}&mdash;{% endif %}</td>
+    <td>{{ contrato.data_devolucao_prevista|date:"d/m/Y H:i" }}</td>
+    <td>{% if contrato.total_dias %}{{ contrato.total_dias }} dia{{ contrato.total_dias|pluralize:"s" }}{% else %}&mdash;{% endif %}</td>
+    <td>{{ contrato.diaria|brl }} por dia<br><span class="sub">{% if contrato.usa_pacote %}Cobran&ccedil;a {{ contrato.get_forma_cobranca_display|lower }}: {{ contrato.valor_pacote|brl }} por {% if contrato.forma_cobranca == 'mensal' %}m&ecirc;s{% else %}semana{% endif %} fechado(a){% else %}Cobran&ccedil;a {{ contrato.get_forma_cobranca_display|lower }}{% endif %}</span></td>
+  </tr>
+  <tr>
+    <th>Franquia KM / dia</th>
+    <th>KM excedente</th>
+    <th>Cau&ccedil;&atilde;o</th>
+    <th>Combust&iacute;vel na sa&iacute;da</th>
+  </tr>
+  <tr>
+    <td>{{ contrato.km_franquia_diaria }} km</td>
+    <td>{{ contrato.valor_km_excedente|brl }} por km</td>
+    <td>{{ contrato.caucao_valor|brl }}<br><span class="sub">{{ contrato.get_caucao_situacao_display }}</span></td>
+    <td>{% if contrato.combustivel_saida %}{{ contrato.get_combustivel_saida_display }}{% else %}&mdash;{% endif %}</td>
   </tr>
 </table>
-{% endif %}
 
-<!-- ━━━ ADICIONAIS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
 {% if adicionais %}
-<div class="sec-label">Servi&ccedil;os Adicionais</div>
-<table class="adic-tbl">
-  <thead>
-    <tr>
-      <th>Servi&ccedil;o</th>
-      <th>Descri&ccedil;&atilde;o</th>
-      <th class="r">Qtd.</th>
-      <th class="r">Di&aacute;ria (R$)</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for adicional in adicionais %}
-    <tr>
-      <td><strong>{{ adicional.get_tipo_display }}</strong></td>
-      <td style="color:#9ca3af; font-size:8.5pt">{{ adicional.descricao|default:"&mdash;" }}</td>
-      <td style="text-align:right">{{ adicional.quantidade }}</td>
-      <td style="text-align:right; font-family:Courier,monospace; font-weight:bold">{{ adicional.diaria }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
+<h3>SERVI&Ccedil;OS ADICIONAIS</h3>
+<table class="grade verde">
+  <tr>
+    <th style="width:30%">Servi&ccedil;o</th>
+    <th style="width:40%">Descri&ccedil;&atilde;o</th>
+    <th class="dir" style="width:10%">Qtd</th>
+    <th class="dir" style="width:20%">Di&aacute;ria</th>
+  </tr>
+  {% for adicional in adicionais %}
+  <tr{% if forloop.counter|divisibleby:2 %} class="par"{% endif %}>
+    <td>{{ adicional.get_tipo_display }}</td>
+    <td>{{ adicional.descricao|default:"&mdash;" }}</td>
+    <td class="dir">{{ adicional.quantidade }}</td>
+    <td class="dir">{{ adicional.diaria|brl }}</td>
+  </tr>
+  {% endfor %}
 </table>
-<div class="sec-rule"></div>
 {% endif %}
 
-<!-- ━━━ RESUMO FINANCEIRO ━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-<div class="sec-label">Resumo Financeiro</div>
-
-<table class="fin-tbl">
+<h3>RESUMO FINANCEIRO</h3>
+<table class="totais">
   {% if contrato.situacao == 'aberto' %}
   <tr>
-    <td class="fin-k">Loca&ccedil;&atilde;o &mdash; {{ contrato.dias_contratados }} dia{{ contrato.dias_contratados|pluralize:"s" }}{% if contrato.usa_pacote %} (pacote {{ contrato.get_forma_cobranca_display|lower }} de R$&nbsp;{{ contrato.valor_pacote }}; dias soltos a R$&nbsp;{{ contrato.diaria }}){% else %} &times; R$&nbsp;{{ contrato.diaria }}{% endif %}</td>
-    <td class="fin-v">R$&nbsp;{{ contrato.valor_locacao_base|floatformat:2 }}</td>
+    <td>Loca&ccedil;&atilde;o &mdash; {{ contrato.dias_contratados }} dia{{ contrato.dias_contratados|pluralize:"s" }}{% if contrato.usa_pacote %} (pacote {{ contrato.get_forma_cobranca_display|lower }} de {{ contrato.valor_pacote|brl }}; dias soltos a {{ contrato.diaria|brl }}){% else %} &times; {{ contrato.diaria|brl }}{% endif %}:</td>
+    <td class="v">{{ contrato.valor_locacao_base|brl }}</td>
   </tr>
   {% if contrato.total_adicionais %}
   <tr>
-    <td class="fin-k">Servi&ccedil;os adicionais</td>
-    <td class="fin-v">R$&nbsp;{{ contrato.total_adicionais|floatformat:2 }}</td>
+    <td>Servi&ccedil;os adicionais:</td>
+    <td class="v">{{ contrato.total_adicionais|brl }}</td>
   </tr>
   {% endif %}
   {% if contrato.total_avarias %}
   <tr>
-    <td class="fin-k">Avarias cobradas</td>
-    <td class="fin-v">R$&nbsp;{{ contrato.total_avarias|floatformat:2 }}</td>
+    <td>Avarias cobradas:</td>
+    <td class="v">{{ contrato.total_avarias|brl }}</td>
   </tr>
   {% endif %}
   {% else %}
   {% for rotulo, valor in contrato.composicao_financeira %}
   <tr>
-    <td class="fin-k">{{ rotulo }}</td>
-    <td class="fin-v">{{ valor|brl }}</td>
+    <td>{{ rotulo }}:</td>
+    <td class="v">{{ valor|brl }}</td>
   </tr>
   {% endfor %}
   {% endif %}
-  <tr>
-    <td class="fin-sep" colspan="2"><div style="border-top:1pt solid #e5e7eb; margin:6pt 0 0 0; height:0">&nbsp;</div></td>
-  </tr>
-  <tr>
-    <td class="fin-big-k">Total da Loca&ccedil;&atilde;o{% if contrato.situacao == 'aberto' %} (estimado){% endif %}</td>
-    <td class="fin-big-v">R$&nbsp;{{ contrato.total_geral|floatformat:2 }}</td>
+  <tr class="total">
+    <td>Total da Loca&ccedil;&atilde;o{% if contrato.situacao == 'aberto' %} (estimado){% endif %}:</td>
+    <td class="v">{{ contrato.total_geral|brl }}</td>
   </tr>
   {% if contrato.total_pago %}
-  <tr>
-    <td class="fin-paid-k">Valor j&aacute; pago</td>
-    <td class="fin-paid-v">R$&nbsp;{{ contrato.total_pago|floatformat:2 }}</td>
+  <tr class="pago">
+    <td>Valor j&aacute; pago:</td>
+    <td class="v">{{ contrato.total_pago|brl }}</td>
+  </tr>
+  {% if contrato.situacao != 'aberto' %}
+  <tr class="pago">
+    <td>Saldo a pagar:</td>
+    <td class="v">{{ contrato.saldo_devedor|brl }}</td>
   </tr>
   {% endif %}
-  {% if contrato.situacao != 'aberto' and contrato.total_pago %}
-  <tr>
-    <td class="fin-paid-k">Saldo a pagar</td>
-    <td class="fin-paid-v">R$&nbsp;{{ contrato.saldo_devedor|floatformat:2 }}</td>
-  </tr>
   {% endif %}
 </table>
 
-<div class="sec-rule"></div>
+{% if contrato.obs_saida %}
+<p class="pequeno"><b>Observa&ccedil;&otilde;es na sa&iacute;da:</b> {{ contrato.obs_saida|linebreaksbr }}</p>
+{% endif %}
+{% if contrato.obs_devolucao %}
+<p class="pequeno"><b>Observa&ccedil;&otilde;es na devolu&ccedil;&atilde;o:</b> {{ contrato.obs_devolucao|linebreaksbr }}</p>
+{% endif %}
 
-<!-- ━━━ ASSINATURA ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-<div class="sig-terms">
+<div class="termos">
   Declaro que li e concordo com todos os termos e condi&ccedil;&otilde;es deste contrato de loca&ccedil;&atilde;o de ve&iacute;culo,
   responsabilizando-me pela conserva&ccedil;&atilde;o e uso correto do ve&iacute;culo, pelo pagamento de eventuais danos,
   multas de tr&acirc;nsito geradas durante o per&iacute;odo da loca&ccedil;&atilde;o, quil&ocirc;metros excedentes e dias extras de uso.
 </div>
 
-<table class="sig-tbl">
+<table class="assin">
   <tr>
-    <td class="sig-a">
-      <div class="sig-line"></div>
-      <div class="sig-name">{{ contrato.cliente.nome_exibicao }}</div>
-      <div class="sig-role">Locat&aacute;rio</div>
-      <div class="sig-doc">{{ contrato.cliente.documento }}</div>
-    </td>
-    <td class="sig-gap"></td>
-    <td class="sig-b">
-      <div class="sig-line"></div>
-      <div class="sig-name">Aluga F&aacute;cil</div>
-      <div class="sig-role">Locadora &mdash; Representante</div>
-    </td>
+    <td class="linha"><b>{{ contrato.cliente.nome_exibicao }}</b><br>Locat&aacute;rio{% if contrato.cliente.documento %}<br><span class="doc">{{ contrato.cliente.documento }}</span>{% endif %}</td>
+    <td class="vao"></td>
+    <td class="linha"><b>Aluga F&aacute;cil</b><br>Locadora &mdash; Representante</td>
   </tr>
 </table>
 
 {% if contrato.assinado %}
-<div class="signed-ok">
-  &#10003; &nbsp;Assinado digitalmente em {{ contrato.assinado_em|date:"d/m/Y \&agrave;\s H:i" }}{% if contrato.ip_assinatura %} &nbsp;&middot;&nbsp; IP: {{ contrato.ip_assinatura }}{% endif %}
+<div class="assinado">
+  &#10003; Assinado digitalmente em {{ contrato.assinado_em|date:"d/m/Y H:i" }}{% if contrato.ip_assinatura %} &middot; IP: {{ contrato.ip_assinatura }}{% endif %}
 </div>
 {% endif %}
-
-<!-- ━━━ RODAPÉ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-<div class="footer-rule"></div>
-<table class="footer-tbl">
-  <tr>
-    <td class="footer-l">Aluga F&aacute;cil &mdash; Sistema de Gest&atilde;o para Locadoras</td>
-    <td class="footer-r">{{ contrato.numero }} &nbsp;&middot;&nbsp; {{ contrato.criado_em|date:"d/m/Y" }}</td>
-  </tr>
-</table>
 
 </body>
 </html>

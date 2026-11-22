@@ -40,7 +40,7 @@
       <input type="text" name="busca" value="{{ filtro_busca }}"
              style="width:100%; padding:8px 12px 8px 36px; border:1px solid #e2e8f0; border-radius:8px; font-size:13.5px; font-family:inherit; outline:none; transition:border-color .15s; background:#fff; color:#0f172a"
              placeholder="Placa, marca ou modelo…"
-             onfocus="this.style.borderColor='#d97706'; this.style.boxShadow='0 0 0 3px rgba(217,119,6,.15)'"
+             onfocus="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(13,110,253,.15)'"
              onblur="this.style.borderColor='#e2e8f0'; this.style.boxShadow='none'">
     </div>
     <button type="submit" class="btn btn-outline-secondary btn-sm">Buscar</button>
@@ -103,7 +103,7 @@
 
       <div style="display:flex; border-top:1px solid #f1f5f9">
         <a href="{% url 'frota:detalhe' veiculo.pk %}"
-           style="flex:1; display:flex; align-items:center; justify-content:center; gap:5px; padding:10px 6px; font-size:12px; font-weight:600; color:#d97706; text-decoration:none; border-right:1px solid #f1f5f9; transition:background .15s"
+           style="flex:1; display:flex; align-items:center; justify-content:center; gap:5px; padding:10px 6px; font-size:12px; font-weight:600; color:var(--primary); text-decoration:none; border-right:1px solid #f1f5f9; transition:background .15s"
            onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
           <i class="bi bi-eye"></i> Ver
         </a>

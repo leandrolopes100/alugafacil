@@ -13,7 +13,7 @@
   <div>
     <h1 class="page-title">Conta a Receber</h1>
     <div class="d-flex align-items-center gap-2 mt-1">
-      <span class="text-mono" style="font-size:13px; font-weight:700; color:#d97706">{{ conta.contrato.numero }}</span>
+      <span class="text-mono" style="font-size:13px; font-weight:700; color:var(--primary)">{{ conta.contrato.numero }}</span>
       <span class="status-badge
         {% if conta.situacao == 'pendente' %}status-warning
         {% elif conta.situacao == 'pago_parcial' %}status-primary
@@ -81,8 +81,8 @@
           {% endif %}
           {% if conta.contrato.total_caucao_coletado %}
           <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:8px; padding-top:8px; border-top:1px solid #f1f5f9; color:#64748b">
-            <span><i class="bi bi-shield-check me-1" style="color:#d97706"></i>Caução coletado</span>
-            <span style="font-weight:600; color:#d97706">R$ {{ conta.contrato.total_caucao_coletado|floatformat:2 }}</span>
+            <span><i class="bi bi-shield-check me-1" style="color:var(--primary)"></i>Caução coletado</span>
+            <span style="font-weight:600; color:var(--primary)">R$ {{ conta.contrato.total_caucao_coletado|floatformat:2 }}</span>
           </div>
           <div style="font-size:10px; color:#94a3b8; text-align:right">Depósito — não incluso no saldo devedor</div>
           {% endif %}
@@ -96,7 +96,7 @@
       <ul class="list-group list-group-flush">
         <li class="list-group-item d-flex justify-content-between small" style="padding:9px 20px">
           <span style="color:#64748b">Cliente</span>
-          <a href="{% url 'clientes:detalhe' conta.cliente.pk %}" style="font-weight:600; color:#d97706; text-decoration:none">{{ conta.cliente.nome_exibicao }}</a>
+          <a href="{% url 'clientes:detalhe' conta.cliente.pk %}" style="font-weight:600; color:var(--primary); text-decoration:none">{{ conta.cliente.nome_exibicao }}</a>
         </li>
         <li class="list-group-item d-flex justify-content-between small" style="padding:9px 20px">
           <span style="color:#64748b">Emissão</span>
@@ -180,7 +180,7 @@
         <div class="row g-3">
           <div class="col-sm-3">
             <div style="font-size:11px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:.05em">Número</div>
-            <div class="text-mono" style="font-weight:700; color:#d97706; font-size:14px">{{ conta.contrato.numero }}</div>
+            <div class="text-mono" style="font-weight:700; color:var(--primary); font-size:14px">{{ conta.contrato.numero }}</div>
           </div>
           <div class="col-sm-3">
             <div style="font-size:11px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:.05em">Veículo</div>

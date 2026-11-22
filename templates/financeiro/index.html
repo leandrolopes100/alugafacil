@@ -21,46 +21,36 @@
 </div>
 
 <!-- KPI Cards — Recebíveis -->
-<div class="row g-3 mb-4">
+<div class="card kpi-strip mb-4">
+  <div class="row g-0">
   <div class="col-6 col-lg-3">
-    <a href="{% url 'financeiro:contas-receber' %}" class="kpi-card">
-      <div class="kpi-icon" style="background:#fdf1e0; color:#d97706">
-        <i class="bi bi-receipt"></i>
-      </div>
-      <div class="kpi-value" style="font-size:22px; color:#d97706">{{ total_receber|brl }}</div>
-      <div class="kpi-label">Em Aberto</div>
+    <a href="{% url 'financeiro:contas-receber' %}" class="kpi-col" style="--kpi-cor:var(--primary)">
+      <div class="kpi-value">{{ total_receber|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-receipt"></i> Em Aberto</div>
       <div class="kpi-sub">saldo a receber</div>
     </a>
   </div>
   <div class="col-6 col-lg-3">
-    <a href="{% url 'financeiro:contas-receber' %}?situacao=vencido" class="kpi-card">
-      <div class="kpi-icon" style="background:#fceceb; color:#b3261e">
-        <i class="bi bi-exclamation-circle-fill"></i>
-      </div>
-      <div class="kpi-value" style="font-size:22px; color:#b3261e">{{ total_vencido|brl }}</div>
-      <div class="kpi-label">Vencido</div>
+    <a href="{% url 'financeiro:contas-receber' %}?situacao=vencido" class="kpi-col" style="--kpi-cor:var(--danger)">
+      <div class="kpi-value">{{ total_vencido|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-exclamation-circle-fill"></i> Vencido</div>
       <div class="kpi-sub">inadimplência</div>
     </a>
   </div>
   <div class="col-6 col-lg-3">
-    <a href="{% url 'financeiro:contas-receber' %}" class="kpi-card">
-      <div class="kpi-icon" style="background:#eafaf0; color:#1e7a4c">
-        <i class="bi bi-arrow-down-circle-fill"></i>
-      </div>
-      <div class="kpi-value" style="font-size:22px; color:#1e7a4c">{{ total_recebido_mes|brl }}</div>
-      <div class="kpi-label">Recebido no Mês</div>
+    <a href="{% url 'financeiro:contas-receber' %}" class="kpi-col" style="--kpi-cor:var(--success)">
+      <div class="kpi-value">{{ total_recebido_mes|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-arrow-down-circle-fill"></i> Recebido no Mês</div>
       <div class="kpi-sub">{% now "F Y" %}</div>
     </a>
   </div>
   <div class="col-6 col-lg-3">
-    <a href="{% url 'financeiro:contas-receber' %}?situacao=pendente" class="kpi-card">
-      <div class="kpi-icon" style="background:#fbeee6; color:#a8461f">
-        <i class="bi bi-hourglass-split"></i>
-      </div>
-      <div class="kpi-value" style="font-size:22px; color:#a8461f">{{ por_situacao.pendente.valor|brl }}</div>
-      <div class="kpi-label">Pendentes</div>
+    <a href="{% url 'financeiro:contas-receber' %}?situacao=pendente" class="kpi-col" style="--kpi-cor:var(--manut)">
+      <div class="kpi-value">{{ por_situacao.pendente.valor|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-hourglass-split"></i> Pendentes</div>
       <div class="kpi-sub">{{ por_situacao.pendente.count }} conta{{ por_situacao.pendente.count|pluralize }}</div>
     </a>
+  </div>
   </div>
 </div>
 
@@ -142,7 +132,7 @@
       <div class="card-header d-flex align-items-center justify-content-between">
         <span><i class="bi bi-list-check"></i> Contas em Aberto</span>
         <a href="{% url 'financeiro:contas-receber' %}"
-           style="font-size:12.5px; color:#d97706; text-decoration:none; font-weight:600">
+           style="font-size:12.5px; color:var(--primary); text-decoration:none; font-weight:600">
           Ver todas <i class="bi bi-arrow-right ms-1"></i>
         </a>
       </div>

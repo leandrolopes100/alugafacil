@@ -88,7 +88,7 @@ class Veiculo(models.Model):
     portas = models.PositiveSmallIntegerField('Portas', default=4)
     lugares = models.PositiveSmallIntegerField('Lugares', default=5)
 
-    km_atual = models.PositiveIntegerField('KM atual', default=0)
+    km_atual = models.PositiveIntegerField('KM atual', default=0, null=True, blank=True)
     grupo = models.ForeignKey(
         GrupoVeiculo, on_delete=models.PROTECT,
         verbose_name='Grupo', related_name='veiculos'

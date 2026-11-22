@@ -20,7 +20,6 @@ urlpatterns = [
     path('relatorios/exportar/<str:tipo>/', views.ExportarCSVView.as_view(), name='relatorio-exportar'),
 
     # Manual do usuário
-    path('manual/', views.ManualUsuarioPDFView.as_view(), name='manual'),
 
     # Busca global
     path('busca/', views.BuscaGlobalView.as_view(), name='busca'),

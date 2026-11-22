@@ -13,6 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&text=AlugF%C3%A1cil%20&display=swap" rel="stylesheet">
 
   <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -26,7 +27,7 @@
   <style>
     /* ── Design Tokens ──────────────────────────────────────────────── */
     :root {
-      --bg:            #f1f5f9;
+      --bg:            #f8f9fa;
       --surface:       #ffffff;
       --border:        #e2e8f0;
       --border-light:  #f1f5f9;
@@ -35,10 +36,12 @@
       --text-secondary:#475569;
       --text-muted:    #94a3b8;
 
-      --primary:       #d97706;
-      --primary-hover: #b45309;
-      --primary-light: #fdf1e0;
-      --primary-ring:  rgba(217,119,6,.25);
+      --primary:       #0d6efd;
+      --primary-hover: #0b5ed7;
+      --primary-light: #e7f1ff;
+      --primary-ring:  rgba(13,110,253,.25);
+      --primary-borda: #b6d4fe;
+      --primary-sobre-escuro: #6ea8fe;
 
       --success:       #1e7a4c;
       --success-bg:    #eafaf0;
@@ -56,8 +59,8 @@
       --manut-bg:      #fbeee6;
       --manut-text:    #6b2c12;
 
-      --sidebar-bg:    #0f172a;
-      --sidebar-w:     248px;
+      --sidebar-bg:    #1a1a2e;
+      --sidebar-w:     250px;
 
       --radius-sm:     6px;
       --radius-md:     10px;
@@ -201,86 +204,92 @@
       z-index: 1030;
       transition: transform .25s ease;
     }
-    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.15) transparent; }
+    .sidebar::-webkit-scrollbar { width: 5px; }
     .sidebar::-webkit-scrollbar-track { background: transparent; }
-    .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 10px; }
+    .sidebar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.3); }
 
     .sidebar-brand {
-      display: flex;
-      align-items: center;
-      padding: 20px 20px 16px;
+      padding: 1.2rem 1rem;
+      border-bottom: 1px solid rgba(255,255,255,.1);
+    }
+    .marca-sistema {
+      display: block;
+      font-family: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 1.15rem;
+      line-height: 1;
+      letter-spacing: .01em;
+      color: #eceef2;
+      white-space: nowrap;
       text-decoration: none;
-      border-bottom: 1px solid rgba(255,255,255,.06);
     }
-    .sidebar-brand .brand-name {
-      font-size: 18px;
-      font-weight: 800;
-      color: #fff;
-      letter-spacing: -.02em;
-    }
-    .sidebar-brand .brand-name .brand-accent { color: var(--primary); }
-    .sidebar-brand .brand-tag {
-      font-size: 10px;
+    .marca-sistema:hover { color: #fff; }
+    .marca-sistema .marca-destaque { color: var(--primary-sobre-escuro); }
+    .marca-subtitulo {
+      display: block;
+      margin-top: .4rem;
+      font-size: .72rem;
       font-weight: 500;
-      color: rgba(255,255,255,.35);
-      margin-top: -2px;
+      color: rgba(255,255,255,.5);
     }
+    .marca-site {
+      display: inline-block;
+      margin-top: .2rem;
+      font-size: .68rem;
+      letter-spacing: .02em;
+      color: rgba(255,255,255,.32);
+      text-decoration: none;
+      transition: color .15s ease;
+    }
+    .marca-site:hover, .marca-site:focus { color: rgba(255,255,255,.6); }
+
+    .sidebar-nav { padding: .5rem .5rem 1rem; flex: 1; }
 
     .sidebar-section {
       display: block;
-      font-size: 10.5px;
-      font-weight: 600;
+      font-size: .7rem;
       text-transform: uppercase;
-      letter-spacing: .08em;
-      color: rgba(255,255,255,.28);
-      padding: 18px 20px 6px;
+      letter-spacing: 1px;
+      color: #6c757d;
+      padding: .8rem 1rem .2rem;
     }
 
     .sidebar-link {
       display: flex;
       align-items: center;
-      gap: 9px;
-      padding: 8px 20px;
-      color: rgba(255,255,255,.58);
+      gap: 8px;
+      padding: .5rem 1rem;
+      color: #adb5bd;
       text-decoration: none;
-      font-size: 13.5px;
-      font-weight: 500;
-      border-left: 2px solid transparent;
-      margin: 1px 0;
-      transition: color .12s, background .12s, border-color .12s;
-      border-radius: 0 6px 6px 0;
-      margin-right: 10px;
+      font-size: .9rem;
+      border-radius: 6px;
+      transition: color .12s, background .12s;
     }
     .sidebar-link i {
-      font-size: 15px;
-      opacity: .7;
       flex-shrink: 0;
       width: 18px;
       text-align: center;
     }
-    .sidebar-link:hover {
-      color: rgba(255,255,255,.9);
-      background: rgba(255,255,255,.06);
-    }
+    .sidebar-link:hover,
     .sidebar-link.active {
       color: #fff;
-      background: rgba(217,119,6,.18);
-      border-left-color: var(--primary);
+      background: rgba(255,255,255,.1);
     }
-    .sidebar-link.active i { opacity: 1; }
+
+    .sidebar-link-desabilitado { opacity: .45; cursor: not-allowed; user-select: none; }
+    .sidebar-link-desabilitado:hover { color: #adb5bd; background: transparent; }
 
     .sidebar-sub .sidebar-link {
       padding-left: 44px;
       font-size: 13px;
-      color: rgba(255,255,255,.46);
     }
-    .sidebar-sub .sidebar-link:hover { color: rgba(255,255,255,.8); }
-    .sidebar-sub .sidebar-link.active { color: rgba(255,255,255,.9); }
 
     .sidebar-footer {
       margin-top: auto;
       padding: 12px 16px;
-      border-top: 1px solid rgba(255,255,255,.06);
+      border-top: 1px solid rgba(255,255,255,.1);
     }
     .sidebar-user {
       display: flex;
@@ -303,25 +312,6 @@
     .sidebar-user-name { font-size: 13px; font-weight: 600; color: #fff; }
     .sidebar-user-role { font-size: 11px; color: rgba(255,255,255,.4); }
 
-    .sidebar-cta {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 7px;
-      margin-bottom: 10px;
-      padding: 9px 14px;
-      border-radius: 8px;
-      background: rgba(217,119,6,.18);
-      border: 1px solid rgba(217,119,6,.35);
-      text-decoration: none;
-      color: rgba(255,255,255,.85);
-      font-size: 12.5px;
-      font-weight: 600;
-      transition: background .15s;
-    }
-    .sidebar-cta:hover { background: rgba(217,119,6,.32); color: rgba(255,255,255,.95); }
-    .sidebar-cta i { font-size: 14px; color: #fbbf24; }
-
     .sidebar-icon-btn {
       color: rgba(255,255,255,.35);
       text-decoration: none;
@@ -336,22 +326,6 @@
       justify-content: center;
     }
     .sidebar-icon-btn:hover { color: rgba(255,255,255,.8); background: rgba(255,255,255,.08); }
-
-    .sidebar-manual-link {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-top: 8px;
-      padding: 5px 10px;
-      border-radius: 5px;
-      text-decoration: none;
-      color: rgba(255,255,255,.3);
-      font-size: 11.5px;
-      font-weight: 500;
-      transition: color .15s;
-    }
-    .sidebar-manual-link:hover { color: rgba(255,255,255,.6); }
-    .sidebar-manual-link i { font-size: 12px; }
 
     .sidebar-badge {
       position: absolute;
@@ -402,53 +376,6 @@
     .topbar .breadcrumb-item a:hover { color: var(--text-primary); }
     .topbar .breadcrumb-item.active { color: var(--text-secondary); font-weight: 500; }
     .topbar .breadcrumb-item + .breadcrumb-item::before { color: var(--text-muted); }
-
-    /* ── Topbar Search ───────────────────────────────────────────────── */
-    .topbar-search {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      height: 32px;
-      width: 220px;
-      padding: 0 10px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      transition: width .2s, border-color .15s;
-    }
-    .topbar-search:focus-within {
-      width: 260px;
-      border-color: var(--primary);
-    }
-    .topbar-search i { font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
-    .topbar-search-mobile { flex: 1; min-width: 0; }
-    .topbar-search-mobile .topbar-search { width: 100%; }
-    .topbar-icon-btn {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-      padding: 8px;
-      border-radius: var(--radius-sm);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 40px;
-      min-height: 40px;
-      font-size: 18px;
-      transition: background .15s, color .15s;
-      flex-shrink: 0;
-    }
-    .topbar-icon-btn:hover { background: var(--bg); color: var(--text-primary); }
-    .topbar-search input {
-      font-size: 12.5px;
-      color: var(--text-primary);
-      background: none;
-      border: none;
-      outline: none;
-      padding: 0;
-      width: 100%;
-    }
 
     /* ── Flash Messages ──────────────────────────────────────────────── */
     .flash-zone { padding: 16px 24px 0; }
@@ -514,13 +441,13 @@
     /* ── Cards ───────────────────────────────────────────────────────── */
     .card {
       background: var(--surface);
-      border: 1px solid var(--border);
+      border: none;
       border-radius: var(--radius-md);
-      box-shadow: var(--shadow-xs);
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
     }
     .card-header {
-      background: transparent;
-      border-bottom: 1px solid var(--border-light);
+      background: #fff;
+      border-bottom: 1px solid #f0f0f0;
       padding: 14px 20px;
       font-size: 13.5px;
       font-weight: 600;
@@ -566,46 +493,57 @@
     .table-link { color: var(--primary); text-decoration: none; font-weight: 600; }
     .table-link:hover { color: var(--primary-hover); }
 
-    /* ── KPI Cards ───────────────────────────────────────────────────── */
-    .kpi-card {
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      background: var(--surface);
-      padding: 20px;
-      transition: box-shadow .15s, transform .15s;
+    /* ── KPI Strip ───────────────────────────────────────────────────── */
+    .kpi-strip {
+      border: none;
+      border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+      overflow: hidden;
+    }
+    .kpi-strip > .row > * { box-shadow: -1px -1px 0 #eef0f2; }
+    .kpi-col {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 1.25rem 1.4rem 1.1rem;
       text-decoration: none;
-      display: block;
+      color: inherit;
+      transition: background-color .15s ease;
     }
-    .kpi-card:hover {
-      box-shadow: var(--shadow-md);
-      transform: translateY(-1px);
-    }
-    .kpi-icon {
-      width: 40px; height: 40px;
-      border-radius: var(--radius-sm);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
-      margin-bottom: 12px;
-    }
-    .kpi-value {
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: -.02em;
-      line-height: 1;
-      color: var(--text-primary);
+    a.kpi-col:hover { background: #fafbfc; color: inherit; }
+    .kpi-col::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--kpi-cor);
     }
     .kpi-label {
-      font-size: 12px;
+      order: -1;
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      font-size: .68rem;
       font-weight: 600;
-      color: var(--text-muted);
+      letter-spacing: .06em;
       text-transform: uppercase;
-      letter-spacing: .05em;
-      margin-top: 4px;
+      color: #8a919b;
+      margin-bottom: .6rem;
     }
-    .kpi-sub {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 4px;
+    .kpi-label i { font-size: .8rem; color: #adb5bd; }
+    .kpi-value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      line-height: 1.1;
+      color: #212529;
+      margin-bottom: .4rem;
+      overflow-wrap: anywhere;
+    }
+    .kpi-sub { font-size: .73rem; color: #6c757d; margin-top: 3px; }
+    @media (max-width: 767.98px) {
+      .kpi-col { padding: 1rem 1rem .9rem; }
+      .kpi-value { font-size: 1.25rem; }
     }
 
     /* ── Status Badges ───────────────────────────────────────────────── */
@@ -682,7 +620,7 @@
     .alert-danger  { background: var(--danger-bg);  color: var(--danger-text);  border-color: #d9a19d; }
     .alert-success { background: var(--success-bg); color: var(--success-text); border-color: #8fcaab; }
     .alert-info    { background: var(--info-bg);    color: var(--info-text);    border-color: #93bdd1; }
-    .alert-primary { background: var(--primary-light); color: var(--primary); border-color: #f0cfa0; }
+    .alert-primary { background: var(--primary-light); color: #084298; border-color: var(--primary-borda); }
 
     /* ── Pagination ──────────────────────────────────────────────────── */
     .pagination { gap: 3px; }
@@ -779,14 +717,13 @@
 <!-- ── Sidebar ───────────────────────────────────────────────────────── -->
 <aside class="sidebar" id="sidebar">
 
-  <a href="{% url 'core:dashboard' %}" class="sidebar-brand">
-    <div>
-      <div class="brand-name">Aluga <span class="brand-accent">Fácil</span></div>
-      <div class="brand-tag">Sistema de Locação</div>
-    </div>
-  </a>
+  <div class="sidebar-brand">
+    <a href="{% url 'core:dashboard' %}" class="marca-sistema">Aluga <span class="marca-destaque">Fácil</span></a>
+    <span class="marca-subtitulo">Sistema de Gestão</span>
+    <a href="https://lopsystem.com.br" target="_blank" rel="noopener" class="marca-site">www.lopsystem.com.br</a>
+  </div>
 
-  <nav style="padding: 8px 0 16px; flex:1">
+  <nav class="sidebar-nav">
 
     <!-- PRINCIPAL -->
     <span class="sidebar-section">Principal</span>
@@ -801,10 +738,9 @@
        class="sidebar-link {% if request.resolver_match.app_name == 'contratos' and 'reserva' not in request.resolver_match.url_name|default:'' %}active{% endif %}">
       <i class="bi bi-file-earmark-text-fill"></i> Contratos
     </a>
-    <a href="{% url 'contratos:reserva-lista' %}"
-       class="sidebar-link {% if 'reserva' in request.resolver_match.url_name|default:'' %}active{% endif %}">
+    <span class="sidebar-link sidebar-link-desabilitado" aria-disabled="true">
       <i class="bi bi-calendar-check-fill"></i> Reservas
-    </a>
+    </span>
     <a href="{% url 'clientes:lista' %}"
        class="sidebar-link {% if request.resolver_match.app_name == 'clientes' %}active{% endif %}">
       <i class="bi bi-people-fill"></i> Clientes
@@ -884,18 +820,12 @@
     {% if modulo_investidores %}
     <!-- INVESTIDORES -->
     <span class="sidebar-section">Investidores</span>
-    <a href="{% url 'investidores:lista' %}"
-       class="sidebar-link {% if request.resolver_match.app_name == 'investidores' and 'cobranca' not in request.resolver_match.url_name|default:'' and request.resolver_match.url_name != 'cobrancas' and request.resolver_match.url_name != 'gerar-lote' %}active{% endif %}">
+    <span class="sidebar-link sidebar-link-desabilitado" aria-disabled="true">
       <i class="bi bi-person-badge-fill"></i> Investidores
-    </a>
-    <a href="{% url 'investidores:cobrancas' %}"
-       class="sidebar-link {% if request.resolver_match.url_name == 'cobrancas' or request.resolver_match.url_name == 'gerar-lote' or request.resolver_match.url_name == 'pagar-cobranca' or request.resolver_match.url_name == 'cancelar-cobranca' %}active{% endif %}"
-       style="position:relative">
+    </span>
+    <span class="sidebar-link sidebar-link-desabilitado" aria-disabled="true">
       <i class="bi bi-cash-stack"></i> Cobranças de Gestão
-      {% if investidores_badge > 0 %}
-      <span class="sidebar-badge">{{ investidores_badge }}</span>
-      {% endif %}
-    </a>
+    </span>
     {% endif %}
 
     <!-- RELATÓRIOS -->
@@ -908,12 +838,6 @@
   </nav>
 
   <div class="sidebar-footer">
-    <!-- Ação rápida: novo contrato -->
-    <a href="{% url 'contratos:novo' %}" class="sidebar-cta">
-      <i class="bi bi-plus-circle-fill"></i>
-      Novo Contrato
-    </a>
-
     <!-- Usuário + logout -->
     <div class="sidebar-user">
       <div class="sidebar-avatar">{{ request.user.username|first|upper }}</div>
@@ -932,10 +856,6 @@
       </form>
     </div>
 
-    <!-- Manual -->
-    <a href="{% url 'core:manual' %}" target="_blank" class="sidebar-manual-link">
-      <i class="bi bi-book"></i> Manual do Usuário
-    </a>
   </div>
 </aside>
 
@@ -943,13 +863,13 @@
 <div class="main-wrapper">
 
   <!-- Topbar -->
-  <header class="topbar" x-data="{ buscaMobileAberta: {{ request.GET.q|yesno:'true,false' }} }">
+  <header class="topbar">
     <button onclick="openSidebar()" id="menuBtn"
             style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:8px; border-radius:6px; align-items:center; justify-content:center; min-width:36px; min-height:36px">
       <i class="bi bi-list" style="font-size:22px; line-height:1"></i>
     </button>
 
-    <nav aria-label="breadcrumb" style="flex:1; min-width:0" x-show="!buscaMobileAberta">
+    <nav aria-label="breadcrumb" style="flex:1; min-width:0">
       <ol class="breadcrumb">
         <li class="breadcrumb-item">
           <a href="{% url 'core:dashboard' %}">Início</a>
@@ -958,38 +878,6 @@
       </ol>
     </nav>
 
-    <!-- Busca expansível — visível só no mobile, mantém a função sempre acessível -->
-    <form action="{% url 'core:busca' %}" method="get" class="topbar-search-mobile d-md-none"
-          x-show="buscaMobileAberta" x-cloak>
-      <div class="topbar-search">
-        <i class="bi bi-search"></i>
-        <input type="text" name="q" placeholder="Buscar placa, cliente..."
-               value="{{ request.GET.q|default:'' }}"
-               x-ref="buscaMobileInput" @keydown.escape="buscaMobileAberta = false">
-      </div>
-    </form>
-
-    <div style="display:flex; align-items:center; gap:8px" x-show="!buscaMobileAberta">
-      <button type="button" class="topbar-icon-btn d-md-none"
-              @click="buscaMobileAberta = true; $nextTick(() => $refs.buscaMobileInput.focus())">
-        <i class="bi bi-search"></i>
-      </button>
-      <form action="{% url 'core:busca' %}" method="get" class="d-none d-md-flex align-items-center">
-        <div class="topbar-search">
-          <i class="bi bi-search"></i>
-          <input type="text" name="q" placeholder="Buscar placa, cliente..."
-                 value="{{ request.GET.q|default:'' }}">
-        </div>
-      </form>
-      <a href="{% url 'contratos:novo' %}" class="btn btn-primary btn-sm d-flex align-items-center gap-1">
-        <i class="bi bi-plus-lg"></i> <span class="d-none d-lg-inline">Novo Contrato</span>
-      </a>
-    </div>
-
-    <button type="button" class="topbar-icon-btn d-md-none" x-show="buscaMobileAberta" x-cloak
-            @click="buscaMobileAberta = false">
-      <i class="bi bi-x-lg"></i>
-    </button>
   </header>
 
   <!-- Flash Messages -->

@@ -42,6 +42,7 @@ class TelaLoginTests(TestCase):
         self.assertContains(resposta, 'autocomplete="current-password"')
         self.assertContains(resposta, 'aria-label="Mostrar senha"')
         self.assertContains(resposta, 'Aluga <span class="marca-destaque">Fácil</span>')
+        self.assertContains(resposta, 'Sistema de Gestão')
 
     def test_senha_errada_mostra_erro_claro_e_mantem_o_usuario(self):
         resposta = self.entrar('atendente.demo', 'errada')

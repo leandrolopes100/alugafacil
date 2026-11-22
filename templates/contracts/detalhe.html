@@ -104,46 +104,36 @@
 
 <!-- ── KPIs financeiros (visível após checkout) ───────────────────────────── -->
 {% if contrato.situacao != 'aberto' and contrato.situacao != 'cancelado' %}
-<div class="row g-3 mb-4">
+<div class="card kpi-strip mb-4">
+  <div class="row g-0">
   <div class="col-6 col-lg-3">
-    <div class="kpi-card {% if contrato.saldo_devedor > 0 %}border-danger border-opacity-50{% else %}border-success border-opacity-50{% endif %}" style="border-width:2px!important">
-      <div class="kpi-icon" style="background:{% if contrato.saldo_devedor > 0 %}#fceceb; color:#b3261e{% else %}#eafaf0; color:#1e7a4c{% endif %}">
-        <i class="bi bi-{% if contrato.saldo_devedor > 0 %}exclamation-circle-fill{% else %}check-circle-fill{% endif %}"></i>
-      </div>
-      <div class="kpi-value" style="font-size:18px; color:{% if contrato.saldo_devedor > 0 %}#b3261e{% else %}#1e7a4c{% endif %}">
+    <div class="kpi-col" style="--kpi-cor:{% if contrato.saldo_devedor > 0 %}var(--danger){% else %}var(--success){% endif %}">
+      <div class="kpi-value">
         {{ contrato.saldo_devedor|brl }}
       </div>
-      <div class="kpi-label">{% if contrato.saldo_devedor > 0 %}Saldo Devedor{% else %}Quitado{% endif %}</div>
+      <div class="kpi-label"><i class="bi bi-{% if contrato.saldo_devedor > 0 %}exclamation-circle-fill{% else %}check-circle-fill{% endif %}"></i> {% if contrato.saldo_devedor > 0 %}Saldo Devedor{% else %}Quitado{% endif %}</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:#fdf1e0; color:#d97706">
-        <i class="bi bi-receipt"></i>
-      </div>
-      <div class="kpi-value" style="font-size:18px; color:#d97706">{{ contrato.total_geral|brl }}</div>
-      <div class="kpi-label">Total a Receber</div>
+    <div class="kpi-col" style="--kpi-cor:var(--primary)">
+      <div class="kpi-value">{{ contrato.total_geral|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-receipt"></i> Total a Receber</div>
       {% if not contrato.total_dias %}<div class="kpi-sub">estimado</div>{% endif %}
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:#eafaf0; color:#1e7a4c">
-        <i class="bi bi-arrow-down-circle-fill"></i>
-      </div>
-      <div class="kpi-value" style="font-size:18px; color:#1e7a4c">{{ contrato.total_pago|brl }}</div>
-      <div class="kpi-label">Total Recebido</div>
+    <div class="kpi-col" style="--kpi-cor:var(--success)">
+      <div class="kpi-value">{{ contrato.total_pago|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-arrow-down-circle-fill"></i> Total Recebido</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:#eef5fa; color:#2f6690">
-        <i class="bi bi-shield-check"></i>
-      </div>
-      <div class="kpi-value" style="font-size:18px; color:#2f6690">{{ contrato.caucao_valor|brl }}</div>
-      <div class="kpi-label">Caução</div>
+    <div class="kpi-col" style="--kpi-cor:var(--info)">
+      <div class="kpi-value">{{ contrato.caucao_valor|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-shield-check"></i> Caução</div>
       <div class="kpi-sub">{{ contrato.get_caucao_situacao_display }}</div>
     </div>
+  </div>
   </div>
 </div>
 {% endif %}

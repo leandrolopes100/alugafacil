@@ -26,14 +26,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&text=AlugF%C3%A1cil%20&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <style>
     :root {
-      --asfalto: #0f172a;
-      --asfalto-claro: #1e293b;
-      --ambar: #d97706;
-      --ambar-escuro: #b45309;
-      --ambar-anel: rgba(217, 119, 6, .22);
+      --asfalto: #1a1a2e;
+      --asfalto-claro: #262646;
+      --azul: #0d6efd;
+      --azul-escuro: #0b5ed7;
+      --azul-anel: rgba(13, 110, 253, .22);
+      --azul-sobre-escuro: #6ea8fe;
       --tinta: #0f172a;
       --tinta-media: #475569;
       --tinta-suave: #64748b;
@@ -89,19 +91,31 @@
     .painel-centro { max-width: 440px; }
 
     .marca-nome {
+      font-family: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif;
       font-size: 44px;
-      font-weight: 800;
-      line-height: 1.1;
-      letter-spacing: -.02em;
-      color: #fff;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: .01em;
+      color: #eceef2;
+      white-space: nowrap;
     }
-    .marca-nome .marca-destaque { color: var(--ambar); }
-    .marca-tag {
-      margin-top: 2px;
-      font-size: 13px;
+    .marca-nome .marca-destaque { color: var(--azul-sobre-escuro); }
+    .marca-subtitulo {
+      margin-top: 10px;
+      font-size: 14px;
       font-weight: 500;
-      color: rgba(255, 255, 255, .35);
+      color: rgba(255, 255, 255, .55);
     }
+    .marca-site {
+      display: inline-block;
+      margin-top: 4px;
+      font-size: 13px;
+      letter-spacing: .02em;
+      color: rgba(255, 255, 255, .32);
+      text-decoration: none;
+      transition: color .15s ease;
+    }
+    .marca-site:hover { color: rgba(255, 255, 255, .6); }
 
     .painel-titulo {
       margin-top: 40px;
@@ -111,7 +125,7 @@
       letter-spacing: -.02em;
       color: #f8fafc;
     }
-    .painel-titulo em { font-style: normal; color: var(--ambar); }
+    .painel-titulo em { font-style: normal; color: var(--azul-sobre-escuro); }
 
     .painel-lista {
       list-style: none;
@@ -131,7 +145,7 @@
       flex: 0 0 14px;
       height: 3px;
       border-radius: 2px;
-      background: var(--ambar);
+      background: var(--azul-sobre-escuro);
       transform: translateY(-3px);
     }
 
@@ -147,7 +161,7 @@
       left: -56px;
       right: -56px;
       height: 4px;
-      background: repeating-linear-gradient(90deg, var(--ambar) 0 34px, transparent 34px 60px);
+      background: repeating-linear-gradient(90deg, var(--azul-sobre-escuro) 0 34px, transparent 34px 60px);
       background-size: 60px 4px;
       opacity: .9;
       animation: rodar 2.4s linear infinite;
@@ -223,8 +237,8 @@
     .campo-entrada:hover { border-color: #cbd5e1; }
     .campo-entrada:focus {
       outline: none;
-      border-color: var(--ambar);
-      box-shadow: 0 0 0 3px var(--ambar-anel);
+      border-color: var(--azul);
+      box-shadow: 0 0 0 3px var(--azul-anel);
     }
     .campo-entrada[aria-invalid="true"] { border-color: var(--erro); }
     .campo-entrada.com-botao { padding-right: 48px; }
@@ -246,7 +260,7 @@
       cursor: pointer;
     }
     .ver-senha:hover { background: #f1f5f9; color: var(--tinta); }
-    .ver-senha:focus-visible { outline: 2px solid var(--ambar); outline-offset: 1px; }
+    .ver-senha:focus-visible { outline: 2px solid var(--azul); outline-offset: 1px; }
 
     .caps {
       display: none;
@@ -272,7 +286,7 @@
       gap: 10px;
       border: 0;
       border-radius: 8px;
-      background: var(--ambar);
+      background: var(--azul);
       color: #fff;
       font: inherit;
       font-size: 15px;
@@ -280,9 +294,9 @@
       cursor: pointer;
       transition: background .15s, box-shadow .15s;
     }
-    .botao-entrar:hover { background: var(--ambar-escuro); box-shadow: 0 6px 16px rgba(217, 119, 6, .3); }
-    .botao-entrar:focus-visible { outline: 3px solid var(--ambar-anel); outline-offset: 2px; }
-    .botao-entrar[disabled] { cursor: progress; background: var(--ambar-escuro); box-shadow: none; }
+    .botao-entrar:hover { background: var(--azul-escuro); box-shadow: 0 6px 16px rgba(13, 110, 253, .3); }
+    .botao-entrar:focus-visible { outline: 3px solid var(--azul-anel); outline-offset: 2px; }
+    .botao-entrar[disabled] { cursor: progress; background: var(--azul-escuro); box-shadow: none; }
     .giro {
       display: none;
       width: 16px;
@@ -318,7 +332,8 @@
       }
       .marca-celular { text-align: center; }
       .marca-celular .marca-nome { font-size: 30px; }
-      .marca-celular .marca-tag { font-size: 11px; }
+      .marca-celular .marca-subtitulo { font-size: 12px; margin-top: 8px; }
+      .marca-celular .marca-site { font-size: 11px; margin-top: 2px; }
       .marca-celular .painel-rodape { margin-top: 24px; padding: 12px 0 0; }
       .marca-celular .estrada { left: -20px; right: -20px; }
       .form-box { margin: 0 auto; }
@@ -338,7 +353,8 @@
 
     <div class="painel-centro">
       <div class="marca-nome">Aluga <span class="marca-destaque">Fácil</span></div>
-      <div class="marca-tag">Sistema de Locação</div>
+      <div class="marca-subtitulo">Sistema de Gestão</div>
+      <a href="https://lopsystem.com.br" target="_blank" rel="noopener" tabindex="-1" class="marca-site">www.lopsystem.com.br</a>
 
       <p class="painel-titulo">Do contrato à devolução,<br>a frota toda em <em>um só lugar</em>.</p>
 
@@ -358,7 +374,8 @@
   <section class="area-form">
     <div class="marca-celular" aria-hidden="true">
       <div class="marca-nome">Aluga <span class="marca-destaque">Fácil</span></div>
-      <div class="marca-tag">Sistema de Locação</div>
+      <div class="marca-subtitulo">Sistema de Gestão</div>
+      <a href="https://lopsystem.com.br" target="_blank" rel="noopener" tabindex="-1" class="marca-site">www.lopsystem.com.br</a>
       <div class="painel-rodape"><div class="estrada"></div></div>
     </div>
     <div class="form-box">

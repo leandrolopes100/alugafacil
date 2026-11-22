@@ -15,69 +15,53 @@
 {% block conteudo_relatorio %}
 
 <!-- KPIs -->
-<div class="row g-3 mb-4">
+<div class="card kpi-strip mb-4">
+  <div class="row g-0">
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:var(--info-bg); color:var(--info)">
-        <i class="bi bi-file-earmark-text"></i>
-      </div>
+    <div class="kpi-col" style="--kpi-cor:var(--info)">
       <div class="kpi-value">{{ total }}</div>
-      <div class="kpi-label">Total</div>
+      <div class="kpi-label"><i class="bi bi-file-earmark-text"></i> Total</div>
       <div class="kpi-sub">contratos no período</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:var(--success-bg); color:var(--success)">
-        <i class="bi bi-check-circle-fill"></i>
-      </div>
-      <div class="kpi-value" style="color:var(--success)">{{ encerrados }}</div>
-      <div class="kpi-label">Encerrados</div>
+    <div class="kpi-col" style="--kpi-cor:var(--success)">
+      <div class="kpi-value">{{ encerrados }}</div>
+      <div class="kpi-label"><i class="bi bi-check-circle-fill"></i> Encerrados</div>
       <div class="kpi-sub">concluídos com sucesso</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:var(--primary-light); color:var(--primary)">
-        <i class="bi bi-cash-stack"></i>
-      </div>
-      <div class="kpi-value" style="font-size:20px; color:var(--primary)">{{ receita|brl }}</div>
-      <div class="kpi-label">Receita</div>
+    <div class="kpi-col" style="--kpi-cor:var(--primary)">
+      <div class="kpi-value">{{ receita|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-cash-stack"></i> Receita</div>
       <div class="kpi-sub">recebido no período</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:#f8fafc; color:var(--text-secondary)">
-        <i class="bi bi-tag"></i>
-      </div>
-      <div class="kpi-value" style="font-size:20px">{{ ticket_medio|brl }}</div>
-      <div class="kpi-label">Ticket Médio</div>
+    <div class="kpi-col" style="--kpi-cor:var(--text-secondary)">
+      <div class="kpi-value">{{ ticket_medio|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-tag"></i> Ticket Médio</div>
       <div class="kpi-sub">por contrato encerrado</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:#f8fafc; color:var(--text-secondary)">
-        <i class="bi bi-clock-history"></i>
-      </div>
+    <div class="kpi-col" style="--kpi-cor:var(--text-secondary)">
       <div class="kpi-value">{{ media_dias }} d</div>
-      <div class="kpi-label">Duração Média</div>
+      <div class="kpi-label"><i class="bi bi-clock-history"></i> Duração Média</div>
       <div class="kpi-sub">dias por locação</div>
     </div>
   </div>
   {% if cancelados %}
   <div class="col-6 col-lg-3">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:#f8fafc; color:var(--text-muted)">
-        <i class="bi bi-x-circle"></i>
-      </div>
-      <div class="kpi-value" style="color:var(--text-muted)">{{ cancelados }}</div>
-      <div class="kpi-label">Cancelados</div>
+    <div class="kpi-col" style="--kpi-cor:var(--text-muted)">
+      <div class="kpi-value">{{ cancelados }}</div>
+      <div class="kpi-label"><i class="bi bi-x-circle"></i> Cancelados</div>
       <div class="kpi-sub">contratos cancelados</div>
     </div>
   </div>
   {% endif %}
+  </div>
 </div>
 
 <!-- Gráficos -->
@@ -163,8 +147,8 @@ new Chart(document.getElementById('chartMeses'), {
       {
         label: 'Contratos',
         data: dadosMeses.contratos,
-        backgroundColor: 'rgba(217,119,6,.15)',
-        borderColor: '#d97706',
+        backgroundColor: 'rgba(13,110,253,.15)',
+        borderColor: '#0d6efd',
         borderWidth: 2,
         borderRadius: 4,
         yAxisID: 'y',

@@ -18,4 +18,4 @@ COPY . .
 RUN useradd --uid 1000 --create-home app && mkdir -p /app/logs /app/media /app/staticfiles && chown -R app:app /app
 USER app
 
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "60", "--access-logfile", "-"]
+CMD ["sh", "-c", "python manage.py collectstatic --noinput && exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 60 --access-logfile -"]

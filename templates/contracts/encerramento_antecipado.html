@@ -157,36 +157,29 @@
           <hr class="section-divider" style="flex:1; margin:0">
         </div>
 
-        <div class="row g-3 mb-2">
+        <div class="card kpi-strip mb-2">
+          <div class="row g-0">
           <div class="col-md-4">
-            <div class="kpi-card">
-              <div class="kpi-icon" style="background:var(--success-bg); color:var(--success)">
-                <i class="bi bi-check-circle-fill"></i>
-              </div>
-              <div class="kpi-value" style="font-size:20px; color:var(--success)" x-text="brl(valorPagas)"></div>
-              <div class="kpi-label"><span x-text="pagas.length"></span> parcela(s) já paga(s)</div>
+            <div class="kpi-col" style="--kpi-cor:var(--success)">
+              <div class="kpi-value" x-text="brl(valorPagas)"></div>
+              <div class="kpi-label"><i class="bi bi-check-circle-fill"></i> <span x-text="pagas.length"></span> parcela(s) já paga(s)</div>
               <div class="kpi-sub">Permanecem no histórico</div>
             </div>
           </div>
           <div class="col-md-4">
-            <div class="kpi-card">
-              <div class="kpi-icon" style="background:var(--warning-bg); color:var(--warning)">
-                <i class="bi bi-clock-history"></i>
-              </div>
-              <div class="kpi-value" style="font-size:20px; color:var(--warning)" x-text="brl(valorMantidas)"></div>
-              <div class="kpi-label"><span x-text="mantidas.length"></span> cobrança(s) em aberto</div>
+            <div class="kpi-col" style="--kpi-cor:var(--warning)">
+              <div class="kpi-value" x-text="brl(valorMantidas)"></div>
+              <div class="kpi-label"><i class="bi bi-clock-history"></i> <span x-text="mantidas.length"></span> cobrança(s) em aberto</div>
               <div class="kpi-sub">Continuam em cobrança</div>
             </div>
           </div>
           <div class="col-md-4">
-            <div class="kpi-card">
-              <div class="kpi-icon" style="background:var(--danger-bg); color:var(--danger)">
-                <i class="bi bi-x-circle-fill"></i>
-              </div>
-              <div class="kpi-value" style="font-size:20px; color:var(--danger)" x-text="brl(valorFuturas)"></div>
-              <div class="kpi-label"><span x-text="futuras.length"></span> parcela(s) futura(s)</div>
+            <div class="kpi-col" style="--kpi-cor:var(--danger)">
+              <div class="kpi-value" x-text="brl(valorFuturas)"></div>
+              <div class="kpi-label"><i class="bi bi-x-circle-fill"></i> <span x-text="futuras.length"></span> parcela(s) futura(s)</div>
               <div class="kpi-sub">Serão canceladas</div>
             </div>
+          </div>
           </div>
         </div>
         <p class="small text-muted mb-4">

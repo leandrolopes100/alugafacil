@@ -57,48 +57,38 @@
   <hr class="section-divider" style="flex:1; margin:0">
 </div>
 
-<div class="row g-3 mb-4">
+<div class="card kpi-strip mb-4">
+  <div class="row g-0">
   <div class="col-6 col-lg-3">
-    <a href="{% url 'frota:lista' %}?situacao=disponivel" class="kpi-card">
-      <div class="kpi-icon" style="background:var(--success-bg); color:var(--success)">
-        <i class="bi bi-check-circle-fill"></i>
-      </div>
-      <div class="kpi-value" style="color:var(--success)">{{ veiculos_disponiveis }}</div>
-      <div class="kpi-label">Disponíveis</div>
+    <a href="{% url 'frota:lista' %}?situacao=disponivel" class="kpi-col" style="--kpi-cor:var(--success)">
+      <div class="kpi-value">{{ veiculos_disponiveis }}</div>
+      <div class="kpi-label"><i class="bi bi-check-circle-fill"></i> Disponíveis</div>
       <div class="kpi-sub">de {{ total_veiculos }} na frota</div>
     </a>
   </div>
   <div class="col-6 col-lg-3">
-    <a href="{% url 'frota:lista' %}?situacao=em_uso" class="kpi-card">
-      <div class="kpi-icon" style="background:var(--primary-light); color:var(--primary)">
-        <i class="bi bi-car-front-fill"></i>
-      </div>
-      <div class="kpi-value" style="color:var(--primary)">{{ veiculos_em_uso }}</div>
-      <div class="kpi-label">Em Uso</div>
+    <a href="{% url 'frota:lista' %}?situacao=em_uso" class="kpi-col" style="--kpi-cor:var(--primary)">
+      <div class="kpi-value">{{ veiculos_em_uso }}</div>
+      <div class="kpi-label"><i class="bi bi-car-front-fill"></i> Em Uso</div>
       <div class="kpi-sub">contrato{{ veiculos_em_uso|pluralize:"s" }} ativo{{ veiculos_em_uso|pluralize:"s" }}</div>
     </a>
   </div>
   <div class="col-6 col-lg-3">
-    <a href="{% url 'frota:lista' %}?situacao=manutencao" class="kpi-card">
-      <div class="kpi-icon" style="background:var(--manut-bg); color:var(--manut)">
-        <i class="bi bi-wrench-adjustable-circle-fill"></i>
-      </div>
-      <div class="kpi-value" style="color:{% if veiculos_manutencao > 0 %}var(--manut){% else %}var(--success){% endif %}">
+    <a href="{% url 'frota:lista' %}?situacao=manutencao" class="kpi-col" style="--kpi-cor:{% if veiculos_manutencao > 0 %}var(--manut){% else %}var(--success){% endif %}">
+      <div class="kpi-value">
         {{ veiculos_manutencao }}
       </div>
-      <div class="kpi-label">Em Manutenção</div>
+      <div class="kpi-label"><i class="bi bi-wrench-adjustable-circle-fill"></i> Em Manutenção</div>
       <div class="kpi-sub">indisponível para locação</div>
     </a>
   </div>
   <div class="col-6 col-lg-3">
-    <a href="{% url 'core:relatorio-frota' %}" class="kpi-card">
-      <div class="kpi-icon" style="background:var(--info-bg); color:var(--info)">
-        <i class="bi bi-speedometer2"></i>
-      </div>
-      <div class="kpi-value" style="color:var(--info)">{{ taxa_ocupacao }}%</div>
-      <div class="kpi-label">Ocupação</div>
+    <a href="{% url 'core:relatorio-frota' %}" class="kpi-col" style="--kpi-cor:var(--info)">
+      <div class="kpi-value">{{ taxa_ocupacao }}%</div>
+      <div class="kpi-label"><i class="bi bi-speedometer2"></i> Ocupação</div>
       <div class="kpi-sub">{% now "F Y" %}</div>
     </a>
+  </div>
   </div>
 </div>
 
@@ -111,55 +101,43 @@
   <hr class="section-divider" style="flex:1; margin:0">
 </div>
 
-<div class="row g-3 mb-4">
+<div class="card kpi-strip mb-4">
+  <div class="row g-0">
   <div class="col-6 col-lg-3">
-    <a href="{% url 'financeiro:fluxo' %}" class="kpi-card">
-      <div class="kpi-icon" style="background:var(--success-bg); color:var(--success)">
-        <i class="bi bi-arrow-down-circle-fill"></i>
-      </div>
-      <div class="kpi-value" style="font-size:20px; color:var(--success)">{{ receita_mes|brl }}</div>
-      <div class="kpi-label">Receita do Mês</div>
+    <a href="{% url 'financeiro:fluxo' %}" class="kpi-col" style="--kpi-cor:var(--success)">
+      <div class="kpi-value">{{ receita_mes|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-arrow-down-circle-fill"></i> Receita do Mês</div>
       <div class="kpi-sub">pagamentos recebidos</div>
     </a>
   </div>
   <div class="col-6 col-lg-3">
-    <a href="{% url 'financeiro:despesas' %}?situacao=quitado" class="kpi-card">
-      <div class="kpi-icon" style="background:var(--danger-bg); color:var(--danger)">
-        <i class="bi bi-arrow-up-circle-fill"></i>
-      </div>
-      <div class="kpi-value" style="font-size:20px; color:var(--danger)">{{ desp_pago|brl }}</div>
-      <div class="kpi-label">Despesas Pagas</div>
+    <a href="{% url 'financeiro:despesas' %}?situacao=quitado" class="kpi-col" style="--kpi-cor:var(--danger)">
+      <div class="kpi-value">{{ desp_pago|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-arrow-up-circle-fill"></i> Despesas Pagas</div>
       <div class="kpi-sub">pagas em {% now "F Y" %}</div>
     </a>
   </div>
   <div class="col-6 col-lg-3">
-    <a href="{% url 'core:relatorio-dre' %}" class="kpi-card">
-      <div class="kpi-icon"
-           style="background:{% if resultado_mes >= 0 %}var(--success-bg); color:var(--success){% else %}var(--danger-bg); color:var(--danger){% endif %}">
-        <i class="bi bi-{% if resultado_mes >= 0 %}graph-up-arrow{% else %}graph-down-arrow{% endif %}"></i>
-      </div>
-      <div class="kpi-value" style="font-size:20px; color:{% if resultado_mes >= 0 %}var(--success){% else %}var(--danger){% endif %}">
+    <a href="{% url 'core:relatorio-dre' %}" class="kpi-col" style="--kpi-cor:{% if resultado_mes >= 0 %}var(--success){% else %}var(--danger){% endif %}">
+      <div class="kpi-value">
         {{ resultado_mes|brl }}
       </div>
-      <div class="kpi-label">Resultado</div>
+      <div class="kpi-label"><i class="bi bi-{% if resultado_mes >= 0 %}graph-up-arrow{% else %}graph-down-arrow{% endif %}"></i> Resultado</div>
       <div class="kpi-sub">regime de caixa · igual à DRE</div>
     </a>
   </div>
   <div class="col-6 col-lg-3">
-    <a href="{% url 'financeiro:contas-pagar' %}" class="kpi-card">
-      <div class="kpi-icon"
-           style="background:{% if desp_atraso > 0 %}var(--danger-bg); color:var(--danger){% else %}var(--manut-bg); color:var(--manut){% endif %}">
-        <i class="bi bi-{% if desp_atraso > 0 %}exclamation-circle-fill{% else %}hourglass-split{% endif %}"></i>
-      </div>
-      <div class="kpi-value" style="font-size:20px; color:{% if desp_atraso > 0 %}var(--danger){% else %}var(--manut){% endif %}">
+    <a href="{% url 'financeiro:contas-pagar' %}" class="kpi-col" style="--kpi-cor:{% if desp_atraso > 0 %}var(--danger){% else %}var(--manut){% endif %}">
+      <div class="kpi-value">
         {{ desp_a_pagar|brl }}
       </div>
-      <div class="kpi-label">A Pagar no Mês</div>
+      <div class="kpi-label"><i class="bi bi-{% if desp_atraso > 0 %}exclamation-circle-fill{% else %}hourglass-split{% endif %}"></i> A Pagar no Mês</div>
       <div class="kpi-sub">
         {% if desp_atraso > 0 %}{{ desp_atraso|brl }} em atraso
         {% else %}pendente de pagamento{% endif %}
       </div>
     </a>
+  </div>
   </div>
 </div>
 

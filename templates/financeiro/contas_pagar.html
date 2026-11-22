@@ -73,36 +73,29 @@
 </div>
 
 <!-- ── KPIs ───────────────────────────────────────────────────────────────── -->
-<div class="row g-3 mb-4">
+<div class="card kpi-strip mb-4">
+  <div class="row g-0">
   <div class="col-6 col-sm-4">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:var(--danger-bg); color:var(--danger)">
-        <i class="bi bi-exclamation-triangle-fill"></i>
-      </div>
-      <div class="kpi-value" style="font-size:22px; color:var(--danger)">{{ kpi_em_atraso|brl }}</div>
-      <div class="kpi-label">Em atraso</div>
+    <div class="kpi-col" style="--kpi-cor:var(--danger)">
+      <div class="kpi-value">{{ kpi_em_atraso|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-exclamation-triangle-fill"></i> Em atraso</div>
       <div class="kpi-sub">vencido sem pagamento</div>
     </div>
   </div>
   <div class="col-6 col-sm-4">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:var(--warning-bg); color:var(--warning)">
-        <i class="bi bi-calendar-fill"></i>
-      </div>
-      <div class="kpi-value" style="font-size:22px; color:var(--warning)">{{ kpi_este_mes|brl }}</div>
-      <div class="kpi-label">A pagar este mês</div>
+    <div class="kpi-col" style="--kpi-cor:var(--warning)">
+      <div class="kpi-value">{{ kpi_este_mes|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-calendar-fill"></i> A pagar este mês</div>
       <div class="kpi-sub">vence em {{ hoje|date:"F/Y" }}</div>
     </div>
   </div>
   <div class="col-6 col-sm-4">
-    <div class="kpi-card">
-      <div class="kpi-icon" style="background:#fdf1e0; color:#d97706">
-        <i class="bi bi-stack"></i>
-      </div>
-      <div class="kpi-value" style="font-size:22px; color:#d97706">{{ kpi_total_pendente|brl }}</div>
-      <div class="kpi-label">Total pendente</div>
+    <div class="kpi-col" style="--kpi-cor:var(--primary)">
+      <div class="kpi-value">{{ kpi_total_pendente|brl }}</div>
+      <div class="kpi-label"><i class="bi bi-stack"></i> Total pendente</div>
       <div class="kpi-sub">parcelas, despesas avulsas e repasses</div>
     </div>
+  </div>
   </div>
 </div>
 
@@ -287,9 +280,9 @@
 
   <!-- Próximas -->
   {% if proximas_grupo %}
-  <div class="card mb-4" style="border-left:3px solid #d97706">
+  <div class="card mb-4" style="border-left:3px solid var(--primary)">
     <div class="card-header d-flex align-items-center">
-      <i class="bi bi-calendar-plus me-2" style="color:#d97706"></i>
+      <i class="bi bi-calendar-plus me-2" style="color:var(--primary)"></i>
       Próximas — {{ proximas_grupo|length }} parcela{{ proximas_grupo|length|pluralize:"s" }}
     </div>
     <div class="table-responsive">
