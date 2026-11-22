@@ -5,7 +5,7 @@ from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
 from .models import CategoriaVeiculo, GrupoVeiculo, Veiculo
-from .tarifas import conferir_tarifas, forma_cobranca_sugerida, resumo_cobranca, valor_base_ciclo
+from .tarifas import conferir_tarifas, diaria_pela_semana, forma_cobranca_sugerida, resumo_cobranca, valor_base_ciclo
 
 
 class RegraDeTarifaTests(SimpleTestCase):
@@ -118,6 +118,24 @@ class CadastroGrupoTarifaTests(TestCase):
     def test_simulacao_sem_diaria_nao_quebra(self):
         dados = self.client.get(reverse('frota:grupo-simular-tarifas'), {'diaria': 'abc'}).json()
         self.assertFalse(dados['pronto'])
+
+    def test_diaria_pela_semana_exata_e_arredondada_para_cima(self):
+        self.assertEqual(diaria_pela_semana(Decimal('700')), Decimal('100.00'))
+        self.assertEqual(diaria_pela_semana(Decimal('650')), Decimal('92.86'))
+        self.assertEqual(diaria_pela_semana(Decimal('650.03')), Decimal('92.87'))
+        for semanal in ('650', '650.03', '499.99', '1000.01'):
+            self.assertGreaterEqual(diaria_pela_semana(Decimal(semanal)) * 7, Decimal(semanal))
+
+    def test_salvar_so_com_semanal_calcula_a_diaria(self):
+        self.client.post(reverse('frota:grupo-novo'), self.dados(diaria='', semanal='650.00'), follow=True)
+        grupo = GrupoVeiculo.objects.get()
+        self.assertEqual(grupo.diaria, Decimal('92.86'))
+        self.assertEqual(grupo.semanal, Decimal('650.00'))
+
+    def test_sem_diaria_e_sem_semanal_pede_um_dos_dois(self):
+        resposta = self.client.post(reverse('frota:grupo-novo'), self.dados(diaria='', semanal=''))
+        self.assertFalse(GrupoVeiculo.objects.exists())
+        self.assertContains(resposta, 'Informe a diária ou o valor semanal.')
 
     def test_tela_do_grupo_tem_o_painel(self):
         resposta = self.client.get(reverse('frota:grupo-novo'))

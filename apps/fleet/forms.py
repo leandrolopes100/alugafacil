@@ -104,17 +104,27 @@ class GrupoVeiculoForm(forms.ModelForm):
             'ativo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['diaria'].required = False
+
     def clean(self):
-        from apps.fleet.tarifas import conferir_tarifas
+        from apps.fleet.tarifas import conferir_tarifas, diaria_pela_semana
         cleaned = super().clean()
         for campo in ('semanal', 'mensal'):
             valor = cleaned.get(campo)
             if valor is not None and valor <= 0:
                 cleaned[campo] = None
         diaria = cleaned.get('diaria')
+        if diaria is None and cleaned.get('semanal') and 'diaria' not in self.errors:
+            diaria = cleaned['diaria'] = diaria_pela_semana(cleaned['semanal'])
         if not diaria or diaria <= 0:
-            if diaria is not None:
-                self.add_error('diaria', 'A diária deve ser maior que zero.')
+            if 'diaria' not in self.errors:
+                self.add_error(
+                    'diaria',
+                    'A diária deve ser maior que zero.' if diaria is not None
+                    else 'Informe a diária ou o valor semanal.',
+                )
             return cleaned
         conferencia = conferir_tarifas(diaria, cleaned.get('semanal'), cleaned.get('mensal'))
         for erro in conferencia['erros']:

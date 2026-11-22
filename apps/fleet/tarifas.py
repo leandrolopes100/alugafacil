@@ -1,4 +1,4 @@
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_CEILING, ROUND_HALF_UP
 
 DIAS_SEMANA = 7
 DIAS_MES_REFERENCIA = 30
@@ -8,6 +8,10 @@ CENTAVO = Decimal('0.01')
 
 def _arredondar(valor):
     return Decimal(valor).quantize(CENTAVO, rounding=ROUND_HALF_UP)
+
+
+def diaria_pela_semana(semanal):
+    return (Decimal(semanal) / DIAS_SEMANA).quantize(CENTAVO, rounding=ROUND_CEILING)
 
 
 def valor_base_ciclo(diaria, dias, pacote=None, completo=False):

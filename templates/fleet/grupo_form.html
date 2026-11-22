@@ -75,6 +75,7 @@
             {% if form.diaria.errors %}
             <div class="invalid-feedback d-block">{{ form.diaria.errors.0 }}</div>
             {% endif %}
+            <div class="form-text fw-semibold" id="diariaCalculada" style="color:var(--primary)" hidden></div>
           </div>
           <div class="col-md-4">
             <label class="form-label fw-semibold small">Semanal (R$)</label>
@@ -82,7 +83,7 @@
             {% if form.semanal.errors %}
             <div class="invalid-feedback d-block">{{ form.semanal.errors.0 }}</div>
             {% else %}
-            <div class="form-text">Pacote de 7 dias. Vazio = pela diária</div>
+            <div class="form-text">Pacote de 7 dias. Ao preencher, a diária é calculada (semanal ÷ 7). Vazio = pela diária</div>
             {% endif %}
           </div>
           <div class="col-md-4">
@@ -288,6 +289,24 @@
       if (pedido === ultima) el('simulandoTarifas').hidden = true;
     }
   }
+
+  const dicaDiaria = el('diariaCalculada');
+
+  function calcularDiariaPelaSemana() {
+    const centavosSemana = Math.round(parseFloat(campos.semanal.value) * 100);
+    if (!(centavosSemana > 0)) { dicaDiaria.hidden = true; return; }
+    const centavosDiaria = Math.ceil(centavosSemana / 7);
+    campos.diaria.value = (centavosDiaria / 100).toFixed(2);
+    let texto = 'Calculada: ' + brl(centavosSemana / 100) + ' ÷ 7 = ' + brl(centavosDiaria / 100);
+    if (centavosDiaria * 7 !== centavosSemana) {
+      texto += ' (arredondada para cima; 7 diárias = ' + brl(centavosDiaria * 7 / 100) + ')';
+    }
+    dicaDiaria.textContent = texto;
+    dicaDiaria.hidden = false;
+  }
+
+  campos.semanal.addEventListener('input', calcularDiariaPelaSemana);
+  campos.diaria.addEventListener('input', () => { dicaDiaria.hidden = true; });
 
   Object.values(campos).forEach(campo => campo && campo.addEventListener('input', () => {
     clearTimeout(temporizador);
