@@ -10,7 +10,7 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DetailView, ListView, UpdateView, View
 
-from apps.core.mixins import GrupoRequiredMixin
+from apps.core.mixins import PermissaoRequeridaMixin
 from apps.financeiro.models import ConfiguracaoLocadora
 from .forms import (
     GerarCobrancaForm,
@@ -52,8 +52,8 @@ def _data_vencimento_para(vinculo, semana_fim):
 
 # ─── Investidores ─────────────────────────────────────────────────────────────
 
-class InvestidorListView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, ListView):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class InvestidorListView(ModuloInvestidoresAtivoMixin, PermissaoRequeridaMixin, ListView):
+    permissao = 'financeiro_acessar'
     model = Investidor
     template_name = 'investidores/lista.html'
     context_object_name = 'investidores'
@@ -88,8 +88,8 @@ class InvestidorListView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, ListV
         return ctx
 
 
-class InvestidorCreateView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, CreateView):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class InvestidorCreateView(ModuloInvestidoresAtivoMixin, PermissaoRequeridaMixin, CreateView):
+    permissao = 'financeiro_acessar'
     model = Investidor
     form_class = InvestidorForm
     template_name = 'investidores/form.html'
@@ -108,8 +108,8 @@ class InvestidorCreateView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, Cre
         return super().form_valid(form)
 
 
-class InvestidorDetalheView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, DetailView):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class InvestidorDetalheView(ModuloInvestidoresAtivoMixin, PermissaoRequeridaMixin, DetailView):
+    permissao = 'financeiro_acessar'
     model = Investidor
     template_name = 'investidores/detalhe.html'
     context_object_name = 'investidor'
@@ -171,8 +171,8 @@ class InvestidorDetalheView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, De
         return ctx
 
 
-class InvestidorEditarView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, UpdateView):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class InvestidorEditarView(ModuloInvestidoresAtivoMixin, PermissaoRequeridaMixin, UpdateView):
+    permissao = 'financeiro_acessar'
     model = Investidor
     form_class = InvestidorForm
     template_name = 'investidores/form.html'
@@ -193,8 +193,8 @@ class InvestidorEditarView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, Upd
 
 # ─── Vínculos ─────────────────────────────────────────────────────────────────
 
-class VincularVeiculoView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class VincularVeiculoView(ModuloInvestidoresAtivoMixin, PermissaoRequeridaMixin, View):
+    permissao = 'financeiro_acessar'
     template_name = 'investidores/vincular_veiculo.html'
 
     def _investidor(self, pk):
@@ -220,8 +220,8 @@ class VincularVeiculoView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, View
         return render(request, self.template_name, {'investidor': investidor, 'form': form})
 
 
-class DesvincularVeiculoView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class DesvincularVeiculoView(ModuloInvestidoresAtivoMixin, PermissaoRequeridaMixin, View):
+    permissao = 'financeiro_acessar'
 
     def post(self, request, vi_pk):
         vinculo = get_object_or_404(VeiculoInvestidor, pk=vi_pk, ativo=True)
@@ -234,8 +234,8 @@ class DesvincularVeiculoView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, V
 
 # ─── Cobranças ────────────────────────────────────────────────────────────────
 
-class CobrancaListView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, ListView):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class CobrancaListView(ModuloInvestidoresAtivoMixin, PermissaoRequeridaMixin, ListView):
+    permissao = 'financeiro_acessar'
     model = CobrancaGestao
     template_name = 'investidores/cobrancas.html'
     context_object_name = 'cobrancas'
@@ -275,8 +275,8 @@ class CobrancaListView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, ListVie
         return ctx
 
 
-class GerarCobrancaView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class GerarCobrancaView(ModuloInvestidoresAtivoMixin, PermissaoRequeridaMixin, View):
+    permissao = 'financeiro_acessar'
     template_name = 'investidores/gerar_cobranca.html'
 
     def _vinculo(self, vi_pk):
@@ -305,8 +305,8 @@ class GerarCobrancaView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, View):
         return render(request, self.template_name, {'vinculo': vinculo, 'form': form})
 
 
-class GerarCobrancaLoteView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class GerarCobrancaLoteView(ModuloInvestidoresAtivoMixin, PermissaoRequeridaMixin, View):
+    permissao = 'financeiro_acessar'
     template_name = 'investidores/gerar_lote.html'
 
     def _vinculos_ativos(self):
@@ -362,8 +362,8 @@ class GerarCobrancaLoteView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, Vi
         return redirect('investidores:cobrancas')
 
 
-class PagarCobrancaView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class PagarCobrancaView(ModuloInvestidoresAtivoMixin, PermissaoRequeridaMixin, View):
+    permissao = 'financeiro_acessar'
     template_name = 'investidores/pagar_cobranca.html'
 
     def _cobranca(self, pk):
@@ -388,8 +388,8 @@ class PagarCobrancaView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, View):
         return render(request, self.template_name, {'cobranca': cobranca, 'form': form})
 
 
-class CancelarCobrancaView(ModuloInvestidoresAtivoMixin, GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class CancelarCobrancaView(ModuloInvestidoresAtivoMixin, PermissaoRequeridaMixin, View):
+    permissao = 'financeiro_acessar'
 
     def post(self, request, pk):
         cobranca = get_object_or_404(CobrancaGestao, pk=pk, situacao='pendente')

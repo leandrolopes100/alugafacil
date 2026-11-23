@@ -63,6 +63,7 @@
 
           <div class="mb-3">
             <label class="form-label fw-semibold small">Veículo (opcional)</label>{{ form.veiculo }}
+            {% include 'financeiro/partials/aviso_veiculo_despesa.html' %}
           </div>
 
           {% if object.parcelado %}

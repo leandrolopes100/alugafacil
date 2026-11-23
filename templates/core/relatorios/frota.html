@@ -20,8 +20,10 @@
 <div class="alert-inline mb-3" style="display:flex; align-items:flex-start; gap:8px; padding:10px 14px; background:var(--info-bg); border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12.5px; color:var(--info-text)">
   <i class="bi bi-info-circle" style="margin-top:1px"></i>
   <span>
-    Este relatório considera apenas as despesas lançadas em um veículo específico.
-    Custos fixos da operação — folha, aluguel, seguro e impostos — entram no
+    Regime de caixa, igual à DRE: conta o que foi pago, na data do pagamento. Os gastos por veículo são as despesas
+    pagas com o veículo informado. Despesas pagas sem veículo no período (aluguel, folha e gastos lançados sem a placa):
+    <strong>{{ despesa_sem_veiculo|default:0|brl }}</strong>. Somando tudo, o resultado é
+    <strong>{{ resultado_geral|default:0|brl }}</strong>, o mesmo do
     <a href="{% url 'core:relatorio-dre' %}?ano={{ ano_sel }}&mes={{ mes_sel }}" class="text-decoration-underline">DRE Financeiro</a>.
   </span>
 </div>
@@ -53,8 +55,8 @@
   <div class="col-6 col-lg-3">
     <div class="kpi-col" style="--kpi-cor:var(--danger)">
       <div class="kpi-value">{{ custo_direto_total|brl }}</div>
-      <div class="kpi-label"><i class="bi bi-arrow-down-circle-fill"></i> Custos Diretos</div>
-      <div class="kpi-sub">despesas lançadas no veículo</div>
+      <div class="kpi-label"><i class="bi bi-arrow-down-circle-fill"></i> Gastos dos Veículos</div>
+      <div class="kpi-sub">despesas pagas com veículo informado</div>
     </div>
   </div>
   <div class="col-6 col-lg-3">
@@ -145,7 +147,7 @@
           <th class="text-center">Ocupação</th>
           <th class="text-end">Ticket Médio</th>
           <th class="text-end">Receita</th>
-          <th class="text-end">Custo Direto</th>
+          <th class="text-end">Gastos</th>
           <th class="text-end">Resultado Direto</th>
         </tr>
       </thead>
@@ -153,7 +155,8 @@
         {% for d in dados_veiculos %}
         <tr>
           <td>
-            <a href="{% url 'frota:detalhe' d.veiculo.pk %}" class="table-link text-mono">{{ d.veiculo.placa }}</a>
+            <a href="{% url 'frota:detalhe' d.veiculo.pk %}#financeiro" class="table-link text-mono">{{ d.veiculo.placa }}</a>
+            {% if d.veiculo.situacao == 'inativo' %}<span class="badge bg-secondary ms-1" title="Inativo: entra no financeiro do período, fora da ocupação média">inativo</span>{% endif %}
           </td>
           <td style="font-size:13px">{{ d.veiculo.marca }} {{ d.veiculo.modelo }}</td>
           <td style="font-size:12.5px; color:#64748b">{{ d.veiculo.grupo.nome }}</td>

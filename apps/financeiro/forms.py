@@ -148,6 +148,10 @@ class DespesaOperacionalForm(forms.ModelForm):
             'observacoes': forms.Textarea(attrs={'class': FC, 'rows': 2}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['categoria'].widget.attrs['data-categorias-veiculo'] = ','.join(DespesaOperacional.CATEGORIAS_DE_VEICULO)
+
     def clean(self):
         dados = super().clean()
         parcelado = dados.get('parcelado')

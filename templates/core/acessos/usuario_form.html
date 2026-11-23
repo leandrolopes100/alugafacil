@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block titulo %}{% if usuario_alvo %}Editar Usuário{% else %}Novo Usuário{% endif %}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:usuarios' %}" class="text-decoration-none text-secondary">Usuários</a></li>
+<li class="breadcrumb-item active">{% if usuario_alvo %}Editar{% else %}Novo{% endif %}</li>
+{% endblock %}
+
+{% block conteudo %}
+<div class="page-header">
+  <h1 class="page-title">{% if usuario_alvo %}Editar usuário{% else %}Novo usuário{% endif %}</h1>
+</div>
+
+<div class="row">
+  <div class="col-lg-7">
+    <form method="post" class="card" novalidate autocomplete="off">
+      {% csrf_token %}
+      <div class="card-header"><i class="bi bi-person-gear me-2 text-primary"></i>Dados de acesso</div>
+      <div class="card-body">
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger d-flex gap-2"><i class="bi bi-x-octagon-fill"></i><div>{% for erro in form.non_field_errors %}{{ erro }}{% endfor %}</div></div>
+        {% endif %}
+        {% if form.perfis_atuais|length > 1 %}
+        <div class="alert alert-warning small">
+          Este usuário está em {{ form.perfis_atuais|length }} perfis ({{ form.perfis_atuais|join:", " }}). Ao salvar, ele fica só com o perfil escolhido abaixo.
+        </div>
+        {% endif %}
+        {% if usuario_alvo.is_superuser %}
+        <div class="alert alert-info small">Superusuário: tem acesso total, com ou sem perfil.</div>
+        {% endif %}
+        <div class="row g-3">
+          {% for campo in form %}
+          {% if campo.name == 'is_active' %}
+          <div class="col-12">
+            <div class="form-check">
+              {{ campo }}
+              <label class="form-check-label small" for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+              <div class="form-text">Desativado não consegue entrar. As sessões abertas dele caem no próximo clique.</div>
+              {% if campo.errors %}<div class="invalid-feedback d-block">{{ campo.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+          {% else %}
+          <div class="{% if campo.name == 'username' or campo.name == 'perfil' or campo.name == 'email' %}col-12{% else %}col-md-6{% endif %}">
+            <label class="form-label fw-semibold small" for="{{ campo.id_for_label }}">{{ campo.label }}{% if campo.field.required %} *{% endif %}</label>
+            {{ campo }}
+            {% if campo.errors %}{% for erro in campo.errors %}<div class="invalid-feedback d-block">{{ erro }}</div>{% endfor %}
+            {% elif campo.help_text %}<div class="form-text">{{ campo.help_text|safe }}</div>{% endif %}
+            {% if campo.name == 'perfil' %}<div class="form-text"><a href="{% url 'core:perfis' %}" class="text-decoration-none">Ver o que cada perfil pode fazer</a></div>{% endif %}
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+      <div class="card-footer bg-transparent d-flex gap-2 justify-content-end">
+        {% if usuario_alvo %}
+        <a href="{% url 'core:usuario-senha' usuario_alvo.pk %}" class="btn btn-outline-secondary me-auto"><i class="bi bi-key me-1"></i>Redefinir senha</a>
+        {% endif %}
+        <a href="{% url 'core:usuarios' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Salvar Usuário</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

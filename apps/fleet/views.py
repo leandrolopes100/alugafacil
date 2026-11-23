@@ -1,8 +1,10 @@
 from django.contrib import messages
-from apps.core.mixins import GrupoRequiredMixin
+from apps.core.mixins import PermissaoRequeridaMixin
+from apps.core.permissoes import tem_permissao
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.views.generic import (
     CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView, View
 )
@@ -11,8 +13,8 @@ from .forms import VeiculoForm, GrupoVeiculoForm, FotoVeiculoForm, DocumentoVeic
 from .models import CategoriaVeiculo, DocumentoVeiculo, FotoVeiculo, GrupoVeiculo, Veiculo
 
 
-class VeiculoListView(GrupoRequiredMixin, ListView):
-    grupos_permitidos = ['admin_locadora', 'atendente', 'mecanico']
+class VeiculoListView(PermissaoRequeridaMixin, ListView):
+    permissao = 'frota_acessar'
     model = Veiculo
     template_name = 'fleet/lista.html'
     context_object_name = 'veiculos'
@@ -54,8 +56,8 @@ class VeiculoListView(GrupoRequiredMixin, ListView):
         return contexto
 
 
-class VeiculoCreateView(GrupoRequiredMixin, CreateView):
-    grupos_permitidos = ['admin_locadora', 'atendente', 'mecanico']
+class VeiculoCreateView(PermissaoRequeridaMixin, CreateView):
+    permissao = 'frota_acessar'
     model = Veiculo
     form_class = VeiculoForm
     template_name = 'fleet/form.html'
@@ -74,8 +76,8 @@ class VeiculoCreateView(GrupoRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class VeiculoDetailView(GrupoRequiredMixin, DetailView):
-    grupos_permitidos = ['admin_locadora', 'atendente', 'mecanico']
+class VeiculoDetailView(PermissaoRequeridaMixin, DetailView):
+    permissao = 'frota_acessar'
     model = Veiculo
     template_name = 'fleet/detalhe.html'
     context_object_name = 'veiculo'
@@ -91,13 +93,28 @@ class VeiculoDetailView(GrupoRequiredMixin, DetailView):
         contexto['bloqueio_situacao'] = self.object.bloqueio_mudanca_situacao()
         contexto['pode_excluir'] = (
             self.object.situacao in ('disponivel', 'inativo') and
-            not self.object.contratos.exists()
+            not self.object.contratos.exists() and
+            not self.object.despesas.exists()
         )
+        usuario = self.request.user
+        if tem_permissao(usuario, 'frota_financeiro'):
+            from apps.core.utils import ANO_MINIMO, ler_inteiro
+            from apps.financeiro.resultado import painel_do_veiculo
+            hoje = timezone.localdate()
+            ano = ler_inteiro(self.request.GET.get('fin_ano'), None, ANO_MINIMO, hoje.year + 1)
+            mes = ler_inteiro(self.request.GET.get('fin_mes'), None, 1, 12) if ano else None
+            contexto['financeiro'] = painel_do_veiculo(self.object, ano, mes)
+            contexto['fin_ano'] = ano
+            contexto['fin_mes'] = mes
+            contexto['fin_anos'] = list(range(hoje.year, max(hoje.year - 5, ANO_MINIMO) - 1, -1))
+            contexto['fin_meses'] = list(enumerate(
+                ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho',
+                 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'], start=1))
         return contexto
 
 
-class VeiculoAlterarSituacaoView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'atendente', 'mecanico']
+class VeiculoAlterarSituacaoView(PermissaoRequeridaMixin, View):
+    permissao = 'frota_acessar'
 
     def post(self, request, pk):
         from django.db import transaction
@@ -114,24 +131,31 @@ class VeiculoAlterarSituacaoView(GrupoRequiredMixin, View):
         return redirect('frota:detalhe', pk=pk)
 
 
-class VeiculoDeleteView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora']
+class VeiculoDeleteView(PermissaoRequeridaMixin, View):
+    permissao = 'frota_excluir'
     def post(self, request, pk):
-        from django.db import ProtectedError
+        from django.db.models import ProtectedError
         veiculo = get_object_or_404(Veiculo, pk=pk, situacao__in=['disponivel', 'inativo'])
         placa = veiculo.placa
         representacao = str(veiculo)
+        if veiculo.despesas.exists():
+            messages.error(
+                request,
+                f'Não é possível excluir o veículo {placa}: existem despesas lançadas para ele. '
+                f'Inative o veículo para tirá-lo da frota sem perder o histórico financeiro.',
+            )
+            return redirect('frota:detalhe', pk=pk)
         try:
             veiculo.delete()
             messages.success(request, f'Veículo {representacao} excluído com sucesso.')
             return redirect('frota:lista')
         except ProtectedError:
-            messages.error(request, f'Não é possível excluir o veículo {placa}: existem contratos vinculados a ele.')
+            messages.error(request, f'Não é possível excluir o veículo {placa}: existem contratos, ordens de serviço, multas ou vínculos com investidor ligados a ele.')
             return redirect('frota:detalhe', pk=pk)
 
 
-class VeiculoUpdateView(GrupoRequiredMixin, UpdateView):
-    grupos_permitidos = ['admin_locadora', 'atendente', 'mecanico']
+class VeiculoUpdateView(PermissaoRequeridaMixin, UpdateView):
+    permissao = 'frota_acessar'
     model = Veiculo
     form_class = VeiculoForm
     template_name = 'fleet/form.html'
@@ -150,8 +174,8 @@ class VeiculoUpdateView(GrupoRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class VeiculoFotosView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'atendente', 'mecanico']
+class VeiculoFotosView(PermissaoRequeridaMixin, View):
+    permissao = 'frota_acessar'
     template_name = 'fleet/fotos.html'
 
     def get(self, request, pk):
@@ -184,8 +208,8 @@ class VeiculoFotosView(GrupoRequiredMixin, View):
         })
 
 
-class VeiculoFotoExcluirView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora']
+class VeiculoFotoExcluirView(PermissaoRequeridaMixin, View):
+    permissao = 'frota_excluir'
     def post(self, request, pk, foto_pk):
         foto = get_object_or_404(FotoVeiculo, pk=foto_pk, veiculo_id=pk)
         foto.delete()
@@ -195,8 +219,8 @@ class VeiculoFotoExcluirView(GrupoRequiredMixin, View):
         return redirect('frota:fotos', pk=pk)
 
 
-class VeiculoDocumentosView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'atendente', 'mecanico']
+class VeiculoDocumentosView(PermissaoRequeridaMixin, View):
+    permissao = 'frota_acessar'
     template_name = 'fleet/documentos.html'
 
     def get(self, request, pk):
@@ -224,8 +248,8 @@ class VeiculoDocumentosView(GrupoRequiredMixin, View):
         })
 
 
-class VeiculoDocumentoExcluirView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora']
+class VeiculoDocumentoExcluirView(PermissaoRequeridaMixin, View):
+    permissao = 'frota_excluir'
     def post(self, request, pk, doc_pk):
         doc = get_object_or_404(DocumentoVeiculo, pk=doc_pk, veiculo_id=pk)
         doc.delete()
@@ -233,8 +257,8 @@ class VeiculoDocumentoExcluirView(GrupoRequiredMixin, View):
         return redirect('frota:documentos', pk=pk)
 
 
-class GrupoListView(GrupoRequiredMixin, ListView):
-    grupos_permitidos = ['admin_locadora', 'atendente', 'mecanico']
+class GrupoListView(PermissaoRequeridaMixin, ListView):
+    permissao = 'frota_acessar'
     model = GrupoVeiculo
     template_name = 'fleet/grupos.html'
     context_object_name = 'grupos'
@@ -252,8 +276,8 @@ class GrupoListView(GrupoRequiredMixin, ListView):
         return contexto
 
 
-class GrupoCreateView(GrupoRequiredMixin, CreateView):
-    grupos_permitidos = ['admin_locadora']
+class GrupoCreateView(PermissaoRequeridaMixin, CreateView):
+    permissao = 'frota_tarifas'
     model = GrupoVeiculo
     form_class = GrupoVeiculoForm
     template_name = 'fleet/grupo_form.html'
@@ -273,8 +297,8 @@ class GrupoCreateView(GrupoRequiredMixin, CreateView):
         return resposta
 
 
-class GrupoUpdateView(GrupoRequiredMixin, UpdateView):
-    grupos_permitidos = ['admin_locadora']
+class GrupoUpdateView(PermissaoRequeridaMixin, UpdateView):
+    permissao = 'frota_tarifas'
     model = GrupoVeiculo
     form_class = GrupoVeiculoForm
     template_name = 'fleet/grupo_form.html'
@@ -312,8 +336,8 @@ def _resumo_tarifas_texto(grupo):
     )
 
 
-class GrupoTarifasSimularView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora']
+class GrupoTarifasSimularView(PermissaoRequeridaMixin, View):
+    permissao = 'frota_tarifas'
 
     def get(self, request):
         from decimal import Decimal, InvalidOperation
@@ -349,8 +373,8 @@ class GrupoTarifasSimularView(GrupoRequiredMixin, View):
 
 # ─── Categorias ──────────────────────────────────────────────────────────────
 
-class CategoriaListView(GrupoRequiredMixin, ListView):
-    grupos_permitidos = ['admin_locadora', 'atendente', 'mecanico']
+class CategoriaListView(PermissaoRequeridaMixin, ListView):
+    permissao = 'frota_acessar'
     model = CategoriaVeiculo
     template_name = 'fleet/categorias.html'
     context_object_name = 'categorias'
@@ -374,8 +398,8 @@ _SUGESTOES_CATEGORIA = [
 ]
 
 
-class CategoriaCreateView(GrupoRequiredMixin, CreateView):
-    grupos_permitidos = ['admin_locadora']
+class CategoriaCreateView(PermissaoRequeridaMixin, CreateView):
+    permissao = 'frota_tarifas'
     model = CategoriaVeiculo
     form_class = CategoriaVeiculoForm
     template_name = 'fleet/categoria_form.html'
@@ -399,8 +423,8 @@ class CategoriaCreateView(GrupoRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class CategoriaUpdateView(GrupoRequiredMixin, UpdateView):
-    grupos_permitidos = ['admin_locadora']
+class CategoriaUpdateView(PermissaoRequeridaMixin, UpdateView):
+    permissao = 'frota_tarifas'
     model = CategoriaVeiculo
     form_class = CategoriaVeiculoForm
     template_name = 'fleet/categoria_form.html'
@@ -417,8 +441,8 @@ class CategoriaUpdateView(GrupoRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class DisponibilidadeView(GrupoRequiredMixin, TemplateView):
-    grupos_permitidos = ['admin_locadora', 'atendente', 'mecanico']
+class DisponibilidadeView(PermissaoRequeridaMixin, TemplateView):
+    permissao = 'frota_acessar'
     template_name = 'fleet/disponibilidade.html'
 
     def get_context_data(self, **kwargs):
@@ -445,9 +469,9 @@ class DisponibilidadeView(GrupoRequiredMixin, TemplateView):
         return contexto
 
 
-class VeiculoTarifasView(GrupoRequiredMixin, View):
+class VeiculoTarifasView(PermissaoRequeridaMixin, View):
     """Retorna tarifas do grupo de um veículo — usado via HTMX no form de contrato."""
-    grupos_permitidos = ['admin_locadora', 'atendente', 'mecanico']
+    permissao = 'frota_acessar'
 
     def get(self, request):
         veiculo_id = request.GET.get('veiculo_id')

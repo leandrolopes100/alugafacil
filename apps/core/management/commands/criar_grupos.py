@@ -1,63 +1,35 @@
-"""
-Cria os grupos de permissao do sistema e associa as permissoes corretas.
-
-Uso:
-    python manage.py criar_grupos
-"""
-from django.contrib.auth.models import Group, Permission
-from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth.models import Group
 from django.core.management.base import BaseCommand
-from django.db.models import Q
+from django.db import transaction
 
-
-GRUPOS = {
-    'admin_locadora': {
-        'descricao': 'Acesso total ao sistema',
-        'apps': ['fleet', 'customers', 'contracts', 'financeiro', 'manutencao'],
-    },
-    'atendente': {
-        'descricao': 'Atendimento: clientes, reservas e contratos',
-        'apps': ['customers', 'contracts', 'fleet'],
-        'excluir_acoes': ['delete'],
-    },
-    'financeiro': {
-        'descricao': 'Modulo financeiro e relatorios',
-        'apps': ['financeiro', 'contracts'],
-        'excluir_acoes': ['delete'],
-    },
-    'mecanico': {
-        'descricao': 'Modulo de manutencao',
-        'apps': ['manutencao', 'fleet'],
-        'excluir_acoes': ['delete'],
-    },
-}
+from apps.core.models import PerfilAcesso
+from apps.core.permissoes import PERFIS_PADRAO
 
 
 class Command(BaseCommand):
-    help = 'Cria grupos de permissao do Aluga Facil'
+    help = (
+        'Cria os perfis de acesso padrão (Administrador, Atendente, Financeiro, Mecânico) que estiverem faltando. '
+        'Perfis existentes não são alterados, a menos que se use --redefinir.'
+    )
 
-    def handle(self, *args, **options):
-        for nome_grupo, config in GRUPOS.items():
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--redefinir', action='store_true',
+            help='Volta as permissões dos 4 perfis padrão para o original, desfazendo o que foi mudado na tela.',
+        )
+
+    @transaction.atomic
+    def handle(self, *args, **opcoes):
+        for nome_grupo, (nome, descricao, codigos) in PERFIS_PADRAO.items():
             grupo, criado = Group.objects.get_or_create(name=nome_grupo)
-            acao = 'Criado' if criado else 'Atualizado'
-
-            permissoes = Permission.objects.filter(
-                content_type__app_label__in=config['apps']
-            )
-            excluir = config.get('excluir_acoes', [])
-            if excluir:
-                # startswith no ORM nao aceita tuplas — usa Q para OR entre prefixos
-                q_excluir = Q()
-                for acao in excluir:
-                    q_excluir |= Q(codename__startswith=f'{acao}_')
-                permissoes = permissoes.exclude(q_excluir)
-
-            grupo.permissions.set(permissoes)
-            self.stdout.write(
-                f'  {acao}: {nome_grupo} ({permissoes.count()} permissoes)'
-            )
-
-        self.stdout.write(self.style.SUCCESS('\nGrupos criados com sucesso!'))
-        self.stdout.write('\nGrupos disponiveis:')
-        for nome, cfg in GRUPOS.items():
-            self.stdout.write(f'  - {nome}: {cfg["descricao"]}')
+            perfil = grupo.perfil
+            if criado:
+                perfil.nome = PerfilAcesso.nome_livre(nome, exceto=perfil.pk)
+                perfil.descricao = descricao
+                perfil.save()
+            if criado or opcoes['redefinir']:
+                perfil.definir_permissoes(codigos)
+                self.stdout.write(f'  {"Criado" if criado else "Redefinido"}: {perfil.nome} ({len(codigos)} permissões)')
+            else:
+                self.stdout.write(f'  Mantido: {perfil.nome}')
+        self.stdout.write(self.style.SUCCESS('Perfis padrão conferidos.'))

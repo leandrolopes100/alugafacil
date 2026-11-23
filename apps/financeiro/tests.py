@@ -1423,3 +1423,236 @@ class ModuloInvestidoresDesligadoTests(FinanceiroTestBase):
         config.usar_modulo_investidores = True
         config.save()
         self.assertEqual(self.client.get(reverse('investidores:lista')).status_code, 200)
+
+
+class ResultadoPorVeiculoTests(FinanceiroTestBase):
+
+    def setUp(self):
+        super().setUp()
+        from apps.investidores.models import CobrancaGestao, Investidor, VeiculoInvestidor
+        self.hoje = timezone.localdate()
+        self.mes_passado = self.hoje.replace(day=1) - timedelta(days=1)
+        self.outro = Veiculo.objects.create(
+            placa='XYZ9K88', marca='VW', modelo='Polo',
+            ano_fabricacao=2022, ano_modelo=2022, cor='Prata', grupo=self.grupo,
+        )
+        contrato_a = self.criar_contrato(situacao='ativo', data_saida=timezone.now())
+        contrato_b = self.criar_contrato(veiculo=self.outro, situacao='ativo', data_saida=timezone.now())
+        self.pagamento_a = PagamentoContrato.objects.create(
+            contrato=contrato_a, forma_pagamento='pix', tipo='locacao', valor=Decimal('1000.00'))
+        PagamentoContrato.objects.create(
+            contrato=contrato_a, forma_pagamento='pix', tipo='caucao', valor=Decimal('500.00'))
+        PagamentoContrato.objects.create(
+            contrato=contrato_a, forma_pagamento='pix', tipo='avaria', valor=Decimal('150.00'),
+            data_pagamento=timezone.now() - timedelta(days=40))
+        PagamentoContrato.objects.create(
+            contrato=contrato_b, forma_pagamento='pix', tipo='locacao', valor=Decimal('700.00'))
+        DespesaOperacional.objects.create(
+            categoria='manutencao', descricao='Pneu A', valor=Decimal('200.00'), veiculo=self.veiculo,
+            data_competencia=self.hoje, data_pagamento=self.hoje)
+        DespesaOperacional.objects.create(
+            categoria='lavagem', descricao='Lavagem A não paga', valor=Decimal('60.00'), veiculo=self.veiculo,
+            data_competencia=self.hoje)
+        DespesaOperacional.objects.create(
+            categoria='aluguel', descricao='Aluguel do ponto', valor=Decimal('900.00'),
+            data_competencia=self.hoje, data_pagamento=self.hoje)
+        DespesaOperacional.objects.create(
+            categoria='caucao', descricao='Devolução de caução', valor=Decimal('500.00'), veiculo=self.veiculo,
+            data_competencia=self.hoje, data_pagamento=self.hoje)
+        parcelada = DespesaOperacional.objects.create(
+            categoria='seguro', descricao='Seguro B', valor=Decimal('300.00'), parcelado=True,
+            numero_parcelas=3, veiculo=self.outro, data_competencia=self.mes_passado)
+        ParcelaDespesa.objects.create(
+            despesa=parcelada, numero=1, valor=Decimal('100.00'), situacao='pago',
+            data_vencimento=self.mes_passado, data_pagamento=self.mes_passado)
+        ParcelaDespesa.objects.create(
+            despesa=parcelada, numero=2, valor=Decimal('100.00'), situacao='pago',
+            data_vencimento=self.hoje, data_pagamento=self.hoje)
+        ParcelaDespesa.objects.create(
+            despesa=parcelada, numero=3, valor=Decimal('100.00'), situacao='pendente',
+            data_vencimento=self.hoje + timedelta(days=30))
+        vinculo = VeiculoInvestidor.objects.create(
+            investidor=Investidor.objects.create(nome='Investidor B'), veiculo=self.outro,
+            taxa_gestao_semanal=Decimal('250.00'), data_inicio=self.hoje - timedelta(days=60))
+        CobrancaGestao.objects.create(
+            veiculo_investidor=vinculo, semana_inicio=self.hoje - timedelta(days=14),
+            semana_fim=self.hoje - timedelta(days=8), valor=Decimal('250.00'),
+            data_vencimento=self.hoje, situacao='pago', data_pagamento=self.hoje)
+        CobrancaGestao.objects.create(
+            veiculo_investidor=vinculo, semana_inicio=self.hoje - timedelta(days=7),
+            semana_fim=self.hoje - timedelta(days=1), valor=Decimal('250.00'),
+            data_vencimento=self.hoje + timedelta(days=1))
+
+    def periodos(self):
+        return [
+            (self.hoje.year, self.hoje.month),
+            (self.mes_passado.year, self.mes_passado.month),
+            (self.hoje.year, None),
+            (None, None),
+        ]
+
+    def assert_soma_dos_veiculos_igual_ao_total(self):
+        from .resultado import SEM_VEICULO, resultado_caixa
+        for ano, mes in self.periodos():
+            total = resultado_caixa(ano, mes)
+            partes = [resultado_caixa(ano, mes, veiculo=v) for v in (self.veiculo, self.outro, SEM_VEICULO)]
+            for chave in ('receita', 'despesa', 'resultado'):
+                self.assertEqual(sum((p[chave] for p in partes), Decimal('0')), total[chave], (ano, mes, chave))
+
+    def test_soma_dos_veiculos_mais_sem_veiculo_e_igual_a_dre_em_todo_periodo(self):
+        self.assert_soma_dos_veiculos_igual_ao_total()
+
+    def test_valores_do_veiculo_no_mes(self):
+        from .resultado import despesas_a_pagar, resultado_caixa
+        a = resultado_caixa(self.hoje.year, self.hoje.month, veiculo=self.veiculo)
+        self.assertEqual(a['receita'], Decimal('1000.00'))
+        self.assertEqual(a['despesa_por_categoria'], {'manutencao': Decimal('200.00')})
+        self.assertEqual(a['resultado'], Decimal('800.00'))
+        b = resultado_caixa(self.hoje.year, self.hoje.month, veiculo=self.outro)
+        self.assertEqual(b['receita'], Decimal('700.00'))
+        self.assertEqual(b['despesa_por_categoria'], {'seguro': Decimal('100.00'), 'repasse_investidor': Decimal('250.00')})
+        self.assertEqual(despesas_a_pagar(self.veiculo), Decimal('60.00'))
+        self.assertEqual(despesas_a_pagar(self.outro), Decimal('350.00'))
+
+    def test_lote_por_veiculo_bate_com_o_calculo_individual(self):
+        from .resultado import SEM_VEICULO, resultado_caixa, resultado_por_veiculo
+        for ano, mes in self.periodos():
+            lote = resultado_por_veiculo(ano, mes)
+            for veiculo in (self.veiculo, self.outro):
+                individual = resultado_caixa(ano, mes, veiculo=veiculo)
+                linha = lote.get(veiculo.pk, {'receita': Decimal('0'), 'despesa': Decimal('0'), 'resultado': Decimal('0')})
+                self.assertEqual(linha['receita'], individual['receita'], (ano, mes))
+                self.assertEqual(linha['despesa'], individual['despesa'], (ano, mes))
+            sem_veiculo = resultado_caixa(ano, mes, veiculo=SEM_VEICULO)['despesa']
+            self.assertEqual(lote.get(None, {'despesa': Decimal('0')})['despesa'], sem_veiculo, (ano, mes))
+
+    def test_soma_dos_meses_e_igual_ao_total_do_veiculo(self):
+        from .resultado import resultado_caixa, resultado_mensal
+        for veiculo in (self.veiculo, self.outro, None):
+            meses = resultado_mensal(veiculo)
+            total = resultado_caixa(veiculo=veiculo)
+            self.assertEqual(sum((m['receita'] for m in meses), Decimal('0')), total['receita'])
+            self.assertEqual(sum((m['despesa'] for m in meses), Decimal('0')), total['despesa'])
+            self.assertEqual([m['mes'] for m in meses], sorted({m['mes'] for m in meses}, reverse=True))
+
+    def test_estorno_tira_o_valor_do_veiculo(self):
+        from .resultado import resultado_caixa
+        from django.contrib.auth.models import User
+        self.pagamento_a.estornar(User.objects.create_user('caixa_estorno'), 'teste')
+        self.assertEqual(resultado_caixa(self.hoje.year, self.hoje.month, veiculo=self.veiculo)['receita'], Decimal('0'))
+        self.assert_soma_dos_veiculos_igual_ao_total()
+
+    def test_pagamento_as_23h30_do_ultimo_dia_fica_no_mes_certo(self):
+        from datetime import datetime
+        from .resultado import resultado_caixa, resultado_mensal
+        contrato = self.criar_contrato(situacao='ativo', data_saida=timezone.now())
+        fim = self.mes_passado
+
+        def receitas():
+            caixa = resultado_caixa(fim.year, fim.month, veiculo=self.veiculo)['receita']
+            mensal = sum((m['receita'] for m in resultado_mensal(self.veiculo) if m['mes'] == fim.replace(day=1)), Decimal('0'))
+            atual = resultado_caixa(self.hoje.year, self.hoje.month, veiculo=self.veiculo)['receita']
+            return caixa, mensal, atual
+
+        antes = receitas()
+        momento = timezone.make_aware(datetime(fim.year, fim.month, fim.day, 23, 30))
+        PagamentoContrato.objects.create(
+            contrato=contrato, forma_pagamento='pix', tipo='locacao', valor=Decimal('33.00'), data_pagamento=momento)
+        depois = receitas()
+        self.assertEqual(depois[0] - antes[0], Decimal('33.00'))
+        self.assertEqual(depois[1] - antes[1], Decimal('33.00'))
+        self.assertEqual(depois[2], antes[2])
+
+    def test_modulo_de_investidores_desligado_tira_o_repasse_do_veiculo(self):
+        from .resultado import despesas_a_pagar, resultado_caixa
+        config = ConfiguracaoLocadora.obter()
+        config.usar_modulo_investidores = False
+        config.save()
+        b = resultado_caixa(self.hoje.year, self.hoje.month, veiculo=self.outro)
+        self.assertNotIn('repasse_investidor', b['despesa_por_categoria'])
+        self.assertEqual(despesas_a_pagar(self.outro), Decimal('100.00'))
+        self.assert_soma_dos_veiculos_igual_ao_total()
+
+    def test_relatorio_de_frota_fecha_com_a_dre_mesmo_com_veiculo_inativo(self):
+        from django.contrib.auth.models import User
+        self.client.force_login(User.objects.create_superuser('gestor_frota', 'f@teste.com', 'senha123'))
+        Veiculo.objects.filter(pk=self.outro.pk).update(situacao='inativo')
+        for periodo in ({'ano': self.hoje.year, 'mes': self.hoje.month}, {'ano': self.hoje.year, 'mes': ''}):
+            frota = self.client.get(reverse('core:relatorio-frota'), periodo).context
+            dre = self.client.get(reverse('core:relatorio-dre'), periodo).context
+            self.assertEqual(frota['resultado_geral'], dre['resultado'], periodo)
+            self.assertEqual(frota['receita_total'], dre['receita_total'], periodo)
+            placas = [d['veiculo'].placa for d in frota['dados_veiculos']]
+            self.assertIn(self.outro.placa, placas)
+
+
+class DespesaDeMultaPagaTests(FinanceiroTestBase):
+
+    def setUp(self):
+        super().setUp()
+        from django.contrib.auth.models import User
+        self.client.force_login(User.objects.create_superuser('gestor_multa', 'mt@teste.com', 'senha123'))
+        self.hoje = timezone.localdate()
+        self.contrato = self.criar_contrato(situacao='ativo', data_saida=timezone.now() - timedelta(days=5))
+        self.multa = MultaTransito.objects.create(
+            veiculo=self.veiculo, contrato=self.contrato, data_infracao=self.hoje - timedelta(days=3),
+            descricao='Excesso de velocidade', valor=Decimal('195.23'), situacao='cobrada_cliente',
+            condutor_nome='Cliente Teste',
+        )
+
+    def marcar_paga(self):
+        return self.client.post(reverse('financeiro:multa-situacao', args=[self.multa.pk]), {'situacao': 'paga'})
+
+    def test_marcar_paga_lanca_despesa_paga_no_veiculo(self):
+        self.marcar_paga()
+        despesa = DespesaOperacional.objects.get(multa_origem=self.multa)
+        self.assertEqual(despesa.categoria, 'multa')
+        self.assertEqual(despesa.valor, Decimal('195.23'))
+        self.assertEqual(despesa.veiculo_id, self.veiculo.pk)
+        self.assertEqual(despesa.data_pagamento, self.hoje)
+
+    def test_reembolso_do_cliente_e_multa_paga_se_anulam_no_veiculo(self):
+        from .resultado import resultado_caixa
+        PagamentoContrato.objects.create(
+            contrato=self.contrato, forma_pagamento='pix', tipo='multa', valor=Decimal('195.23'))
+        self.marcar_paga()
+        caixa = resultado_caixa(self.hoje.year, self.hoje.month, veiculo=self.veiculo)
+        self.assertEqual(caixa['resultado'], Decimal('0.00'))
+
+    def test_editar_valor_depois_de_paga_atualiza_a_despesa_sem_duplicar(self):
+        self.marcar_paga()
+        self.multa.refresh_from_db()
+        self.multa.valor = Decimal('293.47')
+        self.multa.save()
+        self.multa.save()
+        self.assertEqual(DespesaOperacional.objects.filter(multa_origem=self.multa).count(), 1)
+        self.assertEqual(DespesaOperacional.objects.get(multa_origem=self.multa).valor, Decimal('293.47'))
+
+    def test_outras_situacoes_nao_lancam_despesa(self):
+        self.client.post(reverse('financeiro:multa-situacao', args=[self.multa.pk]), {'situacao': 'contestada'})
+        self.assertFalse(DespesaOperacional.objects.filter(categoria='multa').exists())
+
+    def test_comando_lista_sem_alterar_e_so_lanca_com_data(self):
+        from io import StringIO
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+        MultaTransito.objects.filter(pk=self.multa.pk).update(situacao='paga')
+        saida = StringIO()
+        call_command('lancar_despesas_multas_pagas', stdout=saida)
+        self.assertIn(f'#{self.multa.pk}', saida.getvalue())
+        self.assertFalse(DespesaOperacional.objects.filter(multa_origem=self.multa).exists())
+        with self.assertRaises(CommandError):
+            call_command('lancar_despesas_multas_pagas', '--aplicar', stdout=StringIO())
+        call_command('lancar_despesas_multas_pagas', '--aplicar', '--data', '2026-01-15', stdout=StringIO())
+        despesa = DespesaOperacional.objects.get(multa_origem=self.multa)
+        self.assertEqual(despesa.data_pagamento, date(2026, 1, 15))
+        call_command('lancar_despesas_multas_pagas', '--aplicar', '--data', '2026-01-15', stdout=StringIO())
+        self.assertEqual(DespesaOperacional.objects.filter(multa_origem=self.multa).count(), 1)
+
+    def test_despesa_apagada_de_proposito_nao_volta_ao_editar_a_multa(self):
+        self.marcar_paga()
+        DespesaOperacional.objects.filter(multa_origem=self.multa).delete()
+        self.multa.refresh_from_db()
+        self.multa.observacoes = 'Quem pagou foi o cliente, direto no órgão.'
+        self.multa.save()
+        self.assertFalse(DespesaOperacional.objects.filter(multa_origem=self.multa).exists())

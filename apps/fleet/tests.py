@@ -173,3 +173,100 @@ class TarifasDoVeiculoTests(TestCase):
     def test_forma_sugerida_mensal_so_quando_o_grupo_tem_apenas_mensal(self):
         self.grupo.semanal = None
         self.assertEqual(forma_cobranca_sugerida(self.grupo), 'mensal')
+
+
+class PainelFinanceiroDoVeiculoTests(TestCase):
+
+    def setUp(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from apps.contracts.models import Contrato, PagamentoContrato
+        from apps.customers.models import Cliente
+        from apps.financeiro.models import DespesaOperacional
+        categoria = CategoriaVeiculo.objects.create(nome='Econômico')
+        grupo = GrupoVeiculo.objects.create(nome='Hatch', categoria=categoria, diaria=Decimal('100'))
+        self.veiculo = Veiculo.objects.create(
+            placa='PNL1A23', marca='Fiat', modelo='Mobi', ano_fabricacao=2023, ano_modelo=2024,
+            cor='Branco', grupo=grupo, valor_aquisicao=Decimal('50000.00'),
+        )
+        self.livre = Veiculo.objects.create(
+            placa='LIV2B34', marca='Fiat', modelo='Uno', ano_fabricacao=2020, ano_modelo=2020,
+            cor='Preto', grupo=grupo,
+        )
+        contrato = Contrato.objects.create(
+            cliente=Cliente.objects.create(nome='Cliente Painel'), veiculo=self.veiculo,
+            diaria=Decimal('100'), data_devolucao_prevista=timezone.now() + timedelta(days=7),
+            situacao='ativo', data_saida=timezone.now(),
+        )
+        PagamentoContrato.objects.create(contrato=contrato, forma_pagamento='pix', tipo='locacao', valor=Decimal('1500.00'))
+        hoje = timezone.localdate()
+        DespesaOperacional.objects.create(
+            categoria='manutencao', descricao='Troca de óleo', valor=Decimal('250.00'),
+            veiculo=self.veiculo, data_competencia=hoje, data_pagamento=hoje,
+        )
+        DespesaOperacional.objects.create(
+            categoria='lavagem', descricao='Lavagem livre', valor=Decimal('40.00'),
+            veiculo=self.livre, data_competencia=hoje, data_pagamento=hoje,
+        )
+
+    def usuario(self, grupo=None):
+        from django.contrib.auth.models import Group
+        if grupo is None:
+            return User.objects.create_superuser('admin_painel', 'p@teste.com', 'senha123')
+        usuario = User.objects.create_user(f'u_{grupo}', password='senha123')
+        usuario.groups.add(Group.objects.get_or_create(name=grupo)[0])
+        return usuario
+
+    def test_admin_ve_faturou_gastou_resultado_e_retorno(self):
+        self.client.force_login(self.usuario())
+        resposta = self.client.get(reverse('frota:detalhe', args=[self.veiculo.pk]))
+        painel = resposta.context['financeiro']
+        self.assertEqual(painel['periodo']['receita'], Decimal('1500.00'))
+        self.assertEqual(painel['periodo']['despesa'], Decimal('250.00'))
+        self.assertEqual(painel['periodo']['resultado'], Decimal('1250.00'))
+        self.assertEqual(painel['retorno_pct'], Decimal('2.5'))
+        self.assertContains(resposta, 'Financeiro do veículo')
+        self.assertContains(resposta, 'Troca de óleo')
+
+    def test_atendente_e_mecanico_nao_veem_o_financeiro(self):
+        for grupo in ('atendente', 'mecanico'):
+            self.client.force_login(self.usuario(grupo))
+            resposta = self.client.get(reverse('frota:detalhe', args=[self.veiculo.pk]))
+            self.assertEqual(resposta.status_code, 200)
+            self.assertNotIn('financeiro', resposta.context)
+            self.assertNotContains(resposta, 'Financeiro do veículo')
+
+    def test_periodo_invalido_cai_em_todo_o_periodo(self):
+        self.client.force_login(self.usuario())
+        resposta = self.client.get(reverse('frota:detalhe', args=[self.veiculo.pk]), {'fin_ano': 'abc', 'fin_mes': '13'})
+        self.assertEqual(resposta.status_code, 200)
+        self.assertIsNone(resposta.context['fin_ano'])
+        self.assertEqual(resposta.context['financeiro']['periodo']['receita'], Decimal('1500.00'))
+
+    def test_veiculo_de_investidor_nao_mostra_retorno(self):
+        from django.utils import timezone
+        from apps.investidores.models import Investidor, VeiculoInvestidor
+        VeiculoInvestidor.objects.create(
+            investidor=Investidor.objects.create(nome='Inv'), veiculo=self.veiculo,
+            taxa_gestao_semanal=Decimal('200'), data_inicio=timezone.localdate(),
+        )
+        self.client.force_login(self.usuario())
+        painel = self.client.get(reverse('frota:detalhe', args=[self.veiculo.pk])).context['financeiro']
+        self.assertTrue(painel['de_investidor'])
+        self.assertIsNone(painel['retorno_pct'])
+
+    def test_nao_exclui_veiculo_com_despesas(self):
+        self.client.force_login(self.usuario())
+        resposta = self.client.post(reverse('frota:excluir', args=[self.livre.pk]), follow=True)
+        self.assertTrue(Veiculo.objects.filter(pk=self.livre.pk).exists())
+        self.assertContains(resposta, 'existem despesas lançadas para ele')
+
+    def test_exclui_veiculo_sem_contratos_nem_despesas(self):
+        sem_vinculo = Veiculo.objects.create(
+            placa='DEL3C45', marca='Fiat', modelo='Palio', ano_fabricacao=2015, ano_modelo=2015,
+            cor='Azul', grupo=self.livre.grupo,
+        )
+        self.client.force_login(self.usuario())
+        resposta = self.client.post(reverse('frota:excluir', args=[sem_vinculo.pk]), follow=True)
+        self.assertEqual(resposta.status_code, 200)
+        self.assertFalse(Veiculo.objects.filter(pk=sem_vinculo.pk).exists())

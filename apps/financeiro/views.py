@@ -2,7 +2,7 @@ import json
 from collections import defaultdict
 from decimal import Decimal
 from django.contrib import messages
-from apps.core.mixins import GrupoRequiredMixin
+from apps.core.mixins import PermissaoRequeridaMixin
 from django.db.models import Case, Count, Exists, IntegerField, OuterRef, Q, Sum, Value, When
 from django.db.models.functions import ExtractMonth
 from django.http import JsonResponse
@@ -22,9 +22,9 @@ from .models import (ConfiguracaoLocadora, ContaReceber, DespesaOperacional,
 
 # ─── Configuração da Locadora ────────────────────────────────────────────────
 
-class ConfiguracaoLocadoraView(GrupoRequiredMixin, UpdateView):
+class ConfiguracaoLocadoraView(PermissaoRequeridaMixin, UpdateView):
     """Permite ao gestor editar as configurações financeiras sem acesso ao admin."""
-    grupos_permitidos = ['admin_locadora']
+    permissao = 'admin_configuracoes'
     model = ConfiguracaoLocadora
     form_class = ConfiguracaoLocadoraForm
     template_name = 'financeiro/configuracao.html'
@@ -97,8 +97,8 @@ class CobrancaPublicaView(View):
 
 # ─── Agenda de Cobranças ─────────────────────────────────────────────────────
 
-class AgendaCobrancasView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class AgendaCobrancasView(PermissaoRequeridaMixin, View):
+    permissao = 'financeiro_acessar'
     template_name = 'financeiro/agenda.html'
 
     def get(self, request):
@@ -161,8 +161,8 @@ class AgendaCobrancasView(GrupoRequiredMixin, View):
         return itens
 
 
-class RegistrarCobrancaWhatsappView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class RegistrarCobrancaWhatsappView(PermissaoRequeridaMixin, View):
+    permissao = 'financeiro_acessar'
 
     def post(self, request, pk):
         parcela = get_object_or_404(
@@ -188,17 +188,17 @@ class RegistrarCobrancaWhatsappView(GrupoRequiredMixin, View):
 
 # ─── Agenda de Pagamentos (despesas parceladas a pagar) ──────────────────────
 
-class AgendaPagamentosView(GrupoRequiredMixin, View):
+class AgendaPagamentosView(PermissaoRequeridaMixin, View):
     """Mantido para compatibilidade — redireciona para Contas a Pagar."""
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+    permissao = 'financeiro_acessar'
     def get(self, request):
         return redirect('financeiro:contas-pagar')
 
 
 # ─── Dashboard Financeiro ─────────────────────────────────────────────────────
 
-class IndexFinanceiroView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class IndexFinanceiroView(PermissaoRequeridaMixin, View):
+    permissao = 'financeiro_acessar'
     template_name = 'financeiro/index.html'
 
     def get(self, request):
@@ -279,8 +279,8 @@ class IndexFinanceiroView(GrupoRequiredMixin, View):
 
 # ─── Contas a Receber ─────────────────────────────────────────────────────────
 
-class ContaReceberListView(GrupoRequiredMixin, ListView):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class ContaReceberListView(PermissaoRequeridaMixin, ListView):
+    permissao = 'financeiro_acessar'
     model = ContaReceber
     template_name = 'financeiro/contas_receber.html'
     context_object_name = 'contas'
@@ -351,8 +351,8 @@ class ContaReceberListView(GrupoRequiredMixin, ListView):
         return ctx
 
 
-class ContaReceberDetailView(GrupoRequiredMixin, DetailView):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class ContaReceberDetailView(PermissaoRequeridaMixin, DetailView):
+    permissao = 'financeiro_acessar'
     model = ContaReceber
     template_name = 'financeiro/conta_receber_detalhe.html'
     context_object_name = 'conta'
@@ -367,9 +367,9 @@ class ContaReceberDetailView(GrupoRequiredMixin, DetailView):
         return ctx
 
 
-class ReceberPagamentoView(GrupoRequiredMixin, View):
+class ReceberPagamentoView(PermissaoRequeridaMixin, View):
     """Registra um pagamento e atualiza a ContaReceber."""
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+    permissao = 'financeiro_acessar'
 
     def post(self, request, pk):
         from django.db import transaction
@@ -395,8 +395,8 @@ class ReceberPagamentoView(GrupoRequiredMixin, View):
 
 # ─── Despesas ────────────────────────────────────────────────────────────────
 
-class DespesaListView(GrupoRequiredMixin, ListView):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class DespesaListView(PermissaoRequeridaMixin, ListView):
+    permissao = 'financeiro_acessar'
     model = DespesaOperacional
     template_name = 'financeiro/despesas.html'
     context_object_name = 'despesas'
@@ -509,8 +509,8 @@ class DespesaListView(GrupoRequiredMixin, ListView):
         return contexto
 
 
-class DespesaCreateView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class DespesaCreateView(PermissaoRequeridaMixin, View):
+    permissao = 'financeiro_acessar'
     def post(self, request):
         form = DespesaOperacionalForm(request.POST)
         if form.is_valid():
@@ -567,8 +567,8 @@ class DespesaCreateView(GrupoRequiredMixin, View):
         })
 
 
-class DespesaDetailView(GrupoRequiredMixin, DetailView):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class DespesaDetailView(PermissaoRequeridaMixin, DetailView):
+    permissao = 'financeiro_acessar'
     model = DespesaOperacional
     template_name = 'financeiro/despesa_detalhe.html'
     context_object_name = 'despesa'
@@ -595,9 +595,9 @@ class DespesaDetailView(GrupoRequiredMixin, DetailView):
         return ctx
 
 
-class ParcelaDespesaPagarView(GrupoRequiredMixin, View):
+class ParcelaDespesaPagarView(PermissaoRequeridaMixin, View):
     """Marca uma parcela de despesa como paga, registrando a forma de pagamento."""
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+    permissao = 'financeiro_acessar'
 
     def post(self, request, pk):
         parcela = get_object_or_404(ParcelaDespesa, pk=pk)
@@ -615,9 +615,9 @@ class ParcelaDespesaPagarView(GrupoRequiredMixin, View):
         return redirect('financeiro:despesa-detalhe', pk=parcela.despesa_id)
 
 
-class ParcelaDespesaEstornarView(GrupoRequiredMixin, View):
+class ParcelaDespesaEstornarView(PermissaoRequeridaMixin, View):
     """Estorna o pagamento de uma parcela (volta para pendente)."""
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+    permissao = 'financeiro_acessar'
 
     def post(self, request, pk):
         parcela = get_object_or_404(ParcelaDespesa, pk=pk)
@@ -630,9 +630,9 @@ class ParcelaDespesaEstornarView(GrupoRequiredMixin, View):
         return redirect('financeiro:despesa-detalhe', pk=parcela.despesa_id)
 
 
-class ParcelaDespesaEstornarLoteView(GrupoRequiredMixin, View):
+class ParcelaDespesaEstornarLoteView(PermissaoRequeridaMixin, View):
     """Estorna o pagamento de múltiplas parcelas de despesa em uma única ação."""
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+    permissao = 'financeiro_acessar'
 
     def post(self, request):
         from django.http import HttpResponseRedirect
@@ -659,9 +659,9 @@ class ParcelaDespesaEstornarLoteView(GrupoRequiredMixin, View):
         return HttpResponseRedirect(next_url) if next_url else redirect('financeiro:agenda-pagamentos')
 
 
-class DespesaDeleteView(GrupoRequiredMixin, View):
+class DespesaDeleteView(PermissaoRequeridaMixin, View):
     """Exclui uma despesa operacional e suas parcelas (via CASCADE)."""
-    grupos_permitidos = ['admin_locadora']
+    permissao = 'financeiro_excluir_despesa'
 
     def post(self, request, pk):
         despesa = get_object_or_404(DespesaOperacional, pk=pk)
@@ -673,9 +673,9 @@ class DespesaDeleteView(GrupoRequiredMixin, View):
         return redirect(f"{reverse('financeiro:despesas')}?mes={mes}")
 
 
-class DespesaUpdateView(GrupoRequiredMixin, UpdateView):
+class DespesaUpdateView(PermissaoRequeridaMixin, UpdateView):
     """Edição de uma despesa operacional."""
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+    permissao = 'financeiro_acessar'
     model = DespesaOperacional
     form_class = DespesaOperacionalForm
     template_name = 'financeiro/despesa_form.html'
@@ -697,9 +697,9 @@ class DespesaUpdateView(GrupoRequiredMixin, UpdateView):
         return redirect(self.get_success_url())
 
 
-class DespesaMarcarPagoView(GrupoRequiredMixin, View):
+class DespesaMarcarPagoView(PermissaoRequeridaMixin, View):
     """Marca uma despesa simples (não parcelada) como paga."""
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+    permissao = 'financeiro_acessar'
 
     def post(self, request, pk):
         despesa = get_object_or_404(DespesaOperacional, pk=pk, parcelado=False)
@@ -715,9 +715,9 @@ class DespesaMarcarPagoView(GrupoRequiredMixin, View):
         return redirect('financeiro:despesa-detalhe', pk=pk)
 
 
-class DespesaDesmarcarPagoView(GrupoRequiredMixin, View):
+class DespesaDesmarcarPagoView(PermissaoRequeridaMixin, View):
     """Remove o pagamento de uma despesa simples (volta para pendente)."""
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+    permissao = 'financeiro_acessar'
 
     def post(self, request, pk):
         despesa = get_object_or_404(DespesaOperacional, pk=pk, parcelado=False)
@@ -727,9 +727,9 @@ class DespesaDesmarcarPagoView(GrupoRequiredMixin, View):
         return redirect('financeiro:despesa-detalhe', pk=pk)
 
 
-class ParcelaDespesaPagarLoteView(GrupoRequiredMixin, View):
+class ParcelaDespesaPagarLoteView(PermissaoRequeridaMixin, View):
     """Marca múltiplas parcelas de despesa como pagas em uma única ação."""
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+    permissao = 'financeiro_acessar'
 
     def post(self, request):
         from django.http import HttpResponseRedirect
@@ -757,9 +757,9 @@ class ParcelaDespesaPagarLoteView(GrupoRequiredMixin, View):
         return HttpResponseRedirect(next_url) if next_url else redirect('financeiro:contas-pagar')
 
 
-class ContasPagarListView(GrupoRequiredMixin, View):
+class ContasPagarListView(PermissaoRequeridaMixin, View):
     """Parcelas de despesas: modo urgência (grupos temporais) + lista filtrada."""
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+    permissao = 'financeiro_acessar'
     template_name = 'financeiro/contas_pagar.html'
 
     def get(self, request):
@@ -859,8 +859,8 @@ class ContasPagarListView(GrupoRequiredMixin, View):
 
 # ─── Fluxo de Caixa ──────────────────────────────────────────────────────────
 
-class FluxoCaixaView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class FluxoCaixaView(PermissaoRequeridaMixin, View):
+    permissao = 'financeiro_acessar'
     template_name = 'financeiro/fluxo.html'
 
     def get(self, request):
@@ -1004,8 +1004,8 @@ class FluxoCaixaView(GrupoRequiredMixin, View):
 
 # ─── Multas ──────────────────────────────────────────────────────────────────
 
-class MultaListView(GrupoRequiredMixin, ListView):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class MultaListView(PermissaoRequeridaMixin, ListView):
+    permissao = 'financeiro_acessar'
     model = MultaTransito
     template_name = 'financeiro/multas.html'
     context_object_name = 'multas'
@@ -1028,8 +1028,8 @@ class MultaListView(GrupoRequiredMixin, ListView):
         return contexto
 
 
-class MultaCreateView(GrupoRequiredMixin, CreateView):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class MultaCreateView(PermissaoRequeridaMixin, CreateView):
+    permissao = 'financeiro_acessar'
     model = MultaTransito
     form_class = MultaTransitoForm
     template_name = 'financeiro/multa_form.html'
@@ -1048,15 +1048,15 @@ class MultaCreateView(GrupoRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class MultaDetailView(GrupoRequiredMixin, DetailView):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class MultaDetailView(PermissaoRequeridaMixin, DetailView):
+    permissao = 'financeiro_acessar'
     model = MultaTransito
     template_name = 'financeiro/multa_detalhe.html'
     context_object_name = 'multa'
 
 
-class MultaAlterarSituacaoView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class MultaAlterarSituacaoView(PermissaoRequeridaMixin, View):
+    permissao = 'financeiro_acessar'
 
     def post(self, request, pk):
         from django.db import transaction
@@ -1084,8 +1084,8 @@ class MultaAlterarSituacaoView(GrupoRequiredMixin, View):
         return redirect('financeiro:multa-detalhe', pk=pk)
 
 
-class MultaUpdateView(GrupoRequiredMixin, UpdateView):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class MultaUpdateView(PermissaoRequeridaMixin, UpdateView):
+    permissao = 'financeiro_acessar'
     model = MultaTransito
     form_class = MultaTransitoForm
     template_name = 'financeiro/multa_form.html'

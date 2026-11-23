@@ -56,7 +56,7 @@
     <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#modalProrrogar">
       <i class="bi bi-calendar-plus me-1"></i>Prorrogar
     </button>
-    {% if is_admin_locadora %}
+    {% if pode_administrar_contrato %}
     <div class="d-flex align-items-center gap-2 ps-3 ms-1" style="border-left:2px solid var(--danger)">
       <a href="{% url 'contratos:encerramento-antecipado' contrato.pk %}" class="btn btn-danger btn-sm"
          title="Use somente se o veículo for devolvido antes do prazo previsto (quebra de contrato) — parcelas futuras serão canceladas">
@@ -68,7 +68,7 @@
     <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalEncerrar">
       <i class="bi bi-check2-circle me-1"></i>Encerrar Contrato
     </button>
-    {% if is_admin_locadora %}
+    {% if pode_administrar_contrato %}
     <form method="post" action="{% url 'contratos:reverter-checkin' contrato.pk %}" class="d-inline">
       {% csrf_token %}
       <button type="button" class="btn btn-outline-warning btn-sm"

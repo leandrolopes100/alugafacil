@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% block titulo %}{% if perfil %}Editar Perfil{% else %}Novo Perfil{% endif %}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:perfis' %}" class="text-decoration-none text-secondary">Perfis de Acesso</a></li>
+<li class="breadcrumb-item active">{% if perfil %}{{ perfil.nome }}{% else %}Novo{% endif %}</li>
+{% endblock %}
+
+{% block conteudo %}
+<div class="page-header">
+  <h1 class="page-title">{% if perfil %}Editar perfil: {{ perfil.nome }}{% else %}Novo perfil de acesso{% endif %}</h1>
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+  <div class="alert alert-danger d-flex gap-2"><i class="bi bi-x-octagon-fill"></i><div>{% for erro in form.non_field_errors %}{{ erro }}{% endfor %}</div></div>
+  {% endif %}
+
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-shield-lock me-2 text-primary"></i>Dados do perfil</div>
+        <div class="card-body row g-3">
+          <div class="col-md-5">
+            <label class="form-label fw-semibold small" for="{{ form.nome.id_for_label }}">Nome *</label>
+            {{ form.nome }}
+            {% if form.nome.errors %}<div class="invalid-feedback d-block">{{ form.nome.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="col-md-7">
+            <label class="form-label fw-semibold small" for="{{ form.descricao.id_for_label }}">Descrição</label>
+            {{ form.descricao }}
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header d-flex align-items-center">
+          <span><i class="bi bi-check2-square me-2 text-primary"></i>O que este perfil pode fazer</span>
+          <span class="ms-auto d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-marcar="todas">Marcar todas</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-marcar="nenhuma">Desmarcar todas</button>
+          </span>
+        </div>
+        <div class="card-body">
+          {% if form.permissoes.errors %}
+          <div class="alert alert-danger small py-2">{% for erro in form.permissoes.errors %}<div>{{ erro }}</div>{% endfor %}</div>
+          {% endif %}
+          <div class="row g-4">
+            {% for modulo in form.modulos %}
+            <div class="col-md-6">
+              <div class="fw-semibold small text-uppercase mb-2" style="letter-spacing:.04em; color:var(--text-secondary)">
+                <i class="bi {{ modulo.icone }} me-1"></i>{{ modulo.nome }}
+              </div>
+              {% for item in modulo.itens %}
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" name="permissoes" value="{{ item.codigo }}"
+                       id="perm_{{ item.codigo }}" {% if item.marcada %}checked{% endif %}
+                       {% if item.requer %}data-requer="{{ item.requer }}"{% endif %}>
+                <label class="form-check-label small" for="perm_{{ item.codigo }}">{{ item.rotulo }}</label>
+              </div>
+              {% endfor %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="card-footer bg-transparent d-flex gap-2 justify-content-end">
+          <a href="{% url 'core:perfis' %}" class="btn btn-outline-secondary">Cancelar</a>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Salvar Perfil</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      {% if perfil %}
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-people me-2 text-primary"></i>Usuários com este perfil</div>
+        <div class="card-body small">
+          {% for u in usuarios_do_perfil %}
+          <div class="d-flex justify-content-between mb-1">
+            <a href="{% url 'core:usuario-editar' u.pk %}" class="text-decoration-none">{{ u.get_full_name|default:u.username }}</a>
+            {% if not u.is_active %}<span class="badge bg-secondary-subtle text-secondary border">Desativado</span>{% endif %}
+          </div>
+          {% empty %}
+          <span class="text-muted">Nenhum usuário.</span>
+          {% endfor %}
+          {% if usuarios_do_perfil %}
+          <p class="text-muted mt-2 mb-0">As mudanças valem na hora para todos eles.</p>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+      <div class="card border-0 bg-light">
+        <div class="card-body small text-muted">
+          <ul class="ps-3 mb-0">
+            <li class="mb-2">Algumas permissões dependem de outras. Ao marcar, por exemplo, "Excluir veículos", o acesso à frota é marcado junto.</li>
+            <li class="mb-2">Quem tem "Usuários e perfis de acesso" pode dar qualquer permissão a qualquer um, inclusive a si mesmo. Dê só a quem administra o sistema.</li>
+            <li>O sistema não deixa ficar sem nenhum administrador nem permite que você retire o seu próprio acesso.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const caixas = Array.from(document.querySelectorAll('input[name="permissoes"]'));
+  const porCodigo = Object.fromEntries(caixas.map(c => [c.value, c]));
+  caixas.forEach(caixa => caixa.addEventListener('change', () => {
+    if (caixa.checked && caixa.dataset.requer && porCodigo[caixa.dataset.requer]) {
+      porCodigo[caixa.dataset.requer].checked = true;
+    }
+    if (!caixa.checked) {
+      caixas.filter(c => c.dataset.requer === caixa.value).forEach(c => { c.checked = false; });
+    }
+  }));
+  document.querySelectorAll('[data-marcar]').forEach(botao => botao.addEventListener('click', () => {
+    const marcar = botao.dataset.marcar === 'todas';
+    caixas.forEach(c => { c.checked = marcar; });
+  }));
+})();
+</script>
+{% endblock %}

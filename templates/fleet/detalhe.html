@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load core_tags %}
 {% block titulo %}{{ veiculo.placa }} — Frota{% endblock %}
 {% block breadcrumb %}
 <li class="breadcrumb-item"><a href="{% url 'frota:lista' %}" class="text-decoration-none text-secondary">Frota</a></li>
@@ -88,6 +89,146 @@
   <div>{{ bloqueio_situacao }}</div>
 </div>
 {% endif %}
+
+{% if financeiro %}
+<section id="financeiro" class="mb-4">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+    <h2 class="h6 fw-bold mb-0 text-uppercase" style="letter-spacing:.05em; color:var(--text-secondary)">
+      <i class="bi bi-cash-coin me-1"></i>Financeiro do veículo
+    </h2>
+    <form method="get" action="#financeiro" class="d-flex gap-2 align-items-center">
+      <select name="fin_ano" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()" aria-label="Ano">
+        <option value="">Todo o período</option>
+        {% for a in fin_anos %}<option value="{{ a }}" {% if a == fin_ano %}selected{% endif %}>{{ a }}</option>{% endfor %}
+      </select>
+      {% if fin_ano %}
+      <select name="fin_mes" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()" aria-label="Mês">
+        <option value="">Ano inteiro</option>
+        {% for numero, nome in fin_meses %}<option value="{{ numero }}" {% if numero == fin_mes %}selected{% endif %}>{{ nome }}</option>{% endfor %}
+      </select>
+      {% endif %}
+    </form>
+  </div>
+
+  {% with p=financeiro.periodo %}
+  <div class="card kpi-strip mb-3">
+    <div class="row g-0">
+      <div class="col-6 col-lg">
+        <div class="kpi-col" style="--kpi-cor:var(--success)">
+          <div class="kpi-value">{{ p.receita|brl }}</div>
+          <div class="kpi-label"><i class="bi bi-arrow-down-circle"></i> Faturou</div>
+          <div class="kpi-sub">pagamentos recebidos</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg">
+        <div class="kpi-col" style="--kpi-cor:var(--danger)">
+          <div class="kpi-value">{{ p.despesa|brl }}</div>
+          <div class="kpi-label"><i class="bi bi-arrow-up-circle"></i> Gastou</div>
+          <div class="kpi-sub">despesas pagas</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg">
+        <div class="kpi-col" style="--kpi-cor:{% if p.resultado >= 0 %}var(--success){% else %}var(--danger){% endif %}">
+          <div class="kpi-value" style="color:{% if p.resultado >= 0 %}var(--success){% else %}var(--danger){% endif %}">{{ p.resultado|brl }}</div>
+          <div class="kpi-label"><i class="bi bi-graph-up-arrow"></i> Resultado</div>
+          <div class="kpi-sub">faturou − gastou</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg">
+        <div class="kpi-col" style="--kpi-cor:var(--warning)">
+          <div class="kpi-value">{{ financeiro.a_pagar|brl }}</div>
+          <div class="kpi-label"><i class="bi bi-hourglass-split"></i> A pagar</div>
+          <div class="kpi-sub">pendente hoje, fora do resultado</div>
+        </div>
+      </div>
+      {% if financeiro.retorno_pct is not None %}
+      <div class="col-6 col-lg">
+        <div class="kpi-col" style="--kpi-cor:var(--info)">
+          <div class="kpi-value">{{ financeiro.retorno_pct|floatformat:1 }}%</div>
+          <div class="kpi-label"><i class="bi bi-arrow-repeat"></i> Retorno</div>
+          <div class="kpi-sub">resultado total ÷ {{ veiculo.valor_aquisicao|brl }} da compra</div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-4">
+      <div class="card h-100">
+        <div class="card-header"><i class="bi bi-list-ul"></i>Composição</div>
+        <div class="card-body small">
+          <div class="fw-semibold mb-2" style="color:var(--success)">Entradas</div>
+          {% for rotulo, valor in financeiro.receitas %}
+          <div class="d-flex justify-content-between mb-1"><span class="text-secondary">{{ rotulo }}</span><span class="fw-semibold">{{ valor|brl }}</span></div>
+          {% empty %}<div class="text-muted mb-1">Nenhuma entrada no período.</div>{% endfor %}
+          <div class="fw-semibold mt-3 mb-2" style="color:var(--danger)">Saídas</div>
+          {% for rotulo, valor in financeiro.despesas %}
+          <div class="d-flex justify-content-between mb-1"><span class="text-secondary">{{ rotulo }}</span><span class="fw-semibold">{{ valor|brl }}</span></div>
+          {% empty %}<div class="text-muted mb-1">Nenhuma despesa paga no período.</div>{% endfor %}
+          <p class="text-muted mt-3 mb-0" style="font-size:11.5px">
+            Regime de caixa, igual à DRE: conta o que foi pago, na data do pagamento. Caução não entra.
+            Custos gerais da locadora (aluguel, salários) não são divididos entre os carros.
+            {% if financeiro.de_investidor %}Veículo de investidor: o retorno sobre a compra não se aplica.{% endif %}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <div class="card h-100">
+        <div class="card-header"><i class="bi bi-calendar3"></i>Mês a mês <span class="ms-auto small text-muted fw-normal">últimos 24 meses com movimento</span></div>
+        {% if financeiro.mensal %}
+        <div class="table-responsive" style="max-height:320px">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Mês</th><th class="text-end">Faturou</th><th class="text-end">Gastou</th><th class="text-end">Resultado</th></tr></thead>
+            <tbody>
+              {% for m in financeiro.mensal %}
+              <tr>
+                <td>{{ m.mes|date:"m/Y" }}</td>
+                <td class="text-end">{{ m.receita|brl }}</td>
+                <td class="text-end">{{ m.despesa|brl }}</td>
+                <td class="text-end fw-semibold" style="color:{% if m.resultado >= 0 %}var(--success){% else %}var(--danger){% endif %}">{{ m.resultado|brl }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="card-body small text-muted">Nenhum pagamento ou despesa paga registrada para este veículo.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-receipt"></i>Lançamentos do período <span class="ms-auto small text-muted fw-normal">até 30 mais recentes</span></div>
+        {% if financeiro.lancamentos %}
+        <div class="table-responsive" style="max-height:360px">
+          <table class="table table-sm table-hover mb-0">
+            <thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th class="text-end">Valor</th></tr></thead>
+            <tbody>
+              {% for item in financeiro.lancamentos %}
+              <tr>
+                <td class="text-nowrap">{{ item.data|date:"d/m/Y" }}</td>
+                <td>{% if item.url %}<a href="{{ item.url }}" class="table-link">{{ item.descricao }}</a>{% else %}{{ item.descricao }}{% endif %}</td>
+                <td class="text-secondary">{{ item.categoria }}</td>
+                <td class="text-end fw-semibold text-nowrap" style="color:{% if item.entrada %}var(--success){% else %}var(--danger){% endif %}">{% if item.entrada %}+{% else %}−{% endif %} {{ item.valor|brl }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="card-body small text-muted">Nenhum lançamento no período.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endwith %}
+</section>
+{% endif %}
+
 
 <div class="row g-4">
 

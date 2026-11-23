@@ -5,7 +5,7 @@ from datetime import date
 from decimal import Decimal
 
 from django.contrib.auth.mixins import LoginRequiredMixin
-from apps.core.mixins import GrupoRequiredMixin
+from apps.core.mixins import PermissaoRequeridaMixin
 from django.core.paginator import Paginator
 from django.db.models import Avg, Count, Q, Sum
 from django.http import HttpResponse
@@ -130,8 +130,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
 # ─── Hub de Relatorios ────────────────────────────────────────────────────────
 
-class RelatoriosIndexView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'atendente', 'financeiro']
+class RelatoriosIndexView(PermissaoRequeridaMixin, View):
+    permissao = ('relatorios_contratos', 'relatorios_clientes', 'relatorios_financeiros')
     template_name = 'core/relatorios/index.html'
 
     def get(self, request):
@@ -161,8 +161,8 @@ class RelatoriosIndexView(GrupoRequiredMixin, View):
 
 # ─── Relatorio de Contratos ───────────────────────────────────────────────────
 
-class RelatorioContratosView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'atendente', 'financeiro']
+class RelatorioContratosView(PermissaoRequeridaMixin, View):
+    permissao = 'relatorios_contratos'
     template_name = 'core/relatorios/contratos.html'
     POR_PAGINA = 50
 
@@ -245,16 +245,20 @@ class RelatorioContratosView(GrupoRequiredMixin, View):
 
 # ─── Relatorio de Frota / Ocupacao ────────────────────────────────────────────
 
-class RelatorioFrotaView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'atendente', 'mecanico']
+class RelatorioFrotaView(PermissaoRequeridaMixin, View):
+    permissao = 'relatorios_frota'
     template_name = 'core/relatorios/frota.html'
 
     def get(self, request):
+        from apps.financeiro.resultado import resultado_por_veiculo
         ano, mes, periodo = _periodo(request)
         dias_locados_map, dias_no_mes = dias_locados_por_veiculo(*_limites_periodo(ano, mes))
+        financeiro_map = resultado_por_veiculo(ano, mes)
 
         veiculos = list(
-            Veiculo.objects.exclude(situacao='inativo').select_related('grupo__categoria')
+            Veiculo.objects.filter(
+                ~Q(situacao='inativo') | Q(pk__in=[pk for pk in financeiro_map if pk is not None])
+            ).select_related('grupo__categoria')
         )
         if not veiculos:
             return render(request, self.template_name, {**periodo,
@@ -287,42 +291,23 @@ class RelatorioFrotaView(GrupoRequiredMixin, View):
             .values('veiculo_id').annotate(n_cancelados=Count('id'))
         }
 
-        # ── Batch query: toda a receita do periodo por veiculo ──
-        filtro_p = dict(data_pagamento__year=ano)
-        if mes:
-            filtro_p['data_pagamento__month'] = mes
-
-        receita_agg = (
-            PagamentoContrato.objects.receita().filter(**filtro_p)
-            .values('contrato__veiculo_id')
-            .annotate(total=Sum('valor'))
-        )
-        receita_map = {r['contrato__veiculo_id']: r['total'] for r in receita_agg}
-
-        # ── Batch query: despesas por veiculo no periodo ──
-        filtro_d = dict(data_competencia__year=ano, veiculo__isnull=False)
-        if mes:
-            filtro_d['data_competencia__month'] = mes
-
-        despesas_agg = (
-            DespesaOperacional.objects.filter(**filtro_d)
-            .values('veiculo_id')
-            .annotate(total=Sum('valor'))
-        )
-        despesas_map = {r['veiculo_id']: r['total'] for r in despesas_agg}
-
+        zero = Decimal('0.00')
         dados = []
         ocupacao_total = Decimal('0')
+        n_ativos = 0
 
         for v in veiculos:
             agg = contratos_map.get(v.pk, {})
             n_locacoes = agg.get('n_locacoes', 0)
             dias_locados = dias_locados_map.get(v.pk, 0)
-            receita_v = receita_map.get(v.pk, Decimal('0.00'))
-            custo_direto_v = despesas_map.get(v.pk, Decimal('0.00'))
+            financeiro_v = financeiro_map.get(v.pk, {})
+            receita_v = financeiro_v.get('receita', zero)
+            custo_direto_v = financeiro_v.get('despesa', zero)
             resultado_v = receita_v - custo_direto_v
             ocupacao = round(dias_locados / dias_no_mes * 100, 1) if dias_no_mes else 0
-            ocupacao_total += Decimal(str(ocupacao))
+            if v.situacao != 'inativo':
+                ocupacao_total += Decimal(str(ocupacao))
+                n_ativos += 1
 
             dados.append({
                 'veiculo': v,
@@ -337,8 +322,8 @@ class RelatorioFrotaView(GrupoRequiredMixin, View):
             })
 
         dados.sort(key=lambda x: x['ocupacao'], reverse=True)
-        total_veiculos = len(veiculos)
-        ocupacao_media = round(float(ocupacao_total / total_veiculos), 1) if total_veiculos else 0
+        total_veiculos = n_ativos
+        ocupacao_media = round(float(ocupacao_total / n_ativos), 1) if n_ativos else 0
 
         top10 = dados[:10]
         chart_ocupacao = json.dumps({
@@ -363,8 +348,9 @@ class RelatorioFrotaView(GrupoRequiredMixin, View):
                     'receita': sum(d['receita'] for d in vs),
                 })
 
-        receita_total = sum(d['receita'] for d in dados)
-        custo_direto_total = sum(d['custo_direto'] for d in dados)
+        receita_total = sum((d['receita'] for d in dados), zero)
+        custo_direto_total = sum((d['custo_direto'] for d in dados), zero)
+        despesa_sem_veiculo = financeiro_map.get(None, {}).get('despesa', zero)
 
         return render(request, self.template_name, {
             **periodo,
@@ -374,6 +360,8 @@ class RelatorioFrotaView(GrupoRequiredMixin, View):
             'receita_total': receita_total,
             'custo_direto_total': custo_direto_total,
             'resultado_direto_total': receita_total - custo_direto_total,
+            'despesa_sem_veiculo': despesa_sem_veiculo,
+            'resultado_geral': receita_total - custo_direto_total - despesa_sem_veiculo,
             'total_veiculos': total_veiculos,
             'chart_ocupacao': chart_ocupacao,
             'chart_receita': chart_receita,
@@ -382,8 +370,8 @@ class RelatorioFrotaView(GrupoRequiredMixin, View):
 
 # ─── Relatorio Financeiro (DRE Simplificado) ─────────────────────────────────
 
-class RelatorioFinanceiroView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class RelatorioFinanceiroView(PermissaoRequeridaMixin, View):
+    permissao = 'relatorios_financeiros'
     template_name = 'core/relatorios/dre.html'
 
     def get(self, request):
@@ -438,8 +426,8 @@ class RelatorioFinanceiroView(GrupoRequiredMixin, View):
 
 # ─── Relatorio de Clientes ────────────────────────────────────────────────────
 
-class RelatorioClientesView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'atendente']
+class RelatorioClientesView(PermissaoRequeridaMixin, View):
+    permissao = 'relatorios_clientes'
     template_name = 'core/relatorios/clientes.html'
 
     def get(self, request):
@@ -509,8 +497,8 @@ class RelatorioClientesView(GrupoRequiredMixin, View):
 
 # ─── Relatorio de Inadimplencia ───────────────────────────────────────────────
 
-class RelatorioInadimplenciaView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class RelatorioInadimplenciaView(PermissaoRequeridaMixin, View):
+    permissao = 'relatorios_financeiros'
     template_name = 'core/relatorios/inadimplencia.html'
     POR_PAGINA = 50
 
@@ -580,8 +568,8 @@ class RelatorioInadimplenciaView(GrupoRequiredMixin, View):
 
 # ─── Exportacao CSV ───────────────────────────────────────────────────────────
 
-class ExportarCSVView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'financeiro']
+class ExportarCSVView(PermissaoRequeridaMixin, View):
+    permissao = 'relatorios_financeiros'
 
     def get(self, request, tipo):
         handler = {

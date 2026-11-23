@@ -1,0 +1,17 @@
+<div class="form-text aviso-veiculo-despesa" style="color:var(--warning-text)" hidden>
+  <i class="bi bi-exclamation-triangle me-1"></i>Esta categoria costuma ser de um carro. Se for, informe o veículo para o gasto aparecer no financeiro dele.
+</div>
+<script>
+(function () {
+  const aviso = document.currentScript.previousElementSibling;
+  const form = aviso.closest('form');
+  const categoria = form && form.querySelector('select[name="categoria"]');
+  const veiculo = form && form.querySelector('select[name="veiculo"]');
+  if (!categoria || !veiculo) return;
+  const deVeiculo = (categoria.dataset.categoriasVeiculo || '').split(',');
+  function conferir() { aviso.hidden = !(deVeiculo.includes(categoria.value) && !veiculo.value); }
+  categoria.addEventListener('change', conferir);
+  veiculo.addEventListener('change', conferir);
+  conferir();
+})();
+</script>

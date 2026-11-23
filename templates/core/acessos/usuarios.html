@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block titulo %}Usuários{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Usuários</li>
+{% endblock %}
+
+{% block conteudo %}
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div>
+    <h1 class="page-title">Usuários</h1>
+    <p class="page-subtitle mb-0">Quem acessa o sistema e com qual perfil</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'core:perfis' %}" class="btn btn-outline-secondary"><i class="bi bi-shield-lock me-1"></i>Perfis de Acesso</a>
+    <a href="{% url 'core:usuario-novo' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Novo Usuário</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Usuário</th>
+          <th>Perfil</th>
+          <th>Situação</th>
+          <th>Último acesso</th>
+          <th class="text-end">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in usuarios %}
+        <tr {% if not u.is_active %}class="text-muted"{% endif %}>
+          <td>
+            <div class="fw-semibold">{{ u.get_full_name|default:u.username }}</div>
+            <div class="small text-muted">{{ u.username }}{% if u.email %} · {{ u.email }}{% endif %}</div>
+          </td>
+          <td>
+            {% if u.is_superuser %}<span class="badge bg-dark">Superusuário</span>{% endif %}
+            {% for g in u.groups.all %}<span class="badge bg-primary-subtle text-primary border border-primary-subtle me-1">{% if g.perfil %}{{ g.perfil.nome }}{% else %}{{ g.name }}{% endif %}</span>{% empty %}{% if not u.is_superuser %}<span class="small" style="color:var(--danger)">Sem perfil (não acessa nada)</span>{% endif %}{% endfor %}
+          </td>
+          <td>
+            {% if u.is_active %}<span class="badge bg-success-subtle text-success border border-success-subtle">Ativo</span>
+            {% else %}<span class="badge bg-secondary-subtle text-secondary border">Desativado</span>{% endif %}
+          </td>
+          <td class="small text-nowrap">{{ u.last_login|date:"d/m/Y H:i"|default:"Nunca entrou" }}</td>
+          <td class="text-end text-nowrap">
+            {% if u.is_superuser and not request.user.is_superuser %}
+            <span class="small text-muted">Somente superusuário altera</span>
+            {% else %}
+            <a href="{% url 'core:usuario-editar' u.pk %}" class="btn btn-sm btn-outline-secondary" title="Editar"><i class="bi bi-pencil"></i></a>
+            <a href="{% url 'core:usuario-senha' u.pk %}" class="btn btn-sm btn-outline-secondary" title="Redefinir senha"><i class="bi bi-key"></i></a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<p class="small text-muted mt-3 mb-0">
+  <i class="bi bi-info-circle me-1"></i>Usuários não são excluídos, para manter o histórico. Para tirar o acesso, desative.
+</p>
+{% endblock %}

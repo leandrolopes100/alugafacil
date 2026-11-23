@@ -724,6 +724,7 @@
   </div>
 
   <nav class="sidebar-nav">
+    {% with p=perms.core %}
 
     <!-- PRINCIPAL -->
     <span class="sidebar-section">Principal</span>
@@ -732,8 +733,10 @@
       <i class="bi bi-grid-fill"></i> Dashboard
     </a>
 
+    {% if p.contratos_consultar or p.clientes_acessar %}
     <!-- LOCAÇÃO -->
     <span class="sidebar-section">Locação</span>
+    {% if p.contratos_consultar %}
     <a href="{% url 'contratos:lista' %}"
        class="sidebar-link {% if request.resolver_match.app_name == 'contratos' and 'reserva' not in request.resolver_match.url_name|default:'' %}active{% endif %}">
       <i class="bi bi-file-earmark-text-fill"></i> Contratos
@@ -741,11 +744,16 @@
     <span class="sidebar-link sidebar-link-desabilitado" aria-disabled="true">
       <i class="bi bi-calendar-check-fill"></i> Reservas
     </span>
+    {% endif %}
+    {% if p.clientes_acessar %}
     <a href="{% url 'clientes:lista' %}"
        class="sidebar-link {% if request.resolver_match.app_name == 'clientes' %}active{% endif %}">
       <i class="bi bi-people-fill"></i> Clientes
     </a>
+    {% endif %}
+    {% endif %}
 
+    {% if p.frota_acessar %}
     <!-- FROTA -->
     <span class="sidebar-section">Frota</span>
     <a href="{% url 'frota:lista' %}"
@@ -764,7 +772,9 @@
        class="sidebar-link {% if request.resolver_match.url_name == 'categorias' or request.resolver_match.url_name == 'categoria-nova' or request.resolver_match.url_name == 'categoria-editar' %}active{% endif %}">
       <i class="bi bi-tags-fill"></i> Categorias
     </a>
+    {% endif %}
 
+    {% if p.financeiro_acessar %}
     <!-- FINANCEIRO -->
     <span class="sidebar-section">Financeiro</span>
     <a href="{% url 'financeiro:index' %}"
@@ -799,13 +809,9 @@
        class="sidebar-link {% if 'multa' in request.resolver_match.url_name|default:'' %}active{% endif %}">
       <i class="bi bi-exclamation-octagon-fill"></i> Multas de Trânsito
     </a>
-    {% if pode_configurar_locadora %}
-    <a href="{% url 'financeiro:configuracao' %}"
-       class="sidebar-link {% if request.resolver_match.url_name == 'configuracao' %}active{% endif %}">
-      <i class="bi bi-gear-fill"></i> Configurações
-    </a>
     {% endif %}
 
+    {% if p.manutencao_acessar %}
     <!-- MANUTENÇÃO -->
     <span class="sidebar-section">Manutenção</span>
     <a href="{% url 'manutencao:lista' %}"
@@ -816,8 +822,9 @@
        class="sidebar-link {% if request.resolver_match.url_name == 'alertas' or request.resolver_match.url_name == 'alerta-novo' %}active{% endif %}">
       <i class="bi bi-shield-check"></i> Alertas Preventivos
     </a>
+    {% endif %}
 
-    {% if modulo_investidores %}
+    {% if modulo_investidores and p.financeiro_acessar %}
     <!-- INVESTIDORES -->
     <span class="sidebar-section">Investidores</span>
     <span class="sidebar-link sidebar-link-desabilitado" aria-disabled="true">
@@ -828,13 +835,43 @@
     </span>
     {% endif %}
 
+    {% if p.relatorios_contratos or p.relatorios_clientes or p.relatorios_financeiros %}
     <!-- RELATÓRIOS -->
     <span class="sidebar-section">Relatórios</span>
     <a href="{% url 'core:relatorios' %}"
        class="sidebar-link {% if 'relatorio' in request.resolver_match.url_name|default:'' or request.resolver_match.url_name == 'relatorios' %}active{% endif %}">
       <i class="bi bi-bar-chart-fill"></i> Central de Relatórios
     </a>
+    {% elif p.relatorios_frota %}
+    <span class="sidebar-section">Relatórios</span>
+    <a href="{% url 'core:relatorio-frota' %}"
+       class="sidebar-link {% if request.resolver_match.url_name == 'relatorio-frota' %}active{% endif %}">
+      <i class="bi bi-bar-chart-fill"></i> Relatório de Frota
+    </a>
+    {% endif %}
 
+    {% if p.admin_configuracoes or p.admin_usuarios %}
+    <!-- ADMINISTRAÇÃO -->
+    <span class="sidebar-section">Administração</span>
+    {% if p.admin_usuarios %}
+    <a href="{% url 'core:usuarios' %}"
+       class="sidebar-link {% if request.resolver_match.url_name|default:''|slice:':7' == 'usuario' %}active{% endif %}">
+      <i class="bi bi-person-gear"></i> Usuários
+    </a>
+    <a href="{% url 'core:perfis' %}"
+       class="sidebar-link {% if request.resolver_match.url_name|default:''|slice:':6' == 'perfil' or request.resolver_match.url_name == 'perfis' %}active{% endif %}">
+      <i class="bi bi-shield-lock-fill"></i> Perfis de Acesso
+    </a>
+    {% endif %}
+    {% if p.admin_configuracoes %}
+    <a href="{% url 'financeiro:configuracao' %}"
+       class="sidebar-link {% if request.resolver_match.url_name == 'configuracao' %}active{% endif %}">
+      <i class="bi bi-gear-fill"></i> Configurações
+    </a>
+    {% endif %}
+    {% endif %}
+
+    {% endwith %}
   </nav>
 
   <div class="sidebar-footer">
@@ -844,7 +881,7 @@
       <div style="flex:1; min-width:0">
         <div class="sidebar-user-name text-truncate">{{ request.user.get_full_name|default:request.user.username }}</div>
         <div class="sidebar-user-role">
-          {% if request.user.is_superuser %}Administrador{% elif request.user.groups.all %}{{ request.user.groups.first.name }}{% else %}Usuário{% endif %}
+          {{ perfil_usuario }}
         </div>
       </div>
       <form method="post" action="{% url 'logout' %}" class="m-0">

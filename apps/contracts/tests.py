@@ -1196,7 +1196,7 @@ class ContratoEncerramentoAntecipadoTests(ContratosTestBase):
         from django.contrib.auth.models import Group
 
         atendente = User.objects.create_user('atendente1', 'atendente1@teste.com', 'senha123')
-        atendente.groups.add(Group.objects.create(name='atendente'))
+        atendente.groups.add(Group.objects.get_or_create(name='atendente')[0])
         self.client.force_login(atendente)
 
         contrato = self._criar_contrato_ativo()

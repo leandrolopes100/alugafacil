@@ -105,9 +105,11 @@ class DespesaOperacional(models.Model):
         ('aluguel', 'Aluguel do Estabelecimento'),
         ('salario', 'Folha de Pagamento'),
         ('marketing', 'Marketing / Publicidade'),
+        ('multa', 'Multa de Trânsito'),
         ('caucao', 'Devolução de Caução'),
         ('outros', 'Outros'),
     ]
+    CATEGORIAS_DE_VEICULO = ('manutencao', 'seguro', 'ipva', 'licenciamento', 'combustivel', 'lavagem', 'multa')
     FORMA = [
         ('cartao_credito', 'Cartão de Crédito'),
         ('cartao_debito', 'Cartão de Débito'),
@@ -135,6 +137,11 @@ class DespesaOperacional(models.Model):
     os_origem = models.OneToOneField(
         'manutencao.OrdemManutencao', on_delete=models.SET_NULL,
         null=True, blank=True, verbose_name='OS de origem',
+        related_name='despesa_gerada'
+    )
+    multa_origem = models.OneToOneField(
+        'MultaTransito', on_delete=models.SET_NULL,
+        null=True, blank=True, verbose_name='Multa de origem',
         related_name='despesa_gerada'
     )
     debito_automatico = models.BooleanField(
@@ -286,8 +293,36 @@ class MultaTransito(models.Model):
             possiveis = list(self.contratos_possiveis(self.veiculo_id, self.data_infracao)[:2])
             if len(possiveis) == 1:
                 self.contrato = possiveis[0]
+        anterior = (
+            MultaTransito.objects.filter(pk=self.pk).values_list('situacao', flat=True).first()
+            if self.pk else None
+        )
         super().save(*args, **kwargs)
         self.sincronizar_cobranca()
+        self.sincronizar_despesa(criar=anterior != 'paga')
+
+    def sincronizar_despesa(self, criar=False, data_pagamento=None):
+        if self.situacao != 'paga':
+            return
+        descricao = f'Multa de trânsito {self.veiculo.placa} — infração de {self.data_infracao:%d/%m/%Y}'
+        if self.numero_auto:
+            descricao += f' (auto {self.numero_auto})'
+        despesa = DespesaOperacional.objects.filter(multa_origem=self).first()
+        if despesa is None:
+            if not criar:
+                return
+            DespesaOperacional.objects.create(
+                multa_origem=self, categoria='multa', descricao=descricao[:300], valor=self.valor,
+                veiculo=self.veiculo, data_competencia=self.data_infracao,
+                data_pagamento=data_pagamento or timezone.localdate(),
+                observacoes=f'Gerada automaticamente ao marcar a multa #{self.pk} como paga.',
+            )
+            return
+        if (despesa.valor, despesa.veiculo_id, despesa.descricao) != (self.valor, self.veiculo_id, descricao[:300]):
+            despesa.valor = self.valor
+            despesa.veiculo = self.veiculo
+            despesa.descricao = descricao[:300]
+            despesa.save(update_fields=['valor', 'veiculo', 'descricao'])
 
     @property
     def proximas_situacoes(self):

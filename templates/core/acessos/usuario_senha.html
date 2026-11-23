@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block titulo %}Redefinir Senha{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'core:usuarios' %}" class="text-decoration-none text-secondary">Usuários</a></li>
+<li class="breadcrumb-item active">Redefinir senha</li>
+{% endblock %}
+
+{% block conteudo %}
+<div class="page-header">
+  <h1 class="page-title">Redefinir senha de {{ usuario_alvo.get_full_name|default:usuario_alvo.username }}</h1>
+</div>
+
+<div class="row">
+  <div class="col-lg-5">
+    <form method="post" class="card" novalidate autocomplete="off">
+      {% csrf_token %}
+      <div class="card-body">
+        {% if usuario_alvo.pk != request.user.pk %}
+        <p class="small text-muted">Ao salvar, as sessões abertas de <strong>{{ usuario_alvo.username }}</strong> são encerradas e ele precisa entrar com a nova senha.</p>
+        {% endif %}
+        {% for campo in form %}
+        <div class="mb-3">
+          <label class="form-label fw-semibold small" for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+          {{ campo }}
+          {% for erro in campo.errors %}<div class="invalid-feedback d-block">{{ erro }}</div>{% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+      <div class="card-footer bg-transparent d-flex gap-2 justify-content-end">
+        <a href="{% url 'core:usuarios' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-key me-1"></i>Salvar nova senha</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

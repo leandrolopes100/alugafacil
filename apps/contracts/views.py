@@ -2,7 +2,8 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib import messages
-from apps.core.mixins import GrupoRequiredMixin
+from apps.core.mixins import PermissaoRequeridaMixin
+from apps.core.permissoes import tem_permissao
 from django.db.models import Max, Q, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -113,14 +114,7 @@ def _checklist_saida(contrato):
 
 
 def _pode_criar_retroativo(user):
-    """Somente admin_locadora (ou superuser) pode criar contrato retroativo/migrado —
-    essa via gera um pagamento de regularização sem lastro bancário conferível."""
-    if user.is_superuser:
-        return True
-    grupos = getattr(user, '_grupos_nomes_cache', None)
-    if grupos is None:
-        grupos = set(user.groups.values_list('name', flat=True))
-    return 'admin_locadora' in grupos
+    return tem_permissao(user, 'contratos_administrar')
 
 
 def _gerar_parcela_acerto_se_necessario(contrato):
@@ -213,8 +207,8 @@ def _mensagem_caucao(plano):
 
 # ─── Reservas ────────────────────────────────────────────────────────────────
 
-class ReservaListView(GrupoRequiredMixin, ListView):
-    grupos_permitidos = ['admin_locadora', 'atendente']
+class ReservaListView(PermissaoRequeridaMixin, ListView):
+    permissao = 'contratos_operar'
     model = Reserva
     template_name = 'contracts/reserva_lista.html'
     context_object_name = 'reservas'
@@ -240,8 +234,8 @@ class ReservaListView(GrupoRequiredMixin, ListView):
         return contexto
 
 
-class ReservaCreateView(GrupoRequiredMixin, CreateView):
-    grupos_permitidos = ['admin_locadora', 'atendente']
+class ReservaCreateView(PermissaoRequeridaMixin, CreateView):
+    permissao = 'contratos_operar'
     model = Reserva
     form_class = ReservaForm
     template_name = 'contracts/reserva_form.html'
@@ -264,8 +258,8 @@ class ReservaCreateView(GrupoRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class ReservaUpdateView(GrupoRequiredMixin, UpdateView):
-    grupos_permitidos = ['admin_locadora', 'atendente']
+class ReservaUpdateView(PermissaoRequeridaMixin, UpdateView):
+    permissao = 'contratos_operar'
     model = Reserva
     form_class = ReservaForm
     template_name = 'contracts/reserva_form.html'
@@ -286,8 +280,8 @@ class ReservaUpdateView(GrupoRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class ReservaDeleteView(GrupoRequiredMixin, DeleteView):
-    grupos_permitidos = ['admin_locadora']
+class ReservaDeleteView(PermissaoRequeridaMixin, DeleteView):
+    permissao = 'contratos_administrar'
     model = Reserva
     template_name = 'contracts/reserva_detalhe.html'
     success_url = reverse_lazy('contratos:reserva-lista')
@@ -306,15 +300,15 @@ class ReservaDeleteView(GrupoRequiredMixin, DeleteView):
         return super().form_valid(form)
 
 
-class ReservaDetailView(GrupoRequiredMixin, DetailView):
-    grupos_permitidos = ['admin_locadora', 'atendente']
+class ReservaDetailView(PermissaoRequeridaMixin, DetailView):
+    permissao = 'contratos_operar'
     model = Reserva
     template_name = 'contracts/reserva_detalhe.html'
     context_object_name = 'reserva'
 
 
-class ReservaConfirmarView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'atendente']
+class ReservaConfirmarView(PermissaoRequeridaMixin, View):
+    permissao = 'contratos_operar'
     def post(self, request, pk):
         reserva = get_object_or_404(Reserva, pk=pk)
         reserva.situacao = 'confirmada'
@@ -327,8 +321,8 @@ class ReservaConfirmarView(GrupoRequiredMixin, View):
         return redirect('contratos:reserva-detalhe', pk=pk)
 
 
-class ReservaCancelarView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'atendente']
+class ReservaCancelarView(PermissaoRequeridaMixin, View):
+    permissao = 'contratos_operar'
     def post(self, request, pk):
         reserva = get_object_or_404(Reserva, pk=pk)
         situacao_anterior = reserva.situacao
@@ -350,9 +344,9 @@ class ReservaCancelarView(GrupoRequiredMixin, View):
         return redirect('contratos:reserva-lista')
 
 
-class ReservaNoShowView(GrupoRequiredMixin, View):
+class ReservaNoShowView(PermissaoRequeridaMixin, View):
     """Marca uma reserva como no_show e libera o veículo se aplicável."""
-    grupos_permitidos = ['admin_locadora', 'atendente']
+    permissao = 'contratos_operar'
     def post(self, request, pk):
         reserva = get_object_or_404(Reserva, pk=pk, situacao__in=['pendente', 'confirmada'])
         situacao_anterior = reserva.situacao
@@ -371,9 +365,9 @@ class ReservaNoShowView(GrupoRequiredMixin, View):
         return redirect('contratos:reserva-detalhe', pk=pk)
 
 
-class ReservaConverterView(GrupoRequiredMixin, View):
+class ReservaConverterView(PermissaoRequeridaMixin, View):
     """Converte uma reserva confirmada em contrato aberto."""
-    grupos_permitidos = ['admin_locadora', 'atendente']
+    permissao = 'contratos_operar'
     def post(self, request, pk):
         from django.db import transaction
         reserva = get_object_or_404(Reserva, pk=pk, situacao='confirmada')
@@ -415,8 +409,8 @@ class ReservaConverterView(GrupoRequiredMixin, View):
 
 # ─── Contratos ───────────────────────────────────────────────────────────────
 
-class ContratoListView(GrupoRequiredMixin, ListView):
-    grupos_permitidos = ['admin_locadora', 'atendente', 'financeiro']
+class ContratoListView(PermissaoRequeridaMixin, ListView):
+    permissao = 'contratos_consultar'
     model = Contrato
     template_name = 'contracts/lista.html'
     context_object_name = 'contratos'
@@ -444,8 +438,8 @@ class ContratoListView(GrupoRequiredMixin, ListView):
         return contexto
 
 
-class ContratoCreateView(GrupoRequiredMixin, CreateView):
-    grupos_permitidos = ['admin_locadora', 'atendente']
+class ContratoCreateView(PermissaoRequeridaMixin, CreateView):
+    permissao = 'contratos_operar'
     model = Contrato
     form_class = ContratoForm
     template_name = 'contracts/form.html'
@@ -613,8 +607,8 @@ class ContratoCreateView(GrupoRequiredMixin, CreateView):
         return redirect(self.get_success_url())
 
 
-class ContratoDetailView(GrupoRequiredMixin, DetailView):
-    grupos_permitidos = ['admin_locadora', 'atendente', 'financeiro']
+class ContratoDetailView(PermissaoRequeridaMixin, DetailView):
+    permissao = 'contratos_consultar'
     model = Contrato
     template_name = 'contracts/detalhe.html'
     context_object_name = 'contrato'
@@ -682,19 +676,12 @@ class ContratoDetailView(GrupoRequiredMixin, DetailView):
         contexto['acertos_abertos_valor'] = sum(v for p, v in mantidas if p.tipo == 'acerto')
         contexto['vencidas_mantidas_qtd'] = len(vencidas_mantidas)
         contexto['vencidas_mantidas_valor'] = sum(vencidas_mantidas)
-        # Usa cache de grupos setado pelo GrupoRequiredMixin.dispatch()
-        grupos = getattr(self.request.user, '_grupos_nomes_cache', None)
-        if grupos is None:
-            grupos = set(self.request.user.groups.values_list('name', flat=True))
-        # Superusuario sempre pode -- mesmo criterio de bypass do GrupoRequiredMixin,
-        # senao um superuser sem o grupo 'admin_locadora' explicito nao veria botoes
-        # (Quebra de Contrato, Reverter Check-in) que ele tem permissao de acessar.
-        contexto['is_admin_locadora'] = self.request.user.is_superuser or 'admin_locadora' in grupos
+        contexto['pode_administrar_contrato'] = tem_permissao(self.request.user, 'contratos_administrar')
         return contexto
 
 
-class ContratoCheckoutView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'atendente']
+class ContratoCheckoutView(PermissaoRequeridaMixin, View):
+    permissao = 'contratos_operar'
     template_name = 'contracts/checkout.html'
 
     def _get_contrato(self, pk):
@@ -790,8 +777,8 @@ class ContratoCheckoutView(GrupoRequiredMixin, View):
         })
 
 
-class ContratoCheckinView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'atendente']
+class ContratoCheckinView(PermissaoRequeridaMixin, View):
+    permissao = 'contratos_operar'
     template_name = 'contracts/checkin.html'
 
     def get(self, request, pk):
@@ -896,8 +883,8 @@ class ContratoCheckinView(GrupoRequiredMixin, View):
         })
 
 
-class ContratoEncerrarView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'atendente']
+class ContratoEncerrarView(PermissaoRequeridaMixin, View):
+    permissao = 'contratos_operar'
     def post(self, request, pk):
         from django.db import transaction as db_transaction
         contrato = get_object_or_404(Contrato, pk=pk, situacao='aguardando_devolucao')
@@ -948,7 +935,7 @@ class ContratoEncerrarView(GrupoRequiredMixin, View):
         return redirect('contratos:detalhe', pk=pk)
 
 
-class ContratoEncerramentoAntecipadoView(GrupoRequiredMixin, View):
+class ContratoEncerramentoAntecipadoView(PermissaoRequeridaMixin, View):
     """Encerra um contrato 'ativo' antes do prazo previsto (quebra de contrato
     — devolução antecipada do veículo).
 
@@ -963,7 +950,7 @@ class ContratoEncerramentoAntecipadoView(GrupoRequiredMixin, View):
     correspondem a um período em que o veículo já foi usado; só as parcelas
     futuras (vencimento > devolução real) são canceladas — nunca excluídas.
     """
-    grupos_permitidos = ['admin_locadora']
+    permissao = 'contratos_administrar'
     template_name = 'contracts/encerramento_antecipado.html'
 
     def get(self, request, pk):
@@ -1091,14 +1078,14 @@ class ContratoEncerramentoAntecipadoView(GrupoRequiredMixin, View):
         })
 
 
-class ContratoReverterCheckinView(GrupoRequiredMixin, View):
+class ContratoReverterCheckinView(PermissaoRequeridaMixin, View):
     """Desfaz um check-in equivocado, revertendo o contrato de 'aguardando_devolucao'
-    para 'ativo'. Restrito a admin_locadora. Exclui fotos de devolução, zera
+    para 'ativo'. Exige a permissão contratos_administrar. Exclui fotos de devolução, zera
     todos os campos calculados no fechamento, e cancela a parcela de acerto
     gerada por este check-in (se ainda não paga) -- sem isso, refazer o
     check-in gera uma segunda parcela de acerto, cobrando km excedente/dias
     extras em duplicidade."""
-    grupos_permitidos = ['admin_locadora']
+    permissao = 'contratos_administrar'
 
     def post(self, request, pk):
         from django.db import transaction as db_transaction
@@ -1148,8 +1135,8 @@ class ContratoReverterCheckinView(GrupoRequiredMixin, View):
         return redirect('contratos:detalhe', pk=pk)
 
 
-class ContratoCancelarView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'atendente']
+class ContratoCancelarView(PermissaoRequeridaMixin, View):
+    permissao = 'contratos_operar'
     def post(self, request, pk):
         from django.db import transaction as db_transaction
         contrato = get_object_or_404(Contrato, pk=pk)
@@ -1186,9 +1173,9 @@ class ContratoCancelarView(GrupoRequiredMixin, View):
         return redirect('contratos:lista')
 
 
-class ContratoProrrogarView(GrupoRequiredMixin, View):
+class ContratoProrrogarView(PermissaoRequeridaMixin, View):
     """Prorroga o contrato e gera novas parcelas para o período estendido."""
-    grupos_permitidos = ['admin_locadora', 'atendente']
+    permissao = 'contratos_operar'
     def post(self, request, pk):
         from django.db import transaction as db_transaction
         from django.utils.dateparse import parse_datetime
@@ -1287,7 +1274,7 @@ class ContratoProrrogarView(GrupoRequiredMixin, View):
         return redirect('contratos:detalhe', pk=pk)
 
 
-class PagarParcelaView(GrupoRequiredMixin, View):
+class PagarParcelaView(PermissaoRequeridaMixin, View):
     """Registra o recebimento de uma parcela.
 
     Valor igual ao devido (valor_corrigido) quita a parcela. Valor menor é
@@ -1295,7 +1282,7 @@ class PagarParcelaView(GrupoRequiredMixin, View):
     a menos que o operador marque "conceder desconto" e justifique. Valor maior
     quita a parcela e o excedente vai para as próximas dívidas (ou vira crédito).
     """
-    grupos_permitidos = ['admin_locadora', 'atendente', 'financeiro']
+    permissao = 'contratos_receber'
 
     def post(self, request, pk, parcela_pk):
         from decimal import InvalidOperation
@@ -1372,8 +1359,8 @@ class PagarParcelaView(GrupoRequiredMixin, View):
         return redirect('contratos:detalhe', pk=pk)
 
 
-class ContratoAdicionaisView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'atendente']
+class ContratoAdicionaisView(PermissaoRequeridaMixin, View):
+    permissao = 'contratos_operar'
     template_name = 'contracts/adicionais.html'
 
     def get(self, request, pk):
@@ -1415,8 +1402,8 @@ class ContratoAdicionaisView(GrupoRequiredMixin, View):
         })
 
 
-class ContratoAvariasView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'atendente']
+class ContratoAvariasView(PermissaoRequeridaMixin, View):
+    permissao = 'contratos_operar'
     template_name = 'contracts/avarias.html'
 
     def get(self, request, pk):
@@ -1446,9 +1433,9 @@ class ContratoAvariasView(GrupoRequiredMixin, View):
         })
 
 
-class ContratoAvariaMarcarPagaView(GrupoRequiredMixin, View):
+class ContratoAvariaMarcarPagaView(PermissaoRequeridaMixin, View):
     """Marca uma avaria como paga e registra o PagamentoContrato atomicamente."""
-    grupos_permitidos = ['admin_locadora', 'atendente', 'financeiro']
+    permissao = 'contratos_receber'
 
     def post(self, request, pk, avaria_pk):
         from django.db import transaction as db_transaction
@@ -1489,8 +1476,8 @@ class ContratoAvariaMarcarPagaView(GrupoRequiredMixin, View):
         return redirect('contratos:avarias', pk=pk)
 
 
-class ContratoAvariaAjustarView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'atendente', 'financeiro']
+class ContratoAvariaAjustarView(PermissaoRequeridaMixin, View):
+    permissao = 'contratos_receber'
 
     def post(self, request, pk, avaria_pk):
         from django.db import transaction as db_transaction
@@ -1518,8 +1505,8 @@ class ContratoAvariaAjustarView(GrupoRequiredMixin, View):
         return redirect('contratos:avarias', pk=pk)
 
 
-class ContratoAdicionalRemoverView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'atendente']
+class ContratoAdicionalRemoverView(PermissaoRequeridaMixin, View):
+    permissao = 'contratos_operar'
 
     def post(self, request, pk, adicional_pk):
         from django.db import transaction as db_transaction
@@ -1538,8 +1525,8 @@ class ContratoAdicionalRemoverView(GrupoRequiredMixin, View):
         return redirect('contratos:adicionais', pk=pk)
 
 
-class ContratoPDFView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'atendente', 'financeiro']
+class ContratoPDFView(PermissaoRequeridaMixin, View):
+    permissao = 'contratos_consultar'
     def get(self, request, pk):
         from io import BytesIO
         from xhtml2pdf import pisa
@@ -1591,8 +1578,8 @@ class AssinaturaView(View):
         return request.META.get('REMOTE_ADDR')
 
 
-class ContratoPagamentosView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'atendente', 'financeiro']
+class ContratoPagamentosView(PermissaoRequeridaMixin, View):
+    permissao = 'contratos_receber'
     template_name = 'contracts/pagamentos.html'
 
     def get(self, request, pk):
@@ -1631,8 +1618,8 @@ class ContratoPagamentosView(GrupoRequiredMixin, View):
         })
 
 
-class ContratoPagamentoEstornarView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora']
+class ContratoPagamentoEstornarView(PermissaoRequeridaMixin, View):
+    permissao = 'contratos_administrar'
 
     def post(self, request, pk, pagamento_pk):
         from django.db import transaction as db_transaction

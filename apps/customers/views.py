@@ -1,5 +1,5 @@
 from django.contrib import messages
-from apps.core.mixins import GrupoRequiredMixin
+from apps.core.mixins import PermissaoRequeridaMixin
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DetailView, ListView, UpdateView, View
@@ -8,8 +8,8 @@ from .forms import ClienteForm, CNHClienteForm
 from .models import Cliente, CNHCliente
 
 
-class ClienteListView(GrupoRequiredMixin, ListView):
-    grupos_permitidos = ['admin_locadora', 'atendente']
+class ClienteListView(PermissaoRequeridaMixin, ListView):
+    permissao = 'clientes_acessar'
     model = Cliente
     template_name = 'customers/lista.html'
     context_object_name = 'clientes'
@@ -44,8 +44,8 @@ class ClienteListView(GrupoRequiredMixin, ListView):
         return contexto
 
 
-class ClienteCreateView(GrupoRequiredMixin, CreateView):
-    grupos_permitidos = ['admin_locadora', 'atendente']
+class ClienteCreateView(PermissaoRequeridaMixin, CreateView):
+    permissao = 'clientes_acessar'
     model = Cliente
     form_class = ClienteForm
     template_name = 'customers/form.html'
@@ -64,8 +64,8 @@ class ClienteCreateView(GrupoRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class ClienteDetailView(GrupoRequiredMixin, DetailView):
-    grupos_permitidos = ['admin_locadora', 'atendente']
+class ClienteDetailView(PermissaoRequeridaMixin, DetailView):
+    permissao = 'clientes_acessar'
     model = Cliente
     template_name = 'customers/detalhe.html'
     context_object_name = 'cliente'
@@ -77,8 +77,8 @@ class ClienteDetailView(GrupoRequiredMixin, DetailView):
         return contexto
 
 
-class ClienteUpdateView(GrupoRequiredMixin, UpdateView):
-    grupos_permitidos = ['admin_locadora', 'atendente']
+class ClienteUpdateView(PermissaoRequeridaMixin, UpdateView):
+    permissao = 'clientes_acessar'
     model = Cliente
     form_class = ClienteForm
     template_name = 'customers/form.html'
@@ -97,8 +97,8 @@ class ClienteUpdateView(GrupoRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class ClienteCNHView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'atendente']
+class ClienteCNHView(PermissaoRequeridaMixin, View):
+    permissao = 'clientes_acessar'
     template_name = 'customers/cnh.html'
 
     def get(self, request, pk):
@@ -126,8 +126,8 @@ class ClienteCNHView(GrupoRequiredMixin, View):
         })
 
 
-class ClienteCNHExcluirView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora']
+class ClienteCNHExcluirView(PermissaoRequeridaMixin, View):
+    permissao = 'clientes_excluir_cnh'
     def post(self, request, pk, cnh_pk):
         cnh = get_object_or_404(CNHCliente, pk=cnh_pk, cliente_id=pk)
         cnh.delete()

@@ -45,6 +45,7 @@
 <!-- Cards de relatórios disponíveis -->
 <div class="row g-3">
 
+  {% if perms.core.relatorios_contratos %}
   <div class="col-md-6 col-lg-4">
     <a href="{% url 'core:relatorio-contratos' %}" class="card h-100 text-decoration-none"
        style="transition:box-shadow .15s, transform .15s"
@@ -61,7 +62,9 @@
       </div>
     </a>
   </div>
+  {% endif %}
 
+  {% if perms.core.relatorios_frota %}
   <div class="col-md-6 col-lg-4">
     <a href="{% url 'core:relatorio-frota' %}" class="card h-100 text-decoration-none"
        style="transition:box-shadow .15s, transform .15s"
@@ -78,7 +81,9 @@
       </div>
     </a>
   </div>
+  {% endif %}
 
+  {% if perms.core.relatorios_financeiros %}
   <div class="col-md-6 col-lg-4">
     <a href="{% url 'core:relatorio-dre' %}" class="card h-100 text-decoration-none"
        style="transition:box-shadow .15s, transform .15s"
@@ -95,7 +100,9 @@
       </div>
     </a>
   </div>
+  {% endif %}
 
+  {% if perms.core.relatorios_clientes %}
   <div class="col-md-6 col-lg-4">
     <a href="{% url 'core:relatorio-clientes' %}" class="card h-100 text-decoration-none"
        style="transition:box-shadow .15s, transform .15s"
@@ -112,7 +119,9 @@
       </div>
     </a>
   </div>
+  {% endif %}
 
+  {% if perms.core.relatorios_financeiros %}
   <div class="col-md-6 col-lg-4">
     <a href="{% url 'core:relatorio-inadimplencia' %}" class="card h-100 text-decoration-none"
        style="transition:box-shadow .15s, transform .15s"
@@ -129,8 +138,10 @@
       </div>
     </a>
   </div>
+  {% endif %}
 
   <!-- Exportações rápidas -->
+  {% if perms.core.relatorios_financeiros %}
   <div class="col-md-6 col-lg-4">
     <div class="card h-100">
       <div class="card-body d-flex gap-3">
@@ -154,6 +165,7 @@
       </div>
     </div>
   </div>
+  {% endif %}
 
 </div>
 {% endblock %}

@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.db import transaction
-from apps.core.mixins import GrupoRequiredMixin
+from apps.core.mixins import PermissaoRequeridaMixin
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -43,8 +43,8 @@ def _salvar_ordem(request, ordem, situacao_anterior=None, veiculo_anterior_id=No
         )
 
 
-class ManutencaoListView(GrupoRequiredMixin, ListView):
-    grupos_permitidos = ['admin_locadora', 'mecanico']
+class ManutencaoListView(PermissaoRequeridaMixin, ListView):
+    permissao = 'manutencao_acessar'
     model = OrdemManutencao
     template_name = 'manutencao/lista.html'
     context_object_name = 'ordens'
@@ -68,8 +68,8 @@ class ManutencaoListView(GrupoRequiredMixin, ListView):
         return contexto
 
 
-class ManutencaoCreateView(GrupoRequiredMixin, CreateView):
-    grupos_permitidos = ['admin_locadora', 'mecanico']
+class ManutencaoCreateView(PermissaoRequeridaMixin, CreateView):
+    permissao = 'manutencao_acessar'
     model = OrdemManutencao
     form_class = OrdemManutencaoForm
     template_name = 'manutencao/form.html'
@@ -90,15 +90,15 @@ class ManutencaoCreateView(GrupoRequiredMixin, CreateView):
         return redirect(self.get_success_url())
 
 
-class ManutencaoDetailView(GrupoRequiredMixin, DetailView):
-    grupos_permitidos = ['admin_locadora', 'mecanico']
+class ManutencaoDetailView(PermissaoRequeridaMixin, DetailView):
+    permissao = 'manutencao_acessar'
     model = OrdemManutencao
     template_name = 'manutencao/detalhe.html'
     context_object_name = 'ordem'
 
 
-class ManutencaoUpdateView(GrupoRequiredMixin, UpdateView):
-    grupos_permitidos = ['admin_locadora', 'mecanico']
+class ManutencaoUpdateView(PermissaoRequeridaMixin, UpdateView):
+    permissao = 'manutencao_acessar'
     model = OrdemManutencao
     form_class = OrdemManutencaoForm
     template_name = 'manutencao/form.html'
@@ -119,8 +119,8 @@ class ManutencaoUpdateView(GrupoRequiredMixin, UpdateView):
         return redirect(self.get_success_url())
 
 
-class ManutencaoAlterarStatusView(GrupoRequiredMixin, View):
-    grupos_permitidos = ['admin_locadora', 'mecanico']
+class ManutencaoAlterarStatusView(PermissaoRequeridaMixin, View):
+    permissao = 'manutencao_acessar'
 
     _TRANSICOES = {
         'agendada':     ['em_andamento', 'cancelada'],
@@ -149,8 +149,8 @@ class ManutencaoAlterarStatusView(GrupoRequiredMixin, View):
         return redirect(reverse('manutencao:detalhe', kwargs={'pk': pk}))
 
 
-class AlertaListView(GrupoRequiredMixin, ListView):
-    grupos_permitidos = ['admin_locadora', 'mecanico']
+class AlertaListView(PermissaoRequeridaMixin, ListView):
+    permissao = 'manutencao_acessar'
     model = AlertaManutencao
     template_name = 'manutencao/alertas.html'
     context_object_name = 'alertas'
@@ -167,8 +167,8 @@ class AlertaListView(GrupoRequiredMixin, ListView):
         return contexto
 
 
-class AlertaCreateView(GrupoRequiredMixin, CreateView):
-    grupos_permitidos = ['admin_locadora', 'mecanico']
+class AlertaCreateView(PermissaoRequeridaMixin, CreateView):
+    permissao = 'manutencao_acessar'
     model = AlertaManutencao
     form_class = AlertaManutencaoForm
     template_name = 'manutencao/alerta_form.html'

@@ -4,6 +4,13 @@ from django.utils import timezone
 _CACHE_ATTR = '_aluga_facil_badges'
 
 
+def _nome_do_perfil(usuario):
+    if usuario.is_superuser:
+        return 'Administrador'
+    nomes = [g.perfil.nome if hasattr(g, 'perfil') else g.name for g in usuario.groups.select_related('perfil')]
+    return ', '.join(nomes) or 'Sem perfil'
+
+
 def agenda_cobrancas(request):
     # Cache por request para evitar 3 COUNTs duplicados em cada sub-request/context-processor
     cached = getattr(request, _CACHE_ATTR, None)
@@ -17,11 +24,10 @@ def agenda_cobrancas(request):
     agenda_url = '/financeiro/agenda/'
     agenda_pagamentos_url = '/financeiro/agenda-pagamentos/'
     pode_configurar_locadora = False
+    perfil_usuario = ''
     if request.user.is_authenticated:
-        pode_configurar_locadora = (
-            request.user.is_superuser
-            or request.user.groups.filter(name='admin_locadora').exists()
-        )
+        perfil_usuario = _nome_do_perfil(request.user)
+        pode_configurar_locadora = request.user.has_perm('core.admin_configuracoes')
         try:
             from apps.contracts.models import ParcelaContrato
             from apps.financeiro.models import ParcelaDespesa
@@ -55,6 +61,7 @@ def agenda_cobrancas(request):
         'agenda_url': agenda_url,
         'agenda_pagamentos_url': agenda_pagamentos_url,
         'pode_configurar_locadora': pode_configurar_locadora,
+        'perfil_usuario': perfil_usuario,
     }
     try:
         setattr(request, _CACHE_ATTR, result)
